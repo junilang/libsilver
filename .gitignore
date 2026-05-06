@@ -1,0 +1,11 @@
+.ccls
+.ccls-cache
+.archive
+.vscode
+.zed
+
+out
+junimake_local.json
+compile_flags.txt
+tests/scratch
+tests/scratch.c

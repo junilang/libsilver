@@ -1,0 +1,89 @@
+{
+	"project_name": "libsilver",
+	"out_dir": "out",
+	"out_binary": "silver",
+	"main_file": "src/main.c",
+	"tests_dir": "tests",
+	"tests_suffix": ".c",
+	"tests_sub": "ZZ",
+	"tests_include_macro": "BUILD_TESTING_INCLUDE",
+
+	"compiler": "cc",
+
+	"macros": {
+		"BUILD_DEBUG": "false",
+		"BUILD_RELEASE": "false",
+		"BUILD_SAFE": "true",
+		"BUILD_TESTING": "false",
+		"BUILD_ASAN": "false",
+		"BUILD_UBSAN": "false",
+		"BUILD_ASM": "false"
+	},
+
+	"flags": [
+		"-std=c23",
+		"-fwhole-program",
+		"-Wall",
+		"-Wextra",
+		"-Werror=vla",
+		"-Wconversion",
+		"-Wimplicit-fallthrough",
+		"-Wno-unused-function",
+		"-Wno-unused-parameter"
+	],
+
+	"profile_lsp": {
+		"flags": [ "-xc-header", "-ferror-limit=0" ],
+		"macros": {
+			"BUILD_DEBUG": "true",
+			"BUILD_RELEASE": "true",
+			"BUILD_SAFE": "true",
+			"BUILD_TESTING": "true",
+			"BUILD_ASAN": "true",
+			"BUILD_UBSAN": "true",
+			"BUILD_ASM": "true"
+		}
+	},
+
+	"profile_release": {
+		"flags": [ "-O2" ],
+		"macros": {
+			"BUILD_RELEASE": "true"
+		}
+	},
+
+	"profile_asm": {
+		"out_binary": "juni.s",
+		"flags": [ "-masm=intel", "-fverbose-asm", "-S" ],
+		"macros": {
+			"BUILD_ASM": "true"
+		}
+	},
+
+	"profile_asan": {
+		"flags": [ "-fsanitize=address" ],
+		"macros": {
+			"BUILD_ASAN": "true"
+		}
+	},
+
+	"profile_ubsan": {
+		"flags": [ "-fsanitize=undefined"],
+		"macros": {
+			"BUILD_UBSAN": "true"
+		}
+	},
+
+	"profile_debug": {
+		"flags": [ "-g",  "-O0" ],
+		"macros": {
+			"BUILD_DEBUG": "true"
+		}
+	},
+
+	"profile_testing": {
+		"macros": {
+			"BUILD_TESTING": "true"
+		}
+	}
+}
