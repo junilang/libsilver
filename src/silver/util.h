@@ -12,7 +12,6 @@
 
 	#define GCC_DIAG_IGNORE_WTYPELIMITS "GCC diagnostic ignored \"-Wtype-limits\""
 
-
 	#define GCC_PRAGMA_3(P, N, ...) _Pragma(P##N) __VA_OPT__(GCC_ERROR_MAX_DEPTH_REACHED)
 	#define GCC_PRAGMA_2(P, N, ...) _Pragma(P##N) __VA_OPT__(GCC_PRAGMA_3(P, __VA_ARGS__))
 	#define GCC_PRAGMA_1(P, N, ...) _Pragma(P##N) __VA_OPT__(GCC_PRAGMA_2(P, __VA_ARGS__))
