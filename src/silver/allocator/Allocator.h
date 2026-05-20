@@ -6,7 +6,12 @@
 	#define Allocator_SAFE BUILD_SAFE
 #endif
 
+typedef enum : u8 {
+	AllocatorAttr_BIT_THREADSAFE
+} AllocatorAttr;
+
 typedef struct {
+	AllocatorAttr (*attr)(Ptr this);
 	Ptr (*new)(Ptr this, usize size);
 	Ptr (*resize)(Ptr this, Ptr buf, usize size);
 	void (*delete)(Ptr this, Ptr buf);
@@ -63,7 +68,11 @@ Ptr Allocator_resize(Allocator this, Ptr buf, usize size) {
 }
 
 void Allocator_delete(Allocator this, Ptr buf) {
-	return Allocator_iface(this)->delete(Allocator_this(this), buf);
+	Allocator_iface(this)->delete(Allocator_this(this), buf);
+}
+
+AllocatorAttr Allocator_attr(Allocator this) {
+	return Allocator_iface(this)->attr(Allocator_this(this));
 }
 
 #include "Allocator_meta.h"

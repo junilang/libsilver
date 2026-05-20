@@ -1,11 +1,15 @@
 #define IAllocator_GENERATE_INTERFACE(N) \
 	const IAllocator IAllocator_##N = { \
+		.attr = &IAllocator_##N##_attr, \
 		.new = &IAllocator_##N##_new, \
 		.resize = &IAllocator_##N##_resize, \
 		.delete = &IAllocator_##N##_delete \
 	};
 
 #define IAllocator_GENERATE_METHODS(N) \
+	extern AllocatorAttr IAllocator_##N##_attr(Ptr this) { \
+		return N##_attr(this); \
+	} \
 	extern Ptr IAllocator_##N##_new(Ptr this, usize size) { \
 		return N##_new(this, size); \
 	} \
@@ -13,7 +17,7 @@
 		return N##_resize(this, buf, size); \
 	} \
 	extern void IAllocator_##N##_delete(Ptr this, Ptr buf) { \
-		return N##_delete(this, buf); \
+		N##_delete(this, buf); \
 	}
 
 #if Allocator_PTRTAG

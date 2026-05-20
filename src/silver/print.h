@@ -47,7 +47,7 @@ void PRINT_cstring(Str cstr, OutStream os) {
 		OutStream_write(os, USTR("(nullstr)"));
 	}
 
-	OutStream_write(os, (const ubyte*)cstr, strlen(cstr));
+	OutStream_write(os, (const ubyte*)cstr, __builtin_strlen(cstr));
 }
 
 #define PRINT_ITEM(S, A) _Generic((A), \
@@ -73,25 +73,26 @@ void PRINT_cstring(Str cstr, OutStream os) {
 )((A), (S))
 
 #define PRINT_X(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(GCC_ERROR_MAX_DEPTH_REACHED)
-#define PRINT_19(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_X(S, __VA_ARGS__))
-#define PRINT_18(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_19(S, __VA_ARGS__))
-#define PRINT_17(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_18(S, __VA_ARGS__))
-#define PRINT_16(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_17(S, __VA_ARGS__))
-#define PRINT_15(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_16(S, __VA_ARGS__))
-#define PRINT_14(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_15(S, __VA_ARGS__))
-#define PRINT_13(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_14(S, __VA_ARGS__))
-#define PRINT_12(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_13(S, __VA_ARGS__))
-#define PRINT_11(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_12(S, __VA_ARGS__))
-#define PRINT_10(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_11(S, __VA_ARGS__))
-#define PRINT_9(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_10(S, __VA_ARGS__))
-#define PRINT_8(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_9(S, __VA_ARGS__))
-#define PRINT_7(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_8(S, __VA_ARGS__))
-#define PRINT_6(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_7(S, __VA_ARGS__))
-#define PRINT_5(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_6(S, __VA_ARGS__))
-#define PRINT_4(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_5(S, __VA_ARGS__))
-#define PRINT_3(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_4(S, __VA_ARGS__))
-#define PRINT_2(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_3(S, __VA_ARGS__))
+
 #define PRINT_1(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_2(S, __VA_ARGS__))
+#define PRINT_2(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_3(S, __VA_ARGS__))
+#define PRINT_3(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_4(S, __VA_ARGS__))
+#define PRINT_4(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_5(S, __VA_ARGS__))
+#define PRINT_5(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_6(S, __VA_ARGS__))
+#define PRINT_6(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_7(S, __VA_ARGS__))
+#define PRINT_7(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_8(S, __VA_ARGS__))
+#define PRINT_8(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_9(S, __VA_ARGS__))
+#define PRINT_9(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_10(S, __VA_ARGS__))
+#define PRINT_10(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_11(S, __VA_ARGS__))
+#define PRINT_11(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_12(S, __VA_ARGS__))
+#define PRINT_12(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_13(S, __VA_ARGS__))
+#define PRINT_13(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_14(S, __VA_ARGS__))
+#define PRINT_14(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_15(S, __VA_ARGS__))
+#define PRINT_15(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_16(S, __VA_ARGS__))
+#define PRINT_16(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_17(S, __VA_ARGS__))
+#define PRINT_17(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_18(S, __VA_ARGS__))
+#define PRINT_18(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_19(S, __VA_ARGS__))
+#define PRINT_19(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_X(S, __VA_ARGS__))
 
 #define PRINT(stream, ...) { \
 	const OutStream PRINT__stream = (stream); \

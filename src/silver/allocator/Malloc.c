@@ -34,6 +34,10 @@ void Malloc_delete(Ptr this, Ptr buf) {
 	free(buf);
 }
 
+AllocatorAttr Malloc_attr(Ptr this) {
+	return FLAG(AllocatorAttr, THREADSAFE);
+}
+
 IAllocator_GENERATE_KNOWN(Malloc)
 
 #define Malloc Malloc_upcast(nullptr)

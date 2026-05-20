@@ -22,7 +22,9 @@
 
 	"flags": [
 		"-std=c23",
+		"-lpthread",
 		"-fwhole-program",
+		"-pedantic",
 		"-Wall",
 		"-Wextra",
 		"-Werror=vla",

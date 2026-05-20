@@ -5,6 +5,7 @@
 #if !LIBSILVER_INCLUDE
 
 	#include "util.h"
+	#include "enum.h"
 	#include "flag.h"
 	#include "types.h"
 	#include "panic.h"
@@ -36,9 +37,18 @@
 	#include "Rc.h"
 	#include "Arc.h"
 
+	#include "Spinlock.h"
+
+	#include "async/Async.h"
+
+
 	#include "outstream/FileOutStream.c"
 
 	#include "allocator/Malloc.c"
+
+
+	#include "async/DummyAsync.c"
+	#include "weaver/Weaver.c"
 
 	#include "SilverTest.c"
 

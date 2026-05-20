@@ -208,17 +208,21 @@ void Trie_destroy(
 		return;
 
 	if (Trie_isbranch(this)) {
-		return TrieBranch_destroy(this, alc);
+		TrieBranch_destroy(this, alc);
+		return;
 	} else {
-		return TrieSegment_destroy(this, alc);
+		TrieSegment_destroy(this, alc);
+		return;
 	}
 }
 
 void ZZTrie_print(Trie this, TrieSize depth, OutStream os) {
 	if (Trie_isbranch(this)) {
-		return TrieBranch_print(this, depth, os);
+		TrieBranch_print(this, depth, os);
+		return;
 	} else {
-		return TrieSegment_print(this, depth, os);
+		TrieSegment_print(this, depth, os);
+		return;
 	}
 }
 
