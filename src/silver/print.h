@@ -69,7 +69,8 @@ void PRINT_cstring(Str cstr, OutStream os) {
 	StringSpan : StringSpan_print, \
 	SmallString : SmallString_print, \
 	VString : VString_print, \
-	Printable : Printable_print \
+	Printable : Printable_print, \
+	default : PRINT_ptr \
 )((A), (S))
 
 #define PRINT_X(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(GCC_ERROR_MAX_DEPTH_REACHED)
@@ -99,4 +100,20 @@ void PRINT_cstring(Str cstr, OutStream os) {
 	PRINT_1(PRINT__stream, __VA_ARGS__) \
 }
 
+#ifndef PRINT_ATOMIC_BUFFER_SIZE
+	#define PRINT_ATOMIC_BUFFER_SIZE 256
+#endif
+
 #define FPRINT(file, ...) PRINT(FileOutStream_upcast(file), __VA_ARGS__)
+
+#define PRINT_ATOMIC_(bs, os, ...) { \
+	ubyte PRINT__buffer[bs]; \
+	BufferOutStream PRINT__os = {.buffer=PRINT__buffer,.capacity=bs}; \
+	PRINT(BufferOutStream_upcast(&PRINT__os), __VA_ARGS__); \
+	OutStream_write(os, PRINT__buffer, PRINT__os.size); \
+}
+
+#define FPRINT_ATOMIC_(bs, file, ...) PRINT_ATOMIC_(bs, FileOutStream_upcast(file), __VA_ARGS__)
+
+#define PRINT_ATOMIC(os, ...) PRINT_ATOMIC_(PRINT_ATOMIC_BUFFER_SIZE, os, __VA_ARGS__)
+#define FPRINT_ATOMIC(file, ...) FPRINT_ATOMIC_(PRINT_ATOMIC_BUFFER_SIZE, file, __VA_ARGS__)

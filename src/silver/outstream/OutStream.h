@@ -15,6 +15,7 @@ typedef struct {
 
 	enum {
 		IOutStream_FileOutStream_ID,
+		IOutStream_BufferOutStream_ID,
 		IOutStream_KNOWN
 	};
 

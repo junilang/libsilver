@@ -6,13 +6,25 @@
 	#define Weaver_DEBUG BUILD_DEBUG
 #endif
 
-#ifndef Weaver_YIELD_ENQUEUE
-	#define Weaver_YIELD_ENQUEUE true
+#ifndef Weaver_CALL_ENQUEUE
+	#define Weaver_CALL_ENQUEUE true
 #endif
 
 #ifndef Weaver_RESUME_ENQUEUE
 	#define Weaver_RESUME_ENQUEUE true
 #endif
+
+#if Weaver_DEBUG
+	_Thread_local u32 t_WeaverThread_id = 0;
+
+	#define Weaver_DBG(...) FPRINT_ATOMIC( \
+		stderr, "[",t_WeaverThread_id,"] ",__func__,": "__VA_OPT__(,)__VA_ARGS__,"\n" \
+	)
+#else
+	#define Weaver_DBG(...)
+#endif
+
+// TODO use explicit memory ordering on atomic operations
 
 #include "WeaverQueue.h"
 #include "WeaverThread.h"
@@ -51,25 +63,44 @@ void Weaver_boot(Weaver *this) {
 }
 
 void Weaver_wake(Weaver *this, usize n) {
-	if (this->threads_size < n) {
-		n = this->threads_size;
-	}
+	if (atomic_load(&this->lock) != Weaver_LOCK_NONE)
+		return;
 
 	auto it = this->threads;
-	auto const end = it + n;
+	auto const end = it + this->threads_size;
 
-	for (; it < end; it++) {
+	for (; n && (it < end); it++) {
 		uint state = WeaverThreadState_IDLE;
 		if (atomic_compare_exchange_strong(&it->state, &state, WeaverThreadState_RUN)) {
 			syscall(SYS_futex, &it->state, FUTEX_WAKE, INT_MAX);
+			n--;
 		}
 	}
 }
 
 void Weaver_join(Weaver *this) {
-	atomic_store(&this->lock, Weaver_LOCK_JOIN);
+	uint lock = Weaver_LOCK_NONE;
 
-	if (atomic_load(&this->threads_sync) == 0) goto down;
+	if (
+		!atomic_compare_exchange_strong(
+			&this->lock, &lock, Weaver_LOCK_JOIN
+		)
+	)
+		PANIC("invalid lock state");
+
+	// wait for all threads to be idle
+	auto const sync = atomic_load(&this->threads_sync);
+	if (sync == 0) {
+		lock = Weaver_LOCK_JOIN;
+		if (
+			!atomic_compare_exchange_strong(
+				&this->lock, &lock, Weaver_LOCK_NONE
+			)
+		)
+			PANIC("invalid lock state");
+
+		goto down;
+	}
 
 	while (atomic_load(&this->lock) == Weaver_LOCK_JOIN) {
 		syscall(SYS_futex, &this->lock, FUTEX_WAIT,
@@ -78,234 +109,231 @@ void Weaver_join(Weaver *this) {
 	}
 
 	down:;
+	lock = Weaver_LOCK_NONE;
+	if (
+		!atomic_compare_exchange_strong(
+			&this->lock, &lock, Weaver_LOCK_DOWN
+		)
+	)
+		PANIC("invalid lock state");
 
-	atomic_store(&this->lock, Weaver_LOCK_DOWN);
-
+	// wake up all threads and set their state to down
 	auto it = this->threads;
 	auto const end = it + this->threads_size;
 	for (; it < end; it++) {
-		uint state = WeaverThreadState_IDLE;
-		if (atomic_compare_exchange_strong(&it->state, &state, WeaverThreadState_DOWN)) {
+		if (atomic_exchange(&it->state, WeaverThreadState_DOWN) == WeaverThreadState_IDLE) {
 			syscall(SYS_futex, &it->state, FUTEX_WAKE, INT_MAX);
 		}
 	}
 
+	// wait for all threads to shut down
 	while (atomic_load(&this->lock) == Weaver_LOCK_DOWN) {
 		syscall(SYS_futex, &this->lock, FUTEX_WAIT,
 			Weaver_LOCK_DOWN, nullptr
 		);
 	}
 
+	// join threads using pthreads interface
 	it = this->threads;
 	for (; it < end; it++) {
 		pthread_join(it->thread, nullptr);
 	}
 }
 
-void ZZWeaver_swap(Weaver *this, WeaverQinfo qinfo, WeaverQinfo mqinfo) {
-	auto pos = WeaverQinfo_pos(mqinfo);
+// returns true if the calling thread successfully performed a swap
+bool Weaver_swap(Weaver *this, WeaverQinfo expected_index) {
+	WeaverQinfo qinfo = atomic_fetch_or(&this->qinfo, WeaverQinfo_SWAP_LOCK);
 
-	this->queue[mqinfo & WeaverQinfo_INDEX_BIT]->size = pos;
+	if (qinfo & WeaverQinfo_SWAP_LOCK) {
+		// another thread started swapping before us
+		return false;
+	}
 
-	atomic_store(&this->qinfo, (qinfo + 1) & WeaverQinfo_INDEX_MASK);
+	// if the expected index provided by caller does not match the current index
+	// a swap operation already must have happened between when the caller
+	// decided a swap was necessary and we acquired our lock
+	if ((qinfo ^ expected_index) & WeaverQinfo_INDEX_MASK) {
+		// release lock
+		atomic_fetch_and(&this->qinfo, ~WeaverQinfo_SWAP_LOCK);
+		return true;
+	}
+
+	// acquire mqinfo lock
+	WeaverQinfo mqinfo = atomic_fetch_or(&this->mqinfo, WeaverQinfo_SWAP_LOCK);
+
+	// wait until other threads release references
+	while (mqinfo & (WeaverQinfo_RC_MASK | WeaverQinfo_RESIZE_LOCK)) {
+		Spinlock_PAUSE;
+		mqinfo = atomic_load(&this->mqinfo);
+	}
+
+	// qinfo doesn't use the resize lock
+	while (qinfo & WeaverQinfo_RC_MASK) {
+		Spinlock_PAUSE;
+		qinfo = atomic_load(&this->qinfo);
+	}
+
+	// we now have both locks and no valid references are held by other threads
+
+	// set queue size
+	const usize size = WeaverQinfo_pos(mqinfo);
+	this->queue[mqinfo & WeaverQinfo_INDEX_BIT]->size = size;
+
+	// perform swap
 	atomic_store(&this->mqinfo, (mqinfo + 1) & WeaverQinfo_INDEX_MASK);
+	atomic_store(&this->qinfo, (qinfo + 1) & WeaverQinfo_INDEX_MASK);
 
-	Weaver_wake(this, WeaverQinfo_pos(mqinfo));
+	// wake threads
+	Weaver_wake(this, size);
+	return true;
 }
 
 void Weaver_submit(Weaver *this, const AsyncTask *tasks, usize tasks_size) {
-	#if Weaver_SAFE
-		if (tasks_size > WeaverQinfo_POS_MAX)
-			PANIC("tasks_size too large");
-	#endif
+	acquire_reference:;
+	WeaverQinfo mqinfo = atomic_fetch_add(&this->mqinfo, WeaverQinfo_RC_ONE);
 
-	const WeaverQinfo infomod = (tasks_size * WeaverQinfo_POS_ONE) | WeaverQinfo_RC_ONE;
-
-	WeaverQinfo mqinfo;
-	WeaverQinfo mqinfo_0;
-
-	goto resubmit;
-
-	wait_for_lock: {
+	// if another thread is performing a swap
+	if (mqinfo & WeaverQinfo_SWAP_LOCK) {
+		WeaverQinfo mqinfo_0 = mqinfo;
 		while (true) {
-			mqinfo = atomic_load(&this->mqinfo);
-
-			if ((mqinfo ^ mqinfo_0) & WeaverQinfo_INDEX_MASK)
-				goto resubmit;
-
-			if (!WeaverQinfo_lock(mqinfo))
-				break;
-
-			Spinlock_PAUSE;
-		}
-
-		// acquire reference
-		resubmit:;
-		mqinfo = atomic_fetch_add(&this->mqinfo, infomod);
-	}
-
-	if (WeaverQinfo_lock(mqinfo)) {
-		mqinfo_0 = mqinfo;
-
-		while (true) {
-			// try to release reference in case other thread is waiting
+			// try to release our reference
 			if (
 				atomic_compare_exchange_strong(
-					&this->mqinfo, &mqinfo, mqinfo - infomod
+					&this->mqinfo, &mqinfo, mqinfo - WeaverQinfo_RC_ONE
 				)
 			)
-				goto wait_for_lock;
-
-			// other thraed was performing swap, need to resubmit
-			if ((mqinfo ^ mqinfo_0) & WeaverQinfo_INDEX_MASK)
-				goto resubmit;
-
-			// other thread unlocked, we still have our reference
-			if (!WeaverQinfo_lock(mqinfo))
 				break;
+
+			// if the swap completed without releasing our reference,
+			// the reference was lost
+			if ((mqinfo ^ mqinfo_0) & WeaverQinfo_INDEX_MASK)
+				goto acquire_reference;
 		}
+
+		// wait until swap completes
+		while (!((mqinfo ^ mqinfo_0) & WeaverQinfo_INDEX_MASK)) {
+			Spinlock_PAUSE;
+			mqinfo = atomic_load(&this->mqinfo);
+		}
+
+		goto acquire_reference;
 	}
 
-	// we have acquired a valid reference to mqinfo
+	if (mqinfo & WeaverQinfo_RESIZE_LOCK) {
+		yield_to_resize_lock:;
 
-	const usize pos = WeaverQinfo_pos(mqinfo);
-	WeaverQueue *queue = this->queue[mqinfo & WeaverQinfo_INDEX_BIT];
-	usize capacity = queue->capacity;
+		while (true) {
+			if (
+				atomic_compare_exchange_strong(
+					&this->mqinfo, &mqinfo, mqinfo - WeaverQinfo_RC_ONE
+				)
+			)
+				break;
 
-	WeaverQinfo qinfo;
-
-	if (capacity < (pos + tasks_size)) {
-		// acquire lock
-		mqinfo = atomic_fetch_or(&this->mqinfo, WeaverQinfo_LOCK_BIT);
-
-		// if other thread acquired the lock first
-		if (WeaverQinfo_lock(mqinfo)) {
-			// other thread must be waiting for us to release reference
-			mqinfo = atomic_fetch_sub(&this->mqinfo, WeaverQinfo_RC_ONE);
-
-			while (true) {
-				// swap was performed
-				if ((mqinfo ^ mqinfo_0) & WeaverQinfo_INDEX_MASK)
-					goto resubmit;
-
-				if (!WeaverQinfo_lock(mqinfo)) break;
-
-				Spinlock_PAUSE;
-				mqinfo = atomic_fetch_or(&this->mqinfo, WeaverQinfo_LOCK_BIT);
-			}
-
-			// we have acquired the lock and can safely recquire reference
-			mqinfo = atomic_fetch_add(&this->mqinfo, WeaverQinfo_RC_ONE);
+			// if the resize completes before we release our reference,
+			// the reference is still valid and we can continue
+			if (!(mqinfo & WeaverQinfo_RESIZE_LOCK))
+				goto has_reference;
 		}
 
+		// wait for swap to complete and reacquire reference
+		while (mqinfo & WeaverQinfo_RESIZE_LOCK) {
+			Spinlock_PAUSE;
+			mqinfo = atomic_load(&this->mqinfo);
+		}
+
+		goto acquire_reference;
+	}
+
+	has_reference:;
+	WeaverQueue *queue = this->queue[mqinfo & WeaverQinfo_INDEX_BIT];
+	const usize pos = WeaverQinfo_pos(mqinfo);
+	usize capacity = queue->capacity;
+
+	// check if the queue needs to be resized before
+	// inserting our tasks
+	if (capacity < (pos + tasks_size)) {
+		// try to acquire resize lock
+		mqinfo = atomic_fetch_or(&this->mqinfo, WeaverQinfo_RESIZE_LOCK);
+
+		// another thread started to resize first
+		if (mqinfo & WeaverQinfo_RESIZE_LOCK)
+			goto yield_to_resize_lock;
+
 		// wait for other threads to release their references
-		while (WeaverQinfo_maskrc(mqinfo) == WeaverQinfo_RC_ONE) {
+		while ((mqinfo & WeaverQinfo_RC_MASK) != WeaverQinfo_RC_ONE) {
 			Spinlock_PAUSE;
 			mqinfo = atomic_load(&this->mqinfo);
 		}
 
 		// perform resize
-		capacity = WeaverQueue_nextcapacity(capacity, WeaverQinfo_pos(mqinfo));
+
+		capacity = WeaverQueue_nextcapacity(capacity, pos + tasks_size);
 
 		queue = Allocator_resize(
 			this->queue_alc, queue, ZZWeaverQueue_allocsize(capacity)
 		);
+		queue->capacity = capacity;
 
-		this->queue[WeaverQinfo_index(mqinfo_0)] = queue;
+		// update queue pointer in runtime
+		this->queue[mqinfo & WeaverQinfo_INDEX_BIT] = queue;
 
-		memcpy(&queue->tasks[pos], tasks, sizeof(AsyncTask) * tasks_size);
+		// release lock
+		atomic_fetch_and(&this->mqinfo, ~WeaverQinfo_RESIZE_LOCK);
 
-		//	if queue was empty before, a swap is going to be needed
-		// worker threads might be asleep and cannot perform the swap themselves
-		if (pos != 0) {
-			// release lock and reference
-			atomic_fetch_sub(&this->mqinfo, WeaverQinfo_RC_ONE);
-			atomic_fetch_and(&this->mqinfo, ~WeaverQinfo_LOCK_BIT);
-			return;
-		}
+		goto has_reference;
+	}
 
-		// check if swap is needed
-		qinfo = atomic_fetch_add(&this->qinfo, WeaverQinfo_RC_ONE);
+	// make sure the position is the same as when we checked for capacity
+	if (
+		!atomic_compare_exchange_strong(
+			&this->mqinfo, &mqinfo, mqinfo + (tasks_size * WeaverQinfo_POS_ONE)
+		)
+	)
+		goto has_reference;
 
-		if (
-			// swap is already in progress by other thread
-			WeaverQinfo_lock(qinfo)
+	// write tasks
+	memcpy(&queue->tasks[pos], tasks, sizeof(AsyncTask) * tasks_size);
 
-			// queue is not depleted
-			|| (
-				WeaverQinfo_pos(qinfo) <
-				this->queue[qinfo & WeaverQinfo_INDEX_BIT]->size
+	// release reference
+	mqinfo = atomic_fetch_sub(&this->mqinfo, WeaverQinfo_RC_ONE);
+
+	// if this wasn't the last mqinfo reference let another thread do a swap
+	if ((mqinfo & WeaverQinfo_RC_MASK) != WeaverQinfo_RC_ONE)
+		return;
+
+	// else this was the last reference, check if a swap is needed
+
+	// acquire qinfo reference
+	WeaverQinfo qinfo = atomic_fetch_add(&this->qinfo, WeaverQinfo_RC_ONE);
+	if (qinfo & WeaverQinfo_SWAP_LOCK) {
+		WeaverQinfo qinfo_0 = qinfo;
+		// swap is already being performed by other thread, we need to release our reference
+		while (true) {
+			if (
+				atomic_compare_exchange_strong(
+					&this->qinfo, &qinfo, qinfo - WeaverQinfo_RC_ONE
+				)
 			)
+				break;
 
-			// try to acquire qinfo lock
-			// if it was already locked release and let the other perform swap
-			|| WeaverQinfo_lock((qinfo = atomic_fetch_or(&this->qinfo, WeaverQinfo_LOCK_BIT)))
-		) {
-			// release and return
-			atomic_fetch_sub(&this->qinfo, WeaverQinfo_RC_ONE);
-			atomic_fetch_sub(&this->mqinfo, WeaverQinfo_RC_ONE);
-			atomic_fetch_and(&this->mqinfo, ~WeaverQinfo_LOCK_BIT);
-			return;
+			if ((qinfo ^ qinfo_0) & WeaverQinfo_INDEX_MASK)
+				break;
 		}
 
-	} else {
-
-		memcpy(&queue->tasks[pos], tasks, sizeof(AsyncTask) * tasks_size);
-
-		if (pos != 0) {
-			atomic_fetch_sub(&this->mqinfo, WeaverQinfo_RC_ONE);
-			return;
-		}
-
-		qinfo = atomic_fetch_add(&this->qinfo, WeaverQinfo_RC_ONE);
-
-		if (
-			// swap is already in progress by other thread
-			WeaverQinfo_lock(qinfo)
-
-			// queue is not depleted
-			|| (
-				WeaverQinfo_pos(qinfo) <
-				this->queue[qinfo & WeaverQinfo_INDEX_BIT]->size
-			)
-
-			// try to acquire qinfo lock
-			// if it was already locked release and let the other perform swap
-			|| WeaverQinfo_lock((qinfo = atomic_fetch_or(&this->qinfo, WeaverQinfo_LOCK_BIT)))
-		) {
-			atomic_fetch_sub(&this->qinfo, WeaverQinfo_RC_ONE);
-			atomic_fetch_sub(&this->mqinfo, WeaverQinfo_RC_ONE);
-			return;
-		}
-
-		// acquire mqinfo lock
-
-		mqinfo = atomic_fetch_or(&this->mqinfo, WeaverQinfo_LOCK_BIT);
-		if (WeaverQinfo_lock(mqinfo)) {
-			// lock was already taken
-
-			do {
-				Spinlock_PAUSE;
-				mqinfo = atomic_fetch_or(&this->mqinfo, WeaverQinfo_LOCK_BIT);
-
-				// no need to check for swaps because we have the qinfo lock
-			} while (WeaverQinfo_lock(mqinfo));
-		}
+		return;
 	}
 
-	// wait until all other references are released
-	while (WeaverQinfo_maskrc(mqinfo) != WeaverQinfo_RC_ONE) {
-		Spinlock_PAUSE;
-		mqinfo = atomic_load(&this->mqinfo);
+	// if queue is not depleted, we don't need to swap
+	if (WeaverQinfo_pos(qinfo) < this->queue[qinfo & WeaverQinfo_INDEX_BIT]->size) {
+		// release reference
+		atomic_fetch_sub(&this->qinfo, WeaverQinfo_RC_ONE);
+		return;
 	}
 
-	while (WeaverQinfo_maskrc(qinfo) != WeaverQinfo_RC_ONE) {
-		Spinlock_PAUSE;
-		qinfo = atomic_load(&this->qinfo);
-	}
-
-	// both locks are acquired, perform swap
-	ZZWeaver_swap(this, qinfo, mqinfo);
+	// perform swap
+	qinfo = atomic_fetch_sub(&this->qinfo, WeaverQinfo_RC_ONE);
+	Weaver_swap(this, qinfo);
 }
 
 #include "WeaverThread.c"

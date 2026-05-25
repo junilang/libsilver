@@ -31,3 +31,15 @@ typedef struct {
 void AsyncRT_submit(AsyncRT this, const AsyncTask *tasks, usize tasks_size) {
 	AsyncRT_iface(this)->submit(AsyncRT_this(this), tasks, tasks_size);
 }
+
+void AsyncFuture_resolve(AsyncFuture this, AsyncRT rt) {
+	auto result = AsyncFuture_callback(this);
+	switch (result.intent) {
+		case AsyncIntent_YIELD:
+		case AsyncIntent_FINISH:
+			return;
+		default:;
+	}
+
+	AsyncRT_submit(rt, &result.next, 1);
+}

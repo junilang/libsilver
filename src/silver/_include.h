@@ -20,6 +20,9 @@
 	#include "interface.h"
 
 	#include "outstream/OutStream.h"
+	#include "outstream/FileOutStream.c"
+	#include "outstream/BufferOutStream.c"
+
 	#include "printable/Printable.h"
 
 	#include "String.h"
@@ -42,10 +45,7 @@
 	#include "async/Async.h"
 
 
-	#include "outstream/FileOutStream.c"
-
 	#include "allocator/Malloc.c"
-
 
 	#include "async/DummyAsync.c"
 	#include "weaver/Weaver.c"

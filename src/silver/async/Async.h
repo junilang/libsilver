@@ -9,9 +9,8 @@ typedef struct {
 } AsyncFuture;
 
 typedef enum : usize {
-	AsyncIntent_SUSPEND,
-	AsyncIntent_FINISH,
-	AsyncIntent_PANIC,
+	AsyncIntent_YIELD,
+	AsyncIntent_FINISH
 } AsyncIntent;
 
 typedef union {
@@ -19,11 +18,10 @@ typedef union {
 	AsyncIntent intent;
 } AsyncResult;
 
-#define AsyncResult_SUSPEND ((AsyncResult){.intent=AsyncIntent_SUSPEND})
+#define AsyncResult_YIELD ((AsyncResult){.intent=AsyncIntent_YIELD})
 #define AsyncResult_FINISH ((AsyncResult){.intent=AsyncIntent_FINISH})
-#define AsyncResult_PANIC ((AsyncResult){.intent=AsyncIntent_PANIC})
 
 #include "AsyncFuture.h"
 #include "AsyncTask.h"
 #include "AsyncRT.h"
-#include "AsyncFn.h"
+#include "async_helper.h"

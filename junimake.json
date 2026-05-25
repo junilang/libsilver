@@ -16,6 +16,7 @@
 		"BUILD_SAFE": "true",
 		"BUILD_TESTING": "false",
 		"BUILD_ASAN": "false",
+		"BUILD_TSAN": "false",
 		"BUILD_UBSAN": "false",
 		"BUILD_ASM": "false"
 	},
@@ -73,6 +74,13 @@
 		"flags": [ "-fsanitize=undefined"],
 		"macros": {
 			"BUILD_UBSAN": "true"
+		}
+	},
+
+	"profile_tsan": {
+		"flags": [ "-fsanitize=thread" ],
+		"macros": {
+			"BUILD_TSAN": "true"
 		}
 	},
 

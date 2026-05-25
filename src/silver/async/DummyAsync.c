@@ -13,9 +13,8 @@ void DummyAsync_submit(void *this, const AsyncTask *tasks, usize tasks_size) {
 		auto result = task_data->entry(DummyAsync_upcast(nullptr), task);
 
 		switch (result.intent) {
-			case AsyncIntent_SUSPEND: return;
+			case AsyncIntent_YIELD: return;
 			case AsyncIntent_FINISH: goto Bfinish;
-			case AsyncIntent_PANIC: goto Bpanic;
 
 			default:
 				task = result.next;
@@ -31,10 +30,9 @@ void DummyAsync_submit(void *this, const AsyncTask *tasks, usize tasks_size) {
 			} else if (!AsyncFuture_isnull(task_data->future)) {
 				result = AsyncFuture_callback(task_data->future);
 				switch (result.intent) {
-					case AsyncIntent_SUSPEND: return;
-					case AsyncIntent_PANIC: goto Bpanic;
+					case AsyncIntent_YIELD:
 					case AsyncIntent_FINISH:
-						PANIC("DummyAsync: future shouldn't return finish intent");
+						return;
 
 					default:
 						task = result.next;
@@ -43,10 +41,6 @@ void DummyAsync_submit(void *this, const AsyncTask *tasks, usize tasks_size) {
 			} else { // task has no successor
 				return;
 			}
-		}
-
-		if (0) Bpanic: {
-			PANIC("DummyAsync: task panicked");
 		}
 	}
 }

@@ -17,67 +17,48 @@ usize WeaverQueue_nextcapacity(usize capacity, usize target) {
 	return capacity;
 }
 
-// WeaverQinfo:
-// 	3 bit index
-// 	1 bit lock
-//    16 bit refcount
-//    44 bit position
-
 #define WeaverQinfo_BITS 64
 
-#define WeaverQinfo_INDEX_BITS 3
+#define WeaverQinfo_INDEX_BITS 12
 #define WeaverQinfo_INDEX_MASK ((1ull << WeaverQinfo_INDEX_BITS) - 1)
 #define WeaverQinfo_INDEX_BIT (1ull)
 
-#define WeaverQinfo_LOCK_BIT (1ull << WeaverQinfo_INDEX_BITS)
+#define WeaverQinfo_LOCK_SHIFT WeaverQinfo_INDEX_BITS
+#define WeaverQinfo_LOCK_BITS 2
+#define WeaverQinfo_LOCK_MASK (((1ull << WeaverQinfo_LOCK_BITS) - 1) << WeaverQinfo_LOCK_SHIFT)
 
-#define WeaverQinfo_HEADER_BITS (WeaverQinfo_INDEX_BITS + 1)
+#define WeaverQinfo_SWAP_LOCK (1ull << (WeaverQinfo_LOCK_SHIFT + 0))
+#define WeaverQinfo_RESIZE_LOCK  (1ull << (WeaverQinfo_LOCK_SHIFT + 1))
+
+#define WeaverQinfo_HEADER_BITS (WeaverQinfo_INDEX_BITS + WeaverQinfo_LOCK_BITS)
 
 #define WeaverQinfo_RC_SHIFT WeaverQinfo_HEADER_BITS
-#define WeaverQinfo_RC_BITS 16
-#define WeaverQinfo_RC_MASK (((1ull << WeaverQinfo_RC_BITS) - 1) << WeaverQinfo_HEADER_BITS)
+#define WeaverQinfo_RC_BITS 8
+#define WeaverQinfo_RC_MASK (((1ull << WeaverQinfo_RC_BITS) - 1) << WeaverQinfo_RC_SHIFT)
 #define WeaverQinfo_RC_ONE (1ull << WeaverQinfo_RC_SHIFT)
-
 
 #define WeaverQinfo_POS_SHIFT (WeaverQinfo_RC_BITS + WeaverQinfo_HEADER_BITS)
 #define WeaverQinfo_POS_BITS ((WeaverQinfo_BITS - WeaverQinfo_POS_SHIFT))
 #define WeaverQinfo_POS_ONE (1ull << WeaverQinfo_POS_SHIFT)
-#define WeaverQinfo_POS_MAX ((1ull << WeaverQinfo_POS_BITS))
+#define WeaverQinfo_POS_MAX ((1ull << WeaverQinfo_POS_BITS) - 1)
 #define WeaverQinfo_POS_MASK (WeaverQinfo_POS_MAX << WeaverQinfo_POS_SHIFT)
 
 typedef u64 WeaverQinfo;
 
-WeaverQinfo WeaverQinfo_index(WeaverQinfo this) {
-	return this & WeaverQinfo_INDEX_MASK;
-}
-
-WeaverQinfo WeaverQinfo_lock(WeaverQinfo this) {
-	return this & WeaverQinfo_LOCK_BIT;
-}
-
-WeaverQinfo WeaverQinfo_maskpos(WeaverQinfo this) {
-	return this & WeaverQinfo_POS_MASK;
-}
-
-WeaverQinfo WeaverQinfo_pos(WeaverQinfo this) {
-	return this >> WeaverQinfo_POS_SHIFT;
-}
-
-WeaverQinfo WeaverQinfo_maskrc(WeaverQinfo this) {
-	return this & WeaverQinfo_RC_MASK;
-}
-
-WeaverQinfo WeaverQinfo_rc(WeaverQinfo this) {
-	return (this & WeaverQinfo_RC_MASK) >> WeaverQinfo_RC_SHIFT;
+usize WeaverQinfo_pos(WeaverQinfo this) {
+	return (this & WeaverQinfo_POS_MASK) >> WeaverQinfo_POS_SHIFT;
 }
 
 void WeaverQinfo_xprint(WeaverQinfo this, OutStream os) {
+	/*/
 	PRINT(os,
 		WeaverQinfo_lock(this) ? "L" : "",
 		WeaverQinfo_index(this), ",",
 		WeaverQinfo_rc(this),",",
 		WeaverQinfo_pos(this)
 	);
+	*/
+	PRINT(os, "qinfo");
 }
 
 void WeaverQinfo_print(const WeaverQinfo *this, OutStream os) {
