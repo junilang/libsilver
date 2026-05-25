@@ -1,5 +1,5 @@
 typedef struct {
-	atomic_uint_fast32_t count;
+	_Atomic u32 count;
 } ArcState;
 
 #define Arc_BITS 2
