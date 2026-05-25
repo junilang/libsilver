@@ -27,6 +27,9 @@
 // TODO use explicit memory ordering on atomic operations
 
 #include "WeaverQueue.h"
+
+#define Weaver_MAX_THREADS ((1ull << WeaverQinfo_RC_BITS) - 1)
+
 #include "WeaverThread.h"
 #include "Weaver.h"
 

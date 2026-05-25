@@ -20,8 +20,3 @@ typedef union {
 
 #define AsyncResult_YIELD ((AsyncResult){.intent=AsyncIntent_YIELD})
 #define AsyncResult_FINISH ((AsyncResult){.intent=AsyncIntent_FINISH})
-
-#include "AsyncFuture.h"
-#include "AsyncTask.h"
-#include "AsyncRT.h"
-#include "async_helper.h"

@@ -3,6 +3,7 @@
 #endif
 
 #if !LIBSILVER_INCLUDE
+	#define LIBSILVER_INCLUDE true
 
 	#include "util.h"
 	#include "enum.h"
@@ -40,18 +41,9 @@
 	#include "Rc.h"
 	#include "Arc.h"
 
-	#include "Spinlock.h"
-
-	#include "async/Async.h"
-
 
 	#include "allocator/Malloc.c"
 
-	#include "async/DummyAsync.c"
-	#include "weaver/Weaver.c"
-
 	#include "SilverTest.c"
-
-	#define LIBSILVER_INCLUDE true
 
 #endif

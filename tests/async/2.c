@@ -127,8 +127,6 @@ int ZZentry(SilverTestContext *ctx) {
 	FPRINT(stdout, result[array_size -1],"}\n");
 	*/
 
-	FPRINT(stdout, "done\n");
-
 	Allocator_delete(Malloc, array);
 
 	Weaver_join(weaver);

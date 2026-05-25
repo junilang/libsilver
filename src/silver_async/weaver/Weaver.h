@@ -26,6 +26,12 @@ usize ZZWeaver_allocsize(u16 threads_size) {
 void Weaver_init(
 	Weaver *this, u16 threads_size, usize queue_capacity, Allocator queue_alc
 ) {
+	if (threads_size > Weaver_MAX_THREADS)
+		PANIC("max threads limit");
+
+	if (queue_capacity < 2)
+		PANIC("queue capacity must be at least 2")
+
 	this->queue_alc = queue_alc;
 	this->threads_size = threads_size;
 
