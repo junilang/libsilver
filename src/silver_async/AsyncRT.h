@@ -4,6 +4,7 @@
 
 typedef struct {
 	void (*submit)(Ptr this, const AsyncTask *tasks, usize tasks_size);
+	void (*resolve)(Ptr this, const AsyncFuture *futures, usize futures_size);
 } IAsyncRT;
 
 #if AsyncRT_PTRTAG
@@ -32,14 +33,6 @@ void AsyncRT_submit(AsyncRT this, const AsyncTask *tasks, usize tasks_size) {
 	AsyncRT_iface(this)->submit(AsyncRT_this(this), tasks, tasks_size);
 }
 
-void AsyncFuture_resolve(AsyncFuture this, AsyncRT rt) {
-	auto result = AsyncFuture_callback(this);
-	switch (result.intent) {
-		case AsyncIntent_YIELD:
-		case AsyncIntent_FINISH:
-			return;
-		default:;
-	}
-
-	AsyncRT_submit(rt, &result.next, 1);
+void AsyncRT_resolve(AsyncRT this, const AsyncFuture *futures, usize futures_size) {
+	AsyncRT_iface(this)->resolve(AsyncRT_this(this), futures, futures_size);
 }

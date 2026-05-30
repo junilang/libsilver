@@ -5,7 +5,8 @@
 #if !LIBSILVER_ASYNC_INCLUDE
 	#define LIBSILVER_ASYNC_INCLUDE true
 
-	#include "Spinlock.h"
+	#include "cpu.h"
+	#include "umtx.h"
 	#include "Async.h"
 	#include "AsyncFuture.h"
 	#include "AsyncTask.h"
@@ -13,5 +14,9 @@
 	#include "async_helper.h"
 
 	#include "weaver/Weaver.c"
+
+	#if LSP
+		#include "rio/Rio.c"
+	#endif
 
 #endif

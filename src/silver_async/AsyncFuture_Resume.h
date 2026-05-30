@@ -1,27 +1,15 @@
 AsyncResult ZZAsyncFuture_Resume_resolve(_Atomic u64 *sp) {
 	u64 state = AsyncFutureState_NONE;
 	if (atomic_compare_exchange_strong(sp, &state, AsyncFutureState_RESOLVED)) {
-		//FPRINT_ATOMIC(stderr, __func__,": ",(Ptr)sp," resolve\n");
 		return AsyncResult_YIELD;
 	}
 
-	//FPRINT_ATOMIC(stderr, __func__,": ",(Ptr)sp," resume\n");
 	return (AsyncResult){.next.value = (Ptr)state};
 }
 
 bool ZZAsyncFuture_Resume_set(_Atomic u64 *sp, AsyncTask task) {
 	u64 state = AsyncFutureState_NONE;
-	if (atomic_compare_exchange_strong(sp, &state, (u64)task.value)) {
-
-		//FPRINT_ATOMIC(stderr, __func__,": ",(Ptr)sp," set\n");
-
-		return true;
-	} else {
-
-		//FPRINT_ATOMIC(stderr, __func__,": ",(Ptr)sp," already resolved\n");
-		return false;
-	}
-
+	return atomic_compare_exchange_strong(sp, &state, (u64)task.value);
 }
 
 typedef struct {

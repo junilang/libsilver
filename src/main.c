@@ -1,5 +1,6 @@
 #include "silver/_include.h"
 #include "silver_async/_include.h"
+#include "silver_sh/_include.h"
 
 #if BUILD_TESTING
 

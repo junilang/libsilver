@@ -11,7 +11,7 @@ typedef struct {
 	_Atomic WeaverQinfo qinfo;
 	_Atomic WeaverQinfo mqinfo;
 
-	_Atomic u32 lock;
+	_Atomic umtx lock;
 	_Atomic u32 threads_sync;
 
 	u16 threads_size;
@@ -74,4 +74,6 @@ void Weaver_destroy(Weaver *this) {
 }
 
 void Weaver_submit(Weaver *this, const AsyncTask *tasks, usize tasks_size);
+void Weaver_resolve(Weaver *this, const AsyncFuture *futures, usize futures_size);
+
 IAsyncRT_GENERATE_KNOWN(Weaver)

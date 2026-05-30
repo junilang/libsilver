@@ -14,6 +14,10 @@
 	#define Weaver_RESUME_ENQUEUE true
 #endif
 
+#ifndef Weaver_RESOLVE_BUFFER_SIZE
+	#define Weaver_RESOLVE_BUFFER_SIZE 8
+#endif
+
 #if Weaver_DEBUG
 	_Thread_local u32 t_WeaverThread_id = 0;
 
@@ -52,9 +56,7 @@ void Weaver_boot(Weaver *this) {
 	}
 
 	while (atomic_load(&this->lock) == Weaver_LOCK_JOIN) {
-		syscall(SYS_futex, &this->lock, FUTEX_WAIT,
-			Weaver_LOCK_JOIN, nullptr
-		);
+		umtx_wait(&this->lock, Weaver_LOCK_JOIN);
 	}
 
 	atomic_store(&this->lock, Weaver_LOCK_NONE);
@@ -75,7 +77,7 @@ void Weaver_wake(Weaver *this, usize n) {
 	for (; n && (it < end); it++) {
 		uint state = WeaverThreadState_IDLE;
 		if (atomic_compare_exchange_strong(&it->state, &state, WeaverThreadState_RUN)) {
-			syscall(SYS_futex, &it->state, FUTEX_WAKE, INT_MAX);
+			umtx_wake(&it->state, UMTX_WAKE_ALL);
 			n--;
 		}
 	}
@@ -106,9 +108,7 @@ void Weaver_join(Weaver *this) {
 	}
 
 	while (atomic_load(&this->lock) == Weaver_LOCK_JOIN) {
-		syscall(SYS_futex, &this->lock, FUTEX_WAIT,
-			Weaver_LOCK_JOIN, nullptr
-		);
+		umtx_wait(&this->lock, Weaver_LOCK_JOIN);
 	}
 
 	down:;
@@ -125,15 +125,13 @@ void Weaver_join(Weaver *this) {
 	auto const end = it + this->threads_size;
 	for (; it < end; it++) {
 		if (atomic_exchange(&it->state, WeaverThreadState_DOWN) == WeaverThreadState_IDLE) {
-			syscall(SYS_futex, &it->state, FUTEX_WAKE, INT_MAX);
+			umtx_wake(&it->state, UMTX_WAKE_ALL);
 		}
 	}
 
 	// wait for all threads to shut down
 	while (atomic_load(&this->lock) == Weaver_LOCK_DOWN) {
-		syscall(SYS_futex, &this->lock, FUTEX_WAIT,
-			Weaver_LOCK_DOWN, nullptr
-		);
+		umtx_wait(&this->lock, Weaver_LOCK_DOWN);
 	}
 
 	// join threads using pthreads interface
@@ -166,13 +164,13 @@ bool Weaver_swap(Weaver *this, WeaverQinfo expected_index) {
 
 	// wait until other threads release references
 	while (mqinfo & (WeaverQinfo_RC_MASK | WeaverQinfo_RESIZE_LOCK)) {
-		Spinlock_PAUSE;
+		CPU_PAUSE;
 		mqinfo = atomic_load(&this->mqinfo);
 	}
 
 	// qinfo doesn't use the resize lock
 	while (qinfo & WeaverQinfo_RC_MASK) {
-		Spinlock_PAUSE;
+		CPU_PAUSE;
 		qinfo = atomic_load(&this->qinfo);
 	}
 
@@ -215,7 +213,7 @@ void Weaver_submit(Weaver *this, const AsyncTask *tasks, usize tasks_size) {
 
 		// wait until swap completes
 		while (!((mqinfo ^ mqinfo_0) & WeaverQinfo_INDEX_MASK)) {
-			Spinlock_PAUSE;
+			CPU_PAUSE;
 			mqinfo = atomic_load(&this->mqinfo);
 		}
 
@@ -241,7 +239,7 @@ void Weaver_submit(Weaver *this, const AsyncTask *tasks, usize tasks_size) {
 
 		// wait for swap to complete and reacquire reference
 		while (mqinfo & WeaverQinfo_RESIZE_LOCK) {
-			Spinlock_PAUSE;
+			CPU_PAUSE;
 			mqinfo = atomic_load(&this->mqinfo);
 		}
 
@@ -265,7 +263,7 @@ void Weaver_submit(Weaver *this, const AsyncTask *tasks, usize tasks_size) {
 
 		// wait for other threads to release their references
 		while ((mqinfo & WeaverQinfo_RC_MASK) != WeaverQinfo_RC_ONE) {
-			Spinlock_PAUSE;
+			CPU_PAUSE;
 			mqinfo = atomic_load(&this->mqinfo);
 		}
 
@@ -337,6 +335,37 @@ void Weaver_submit(Weaver *this, const AsyncTask *tasks, usize tasks_size) {
 	// perform swap
 	qinfo = atomic_fetch_sub(&this->qinfo, WeaverQinfo_RC_ONE);
 	Weaver_swap(this, qinfo);
+}
+
+void Weaver_resolve(Weaver *this, const AsyncFuture *it, usize size) {
+	constexpr usize bs = Weaver_RESOLVE_BUFFER_SIZE;
+
+	AsyncTask tasks[bs];
+	usize tasks_size = 0;
+
+	const AsyncFuture *end = it + size;
+
+	for (; it < end; it++) {
+		AsyncResult result = AsyncFuture_callback(*it);
+		switch (result.intent) {
+			case AsyncIntent_YIELD:
+			case AsyncIntent_FINISH:
+				continue;
+			default:;
+		}
+
+		tasks[tasks_size] = result.next;
+		tasks_size++;
+
+		if (tasks_size == bs) {
+			Weaver_submit(this, tasks, tasks_size);
+			tasks_size = 0;
+		}
+	}
+
+	if (tasks_size) {
+		Weaver_submit(this, tasks, tasks_size);
+	}
 }
 
 #include "WeaverThread.c"

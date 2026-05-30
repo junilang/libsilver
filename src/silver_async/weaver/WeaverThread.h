@@ -8,8 +8,7 @@ typedef enum : u8 {
 typedef struct {
 	pthread_t thread;
 	union {
-		// also used as futex
-		_Atomic u32 state;
+		_Atomic umtx state;
 		AsyncTask orphaned_task;
 	};
 } WeaverThread;

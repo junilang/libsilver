@@ -48,21 +48,3 @@ typedef u64 WeaverQinfo;
 usize WeaverQinfo_pos(WeaverQinfo this) {
 	return (this & WeaverQinfo_POS_MASK) >> WeaverQinfo_POS_SHIFT;
 }
-
-void WeaverQinfo_xprint(WeaverQinfo this, OutStream os) {
-	/*/
-	PRINT(os,
-		WeaverQinfo_lock(this) ? "L" : "",
-		WeaverQinfo_index(this), ",",
-		WeaverQinfo_rc(this),",",
-		WeaverQinfo_pos(this)
-	);
-	*/
-	PRINT(os, "qinfo");
-}
-
-void WeaverQinfo_print(const WeaverQinfo *this, OutStream os) {
-	WeaverQinfo_xprint(*this, os);
-}
-
-IPrintable_GENERATE(WeaverQinfo, const WeaverQinfo*)

@@ -2,23 +2,15 @@ void ZZAsyncFuture_Wake_resolve(_Atomic u32 *sp) {
 	u32 state = AsyncFutureState_WAITING;
 	if (atomic_compare_exchange_strong(sp, &state, AsyncFutureState_RESOLVED)) {
 		syscall(SYS_futex, sp, FUTEX_WAKE, INT_MAX);
-		//FPRINT_ATOMIC(stderr, __func__, " wake\n");
-	} else {
-		//FPRINT_ATOMIC(stderr, __func__, " resolved first\n");
 	}
 }
 
 void ZZAsyncFuture_Wake_wait(_Atomic u32 *sp) {
 	u32 state = AsyncFutureState_NONE;
 	if (atomic_compare_exchange_strong(sp, &state, AsyncFutureState_WAITING)) {
-		//FPRINT_ATOMIC(stderr, __func__, " waiting\n");
 		do {
 			syscall(SYS_futex, sp, FUTEX_WAIT, AsyncFutureState_WAITING, nullptr);
 		} while (atomic_load(sp) == AsyncFutureState_WAITING);
-
-		//FPRINT_ATOMIC(stderr, __func__, " woke up\n");
-	} else {
-		//FPRINT_ATOMIC(stderr, __func__, " resolved\n");
 	}
 }
 

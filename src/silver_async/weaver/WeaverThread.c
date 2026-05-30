@@ -131,7 +131,7 @@ Ptr WeaverThread_main(Ptr vthis) {
 
 			// wait for swap to complete
 			while (!((qinfo ^ qinfo_0) & WeaverQinfo_INDEX_MASK)) {
-				Spinlock_PAUSE;
+				CPU_PAUSE;
 				qinfo = atomic_load(&rt->qinfo);
 			}
 
@@ -161,7 +161,7 @@ Ptr WeaverThread_main(Ptr vthis) {
 				WeaverQinfo qinfo_0 = qinfo;
 				// wait for other thread to complete swap
 				do {
-					Spinlock_PAUSE;
+					CPU_PAUSE;
 					qinfo = atomic_load(&rt->qinfo);
 				} while (!((qinfo ^ qinfo_0) & WeaverQinfo_INDEX_MASK));
 			}
@@ -195,14 +195,12 @@ Ptr WeaverThread_main(Ptr vthis) {
 		if (atomic_fetch_sub(&rt->threads_sync, 1) == 1) {
 			uint lock = Weaver_LOCK_JOIN;
 			if (atomic_compare_exchange_strong(&rt->lock, &lock, Weaver_LOCK_NONE)) {
-				syscall(SYS_futex, &rt->lock, FUTEX_WAKE, INT_MAX);
+				umtx_wake(&rt->lock, UMTX_WAKE_ALL);
 			}
 		}
 
 		while (atomic_load(&this->state) == WeaverThreadState_IDLE) {
-			syscall(SYS_futex, &this->state, FUTEX_WAIT,
-				WeaverThreadState_IDLE, nullptr
-			);
+			umtx_wait(&this->state, WeaverThreadState_IDLE);
 		}
 
 		atomic_fetch_add(&rt->threads_sync, 1);
@@ -216,7 +214,7 @@ Ptr WeaverThread_main(Ptr vthis) {
 		if (atomic_load(&rt->threads_sync) == rt->threads_size) {
 			uint lock = Weaver_LOCK_DOWN;
 			if (atomic_compare_exchange_strong(&rt->lock, &lock, Weaver_LOCK_NONE)) {
-				syscall(SYS_futex, &rt->lock, FUTEX_WAKE, INT_MAX);
+				umtx_wake(&rt->lock, UMTX_WAKE_ALL);
 			}
 		}
 

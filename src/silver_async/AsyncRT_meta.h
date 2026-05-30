@@ -1,11 +1,15 @@
 #define IAsyncRT_GENERATE_INTERFACE(N) \
 	const IAsyncRT IAsyncRT_##N = { \
 		.submit = &IAsyncRT_##N##_submit, \
+		.resolve = &IAsyncRT_##N##_resolve, \
 	};
 
 #define IAsyncRT_GENERATE_METHODS(N) \
 	extern void IAsyncRT_##N##_submit(Ptr this, const AsyncTask *tasks, usize tasks_size) { \
 		N##_submit(this, tasks, tasks_size); \
+	} \
+	extern void IAsyncRT_##N##_resolve(Ptr this, const AsyncFuture *futures, usize futures_size) { \
+		N##_resolve(this, futures, futures_size); \
 	}
 
 #if AsyncRT_PTRTAG
