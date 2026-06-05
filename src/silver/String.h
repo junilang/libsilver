@@ -28,6 +28,10 @@ uhash StringSpan_hash(StringSpan this, uhash base) {
 	return HASH_FN(this.begin, (usize)(this.end - this.begin), base);
 }
 
+usize StringSpan_size(StringSpan this) {
+	return (usize)(this.end - this.begin);
+}
+
 #define USTR(str) (const ubyte*)(str), __builtin_strlen(str)
 #define STRING(str) ((String){.data=(const ubyte*)(str), .size=__builtin_strlen(str)})
 

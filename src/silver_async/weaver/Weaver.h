@@ -1,10 +1,12 @@
-enum {
+enum : umtx {
 	Weaver_LOCK_NONE,
 	Weaver_LOCK_JOIN,
 	Weaver_LOCK_DOWN
 };
 
 typedef struct {
+	AsyncRT iface;
+
 	Allocator queue_alc;
 	WeaverQueue *queue[2];
 
@@ -23,6 +25,12 @@ usize ZZWeaver_allocsize(u16 threads_size) {
 	return offsetof(Weaver, threads) + (sizeof(WeaverThread) * threads_size);
 }
 
+AsyncRT *Weaver_upcast(Weaver *this) {
+	return &this->iface;
+}
+
+void Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size);
+
 void Weaver_init(
 	Weaver *this, u16 threads_size, usize queue_capacity, Allocator queue_alc
 ) {
@@ -31,6 +39,10 @@ void Weaver_init(
 
 	if (queue_capacity < 2)
 		PANIC("queue capacity must be at least 2")
+
+
+	// setup interface
+	this->iface.submit = &Weaver_submit;
 
 	this->queue_alc = queue_alc;
 	this->threads_size = threads_size;
@@ -49,10 +61,11 @@ void Weaver_init(
 	this->queue[0] = qs[0];
 	this->queue[1] = qs[1];
 
-	atomic_init(&this->qinfo,  (WeaverQinfo)0);
-	atomic_init(&this->mqinfo, (WeaverQinfo)1);
-	atomic_init(&this->threads_sync, 0);
-	atomic_init(&this->lock, Weaver_LOCK_NONE);
+	this->qinfo = 0;
+	this->mqinfo = 1;
+
+	this->threads_sync = 0;
+	this->lock = Weaver_LOCK_NONE;
 }
 
 void Weaver_deinit(Weaver *this) {
@@ -72,8 +85,3 @@ void Weaver_destroy(Weaver *this) {
 	Weaver_deinit(this);
 	Allocator_delete(alc, this);
 }
-
-void Weaver_submit(Weaver *this, const AsyncTask *tasks, usize tasks_size);
-void Weaver_resolve(Weaver *this, const AsyncFuture *futures, usize futures_size);
-
-IAsyncRT_GENERATE_KNOWN(Weaver)

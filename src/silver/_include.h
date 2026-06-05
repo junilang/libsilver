@@ -26,12 +26,12 @@
 
 	#include "printable/Printable.h"
 
+	#include "allocator/Allocator.h"
+
 	#include "String.h"
 	#include "VString.h"
 
 	#include "print.h"
-
-	#include "allocator/Allocator.h"
 
 	#include "Vec.h"
 	#include "Vec32.h"

@@ -1,8 +1,11 @@
-typedef struct {
-	_Atomic u32 count;
-} ArcState;
+#define Arc_TAG_BITS 2
 
-#define Arc_BITS 2
+typedef union {
+	alignas(1ull << Arc_TAG_BITS) char align__;
+	struct {
+		_Atomic u32 count;
+	};
+} ArcState;
 
 typedef enum : u8 {
 	ArcClass_OWNER,
@@ -10,33 +13,28 @@ typedef enum : u8 {
 	ArcClass_CONST
 } ArcClass;
 
-#define Arc_ALIGN (\
-	(1 << Arc_BITS) > alignof(ArcState) ? \
-	(1 << Arc_BITS) : alignof(ArcState) \
-)
+typedef struct {
+	Ptr value;
+} Arc;
 
-#define Arc_MEMBER alignas(Arc_ALIGN) ArcState
-
-typedef UNIQUEPTR(Arc);
-
-Arc ZZArc_setclass(ArcState *state, ArcClass class) {
-	return lptrtag(state, Arc_BITS, class);
+Arc Arc_upcast(ArcState *state, ArcClass class) {
+	return (Arc){ .value = lptrtag(state, Arc_TAG_BITS, class) };
 }
 
-#define Arc_CONST ZZArc_setclass(nullptr, ArcClass_CONST)
+#define Arc_CONST Arc_upcast(nullptr, ArcClass_CONST);
 
 ArcState *Arc_state(Arc rc) {
-	return lptrstrip(rc, Arc_BITS);
+	return lptrstrip(rc.value, Arc_TAG_BITS);
 }
 
 ArcClass Arc_class(Arc rc) {
-	return (ArcClass)lptrread(rc, Arc_BITS);
+	return (ArcClass)lptrread(rc.value, Arc_TAG_BITS);
 }
 
 Arc Arc_init(ArcState *state) {
 	atomic_init(&state->count, 1);
 	state->count = 1;
-	return ZZArc_setclass(state, ArcClass_OWNER);
+	return Arc_upcast(state, ArcClass_OWNER);
 }
 
 Arc Arc_create(Allocator alc) {
@@ -52,7 +50,9 @@ bool Arc_release(Arc rc) {
 		case ArcClass_OWNER:
 			ArcState *state = Arc_state(rc);
 			return atomic_fetch_sub(&state->count, 1) == 1;
-	} UNREACHABLE;
+	}
+
+	UNREACHABLE;
 }
 
 bool Arc_destroy(Arc rc, Allocator alc) {
@@ -67,7 +67,9 @@ bool Arc_destroy(Arc rc, Allocator alc) {
 
 			Allocator_delete(alc, state);
 			return true;
-	} UNREACHABLE;
+	}
+
+	UNREACHABLE;
 }
 
 Arc Arc_copy(Arc rc) {
@@ -78,8 +80,10 @@ Arc Arc_copy(Arc rc) {
 		case ArcClass_OWNER:
 			ArcState *state = Arc_state(rc);
 			atomic_fetch_add(&state->count, 1);
-			return ZZArc_setclass(state, ArcClass_OWNER);
-	} UNREACHABLE;
+			return Arc_upcast(state, ArcClass_OWNER);
+	}
+
+	UNREACHABLE;
 }
 
 Arc Arc_weak(Arc rc) {
@@ -88,8 +92,10 @@ Arc Arc_weak(Arc rc) {
 		case ArcClass_WEAK:
 			return rc;
 		case ArcClass_OWNER:
-			return ZZArc_setclass(Arc_state(rc), ArcClass_WEAK);
-	} UNREACHABLE;
+			return Arc_upcast(Arc_state(rc), ArcClass_WEAK);
+	}
+
+	UNREACHABLE;
 }
 
 Arc Arc_const(Arc rc) {
@@ -98,8 +104,10 @@ Arc Arc_const(Arc rc) {
 		case ArcClass_WEAK:
 			return rc;
 		case ArcClass_OWNER:
-			return ZZArc_setclass(Arc_state(rc), ArcClass_WEAK);
-	} UNREACHABLE;
+			return Arc_upcast(Arc_state(rc), ArcClass_WEAK);
+	}
+
+	UNREACHABLE;
 }
 
 bool Arc_isconst(Arc rc) { return Arc_class(rc) == ArcClass_CONST; }

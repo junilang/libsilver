@@ -5,8 +5,11 @@ typedef struct {
 } WeaverQueue;
 
 usize ZZWeaverQueue_allocsize(usize capacity) {
-	// TODO add unsafe version
-	return usize_pflx(offsetof(WeaverQueue, tasks), sizeof(AsyncTask), capacity);
+	#if Weaver_SAFE
+		return usize_pflx(offsetof(WeaverQueue, tasks), sizeof(AsyncTask), capacity);
+	#else
+		return offsetof(WeaverQueue, tasks) + sizeof(AsyncTask) * capacity;
+	#endif
 }
 
 usize WeaverQueue_nextcapacity(usize capacity, usize target) {

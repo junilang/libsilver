@@ -1,69 +1,26 @@
 AsyncTask WeaverThread_runtask(
 	WeaverThread const *this, Weaver *const rt, AsyncTask task
 ) {
-	auto const task_data = AsyncTask_data(task);
+	AsyncResult result;
+	AsyncIntent intent = AsyncTask_call(task, (AsyncRT*)rt, &result);
 
-	//Weaver_DBG("task=",(Ptr)task_data);
-
-	auto result = task_data->entry(Weaver_upcast(rt), task);
-
-	switch (result.intent) {
-		case AsyncIntent_YIELD: return AsyncTask_NULL;
-		case AsyncIntent_FINISH: goto Bfinish;
-		default: goto Bnext;
-	}
-
-	if (0) Bfinish: {
-		auto const metadata = AsyncTask_metadata(task);
-
-		if (metadata & FLAG(AsyncTaskFlag, RESUMING)) {
-			task = task_data->resume;
-
-			#if Weaver_SAFE
-				if (AsyncTask_isnull(task)) return AsyncTask_NULL;
+	switch (intent) {
+		case AsyncIntent_CALL:
+			#if Weaver_CALL_IMMEDIATE
+				return result.task;
 			#endif
 
-			goto resume;
-		} else {
-			auto future = task_data->future;
-			if (AsyncFuture_isnull(future)) return AsyncTask_NULL;
+		case AsyncIntent_RESUME:
+			#if Weaver_RESUME_IMMEDIATE
+				return result.task;
+			#endif
 
-			result = AsyncFuture_callback(future);
-			switch (result.intent) {
-				case AsyncIntent_YIELD:
-				case AsyncIntent_FINISH:
-					return AsyncTask_NULL;
+		case AsyncIntent_SUSPEND:
+			Weaver_submit(rt, &result.task, 1);
+			FALLTHROUGH;
 
-				default:;
-			}
-
-			task = result.next;
-			goto resume;
-		}
-	}
-
-	if (0) resume: {
-		if (
-			Weaver_RESUME_ENQUEUE
-			|| (AsyncTask_metadata(task) & FLAG(AsyncTaskFlag, SUSPEND))
-		) {
-			Weaver_submit(rt, &task, 1);
+		case AsyncIntent_YIELD:
 			return AsyncTask_NULL;
-		} else {
-			return task;
-		}
-	}
-
-	if (0) Bnext: {
-		if (
-			Weaver_CALL_ENQUEUE ||
-			(AsyncTask_metadata(result.next) & FLAG(AsyncTaskFlag, SUSPEND))
-		) {
-			Weaver_submit(rt, &result.next, 1);
-			return AsyncTask_NULL;
-		} else {
-			return result.next;
-		}
 	}
 
 	UNREACHABLE;
@@ -74,9 +31,9 @@ Ptr WeaverThread_main(Ptr vthis) {
 	Weaver *rt;
 	AsyncTask pending_task = AsyncTask_NULL;
 
-	uint state = atomic_exchange(&this->state, WeaverThreadState_IDLE);
+	uint state = atomic_exchange_explicit(&this->state, WeaverThread_IDLE, memory_order_acquire);
 	#if Weaver_SAFE
-		if (state < WeaverThreadState_BOOT)
+		if (state < WeaverThread_BOOT)
 			PANIC("invalid boot state");
 	#endif
 
@@ -87,21 +44,22 @@ Ptr WeaverThread_main(Ptr vthis) {
 	// calculate pointer to runtime based on our thread id
 	rt = (Weaver*)((ubyte*)this - (
 		offsetof(Weaver, threads) +
-		(state - WeaverThreadState_BOOT) * sizeof(WeaverThread)
+		(state - WeaverThread_BOOT) * sizeof(WeaverThread)
 	));
 
 	goto idle; // boot sequence complete
 
 	load_state:;
-	state = atomic_load(&this->state);
+	state = atomic_load_explicit(&this->state, memory_order_acquire);
 
 	dispatch_state:;
 	switch (state) {
-		default: UNREACHABLE;
-		case WeaverThreadState_DOWN: goto Bdown;
-		case WeaverThreadState_IDLE: goto Bidle;
-		case WeaverThreadState_RUN: goto Brun;
+		case WeaverThread_DOWN: goto Bdown;
+		case WeaverThread_IDLE: goto Bidle;
+		case WeaverThread_RUN: goto Brun;
 	}
+
+	UNREACHABLE;
 
 	if (0) Brun: {
 		if (AsyncTask_isnull(pending_task)) goto fetch_task;
@@ -112,15 +70,18 @@ Ptr WeaverThread_main(Ptr vthis) {
 
 	if (0) fetch_task: {
 		// acquire read reference
-		WeaverQinfo qinfo = atomic_fetch_add(&rt->qinfo, WeaverQinfo_RC_ONE);
+		WeaverQinfo qinfo = atomic_fetch_add_explicit(
+			&rt->qinfo, WeaverQinfo_RC_ONE, memory_order_acquire
+		);
 
 		if (qinfo & WeaverQinfo_SWAP_LOCK) {
 			WeaverQinfo qinfo_0 = qinfo;
 			// a swap is being performed by another thread
 			while (true) {
 				if (
-					atomic_compare_exchange_strong(
-						&rt->qinfo, &qinfo, qinfo - WeaverQinfo_RC_ONE
+					atomic_compare_exchange_weak_explicit(
+						&rt->qinfo, &qinfo, qinfo - WeaverQinfo_RC_ONE,
+						memory_order_acquire, memory_order_relaxed
 					)
 				)
 					break;
@@ -131,15 +92,15 @@ Ptr WeaverThread_main(Ptr vthis) {
 
 			// wait for swap to complete
 			while (!((qinfo ^ qinfo_0) & WeaverQinfo_INDEX_MASK)) {
-				CPU_PAUSE;
-				qinfo = atomic_load(&rt->qinfo);
+				CPU_YIELD;
+				qinfo = atomic_load_explicit(&rt->qinfo, memory_order_acquire);
 			}
 
 			goto load_state;
 		}
 
 		// we have a valid reference and can read a task from the queue
-		qinfo = atomic_fetch_add(&rt->qinfo, WeaverQinfo_POS_ONE);
+		qinfo = atomic_fetch_add_explicit(&rt->qinfo, WeaverQinfo_POS_ONE, memory_order_acquire);
 
 		const usize pos = WeaverQinfo_pos(qinfo);
 		const WeaverQueue *queue = rt->queue[qinfo & WeaverQinfo_INDEX_BIT];
@@ -147,22 +108,22 @@ Ptr WeaverThread_main(Ptr vthis) {
 		// check if queue is empty
 		if (pos < queue->size) {
 			pending_task = queue->tasks[pos];
-			atomic_fetch_sub(&rt->qinfo, WeaverQinfo_RC_ONE);
+			atomic_fetch_sub_explicit(&rt->qinfo, WeaverQinfo_RC_ONE, memory_order_relaxed);
 			goto load_state;
 		}
 
 		// queue is empty, try to swap
 		// release our reference
-		qinfo = atomic_fetch_sub(&rt->qinfo, WeaverQinfo_RC_ONE);
+		qinfo = atomic_fetch_sub_explicit(&rt->qinfo, WeaverQinfo_RC_ONE, memory_order_acq_rel);
 
 		// try to swap if mqueue is not empty
-		if (atomic_load(&rt->mqinfo) & WeaverQinfo_POS_MASK) {
+		if (atomic_load_explicit(&rt->mqinfo, memory_order_acquire) & WeaverQinfo_POS_MASK) {
 			if (!Weaver_swap(rt, qinfo)) {
 				WeaverQinfo qinfo_0 = qinfo;
 				// wait for other thread to complete swap
 				do {
-					CPU_PAUSE;
-					qinfo = atomic_load(&rt->qinfo);
+					CPU_YIELD;
+					qinfo = atomic_load_explicit(&rt->qinfo, memory_order_acquire);
 				} while (!((qinfo ^ qinfo_0) & WeaverQinfo_INDEX_MASK));
 			}
 
@@ -172,8 +133,9 @@ Ptr WeaverThread_main(Ptr vthis) {
 		// else if mqueue is empty try going idle
 
 		if (
-			atomic_compare_exchange_strong(
-				&this->state, &state, WeaverThreadState_IDLE
+			atomic_compare_exchange_strong_explicit(
+				&this->state, &state, WeaverThread_IDLE,
+				memory_order_acq_rel, memory_order_acquire
 			)
 		)
 			goto idle;
@@ -192,18 +154,28 @@ Ptr WeaverThread_main(Ptr vthis) {
 
 		idle:;
 
-		if (atomic_fetch_sub(&rt->threads_sync, 1) == 1) {
+		if (atomic_fetch_sub_explicit(&rt->threads_sync, 1, memory_order_acq_rel) == 1) {
 			uint lock = Weaver_LOCK_JOIN;
-			if (atomic_compare_exchange_strong(&rt->lock, &lock, Weaver_LOCK_NONE)) {
-				umtx_wake(&rt->lock, UMTX_WAKE_ALL);
+			if (
+				atomic_compare_exchange_strong_explicit(
+					&rt->lock, &lock, Weaver_LOCK_NONE,
+					memory_order_acq_rel, memory_order_acquire
+				)
+			) {
+				umtx_wake_all(&rt->lock);
 			}
 		}
 
-		while (atomic_load(&this->state) == WeaverThreadState_IDLE) {
-			umtx_wait(&this->state, WeaverThreadState_IDLE);
-		}
+		do {
+			switch (umtx_wait(&this->state, WeaverThread_IDLE)) {
+				case umtxResult_MISMATCH:
+					goto idle_mismatch;
+				default:;
+			}
+		} while (atomic_load_explicit(&this->state, memory_order_acquire) == WeaverThread_IDLE);
 
-		atomic_fetch_add(&rt->threads_sync, 1);
+		idle_mismatch:;
+		atomic_fetch_add_explicit(&rt->threads_sync, 1, memory_order_acq_rel);
 
 		goto load_state;
 	}
@@ -211,10 +183,15 @@ Ptr WeaverThread_main(Ptr vthis) {
 	if (0) Bdown: {
 		this->orphaned_task = pending_task;
 
-		if (atomic_load(&rt->threads_sync) == rt->threads_size) {
+		if (atomic_load_explicit(&rt->threads_sync, memory_order_acquire) == rt->threads_size) {
 			uint lock = Weaver_LOCK_DOWN;
-			if (atomic_compare_exchange_strong(&rt->lock, &lock, Weaver_LOCK_NONE)) {
-				umtx_wake(&rt->lock, UMTX_WAKE_ALL);
+			if (
+				atomic_compare_exchange_strong_explicit(
+					&rt->lock, &lock, Weaver_LOCK_NONE,
+					memory_order_acq_rel, memory_order_relaxed
+				)
+			) {
+				umtx_wake_all(&rt->lock);
 			}
 		}
 

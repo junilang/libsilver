@@ -1,22 +1,9 @@
-typedef STRUCTDECL(AsyncRT);
+typedef STRUCTDECL(AsyncTask);
+typedef STRUCTDECL(AsyncResult);
 
-typedef struct {
-	Ptr value;
-} AsyncTask;
-
-typedef struct {
-	Ptr value;
-} AsyncFuture;
-
-typedef enum : usize {
+typedef enum : u8 {
 	AsyncIntent_YIELD,
-	AsyncIntent_FINISH
+	AsyncIntent_CALL,
+	AsyncIntent_RESUME,
+	AsyncIntent_SUSPEND
 } AsyncIntent;
-
-typedef union {
-	AsyncTask next;
-	AsyncIntent intent;
-} AsyncResult;
-
-#define AsyncResult_YIELD ((AsyncResult){.intent=AsyncIntent_YIELD})
-#define AsyncResult_FINISH ((AsyncResult){.intent=AsyncIntent_FINISH})

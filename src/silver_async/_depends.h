@@ -5,6 +5,7 @@
 
 	#ifdef __linux__
 		#include <unistd.h>
+		#include <errno.h>
 		#include <pthread.h>
 		#include <sys/syscall.h>
 		#include <linux/futex.h>
@@ -12,7 +13,7 @@
 		#include <liburing.h>
 
 	#else
-		#error "silver_async only supports Linux"
+		#error "unsupported platform"
 
 	#endif
 

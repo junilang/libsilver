@@ -5,107 +5,76 @@
 typedef STRUCTDECL(AsyncTaskData);
 
 #if AsyncTask_PTRTAG
-	#define AsyncTaskMetadata_BITS PTRTAG_BITS
-	#define AsyncTaskMetadata_MAX PTRTAG_MAX
+	typedef utag AsyncTaskState;
 
-	typedef utag AsyncTaskMetadata;
+	#define AsyncTaskState_BITS PTRTAG_BITS
+	#define AsyncTaskState_MAX PTRTAG_MAX
 
-	AsyncTaskMetadata AsyncTask_metadata(AsyncTask this) {
-		return ptrread(this.value);
-	}
+#else
+	typedef u64 AsyncTaskState;
 
-	AsyncTaskData *AsyncTask_data(AsyncTask this) {
+	#define AsyncTaskState_BITS 64
+	#define AsyncTaskState_MAX UINT64_MAX
+
+#endif
+
+typedef AsyncIntent (*AsyncFn)(
+	AsyncRT *rt, Ptr data, AsyncTaskState state, AsyncResult *result
+);
+
+
+#if AsyncTask_PTRTAG
+	struct AsyncTask {
+		Ptr value;
+	};
+
+	Ptr AsyncTask_data(AsyncTask this) {
 		return ptrstrip(this.value);
 	}
 
-	AsyncTask AsyncTask_setmeta(AsyncTaskData *this, AsyncTaskMetadata metadata) {
-		return (AsyncTask){.value=ptrtag(this, metadata)};
+	AsyncTaskState AsyncTask_state(AsyncTask this) {
+		return ptrread(this.value);
+	}
+
+	AsyncTask AsyncTask_upcast(Ptr data, AsyncTaskState state) {
+		return (AsyncTask){.value=ptrtag(data, state)};
+	}
+
+	#define AsyncTask_NULL LITERAL(AsyncTask, .value=nullptr)
+
+	bool AsyncTask_isnull(AsyncTask this) {
+		return this.value == nullptr;
 	}
 
 #else
-	typedef u32 AsyncTaskMetadata;
-
-	#define AsyncTaskMetadata__BITS (sizeof(AsyncTaskMetadata) * CHAR_BIT)
-	#define AsyncTaskMetadata__MAX UINT32_MAX
-
-
-	AsyncTaskMetadata AsyncTask_metadata(AsyncTask this) {
-		return ((AsyncTaskData*)this)->metadata;
-	}
-
-	AsyncTaskData *AsyncTask_data(AsyncTask this) {
-		return this.value;
-	}
-
-	AsyncTask AsyncTask_setmeta(AsyncTaskData *this, AsyncTaskMetadata metadata) {
-		this->metadata = metadata;
-		return (AsyncTask){.value=this};
-	}
-
-#endif
-
-bool AsyncTask_isnull(AsyncTask task) {
-	return task.value == nullptr;
-}
-
-#define AsyncTask_NULL ((AsyncTask){.value=nullptr})
-
-typedef AsyncTaskMetadata AsyncTaskState;
-
-#define AsyncTaskFlag_BITS 2
-#define AsyncTaskState_BITS (AsyncTaskMetadata_BITS - AsyncTaskFlag_BITS)
-#define AsyncTaskState_MASK ((AsyncTaskMetadata)(AsyncTaskMetadata_MAX >> AsyncTaskFlag_BITS))
-
-enum {
-	AsyncTaskFlag_BIT_RESUMING = AsyncTaskState_BITS,
-	AsyncTaskFlag_BIT_SUSPEND
-};
-
-AsyncTaskState AsyncTask_state(AsyncTask this) {
-	return AsyncTask_metadata(this) & AsyncTaskState_MASK;
-}
-
-AsyncTaskMetadata AsyncTask_flags(AsyncTask this) {
-	return (AsyncTaskMetadata)(
-		AsyncTask_metadata(this) & (~AsyncTaskState_MASK)
-	);
-}
-
-typedef AsyncResult (*AsyncFn)(AsyncRT rt, AsyncTask task);
-
-struct AsyncTaskData {
-#if !AsyncTask_PTRTAG
-	AsyncTaskMetadata metadata;
-#endif
-	AsyncFn entry;
-	union {
-		AsyncFuture future;
-		AsyncTask resume;
+	struct AsyncTask {
+		AsyncTaskState state;
+		Ptr data;
 	};
-};
 
-AsyncTaskMetadata AsyncTaskMetadata_create(AsyncTaskMetadata flags, AsyncTaskState state) {
-	return flags | state;
-}
-
-void AsyncTask_xprint(AsyncTask this, OutStream os) {
-	if (AsyncTask_isnull(this)) {
-		PRINT(os, "AsyncTask_NULL");
-		return;
+	Ptr AsyncTask_data(AsyncTask this) {
+		return this.data;
 	}
 
-	auto const data = AsyncTask_data(this);
-
-	PRINT(os, "AsyncTask(",(Ptr)data,", ");
-	if (AsyncTask_flags(this) & FLAG(AsyncTaskFlag, RESUMING)) {
-		PRINT(os,"R, ");
+	AsyncTaskState AsyncTask_state(AsyncTask this) {
+		return this.state;
 	}
 
-	PRINT(os, "S",AsyncTask_state(this),")");
-}
+	AsyncTask AsyncTask_upcast(Ptr data, AsyncTaskState state) {
+		return (AsyncTask){.state=state,.data=data};
+	}
 
-void AsyncTask_print(const AsyncTask *this, OutStream os) {
-	AsyncTask_xprint(*this, os);
-}
+	#define AsyncTask_NULL LITERAL(AsyncTask, .data=nullptr)
 
-IPrintable_GENERATE(AsyncTask, const AsyncTask*)
+	bool AsyncTask_isnull(AsyncTask this) {
+		return this.data == nullptr;
+	}
+
+#endif
+
+AsyncIntent AsyncTask_call(AsyncTask this, AsyncRT *rt, AsyncResult *result) {
+	auto data = AsyncTask_data(this);
+	auto state = AsyncTask_state(this);
+
+	return (*(AsyncFn*)data)(rt, data, state, result);
+}

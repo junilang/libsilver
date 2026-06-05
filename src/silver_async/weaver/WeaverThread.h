@@ -1,14 +1,12 @@
-typedef enum : u8 {
-	WeaverThreadState_DOWN,
-	WeaverThreadState_IDLE,
-	WeaverThreadState_RUN,
-	WeaverThreadState_BOOT
-} WeaverThreadState;
+enum : umtx {
+	WeaverThread_DOWN,
+	WeaverThread_IDLE,
+	WeaverThread_RUN,
+	WeaverThread_BOOT
+};
 
 typedef struct {
 	pthread_t thread;
-	union {
-		_Atomic umtx state;
-		AsyncTask orphaned_task;
-	};
+	AsyncTask orphaned_task;
+	_Atomic umtx state;
 } WeaverThread;

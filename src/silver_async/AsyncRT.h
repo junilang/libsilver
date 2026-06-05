@@ -1,38 +1,22 @@
-#ifndef AsyncRT_PTRTAG
-	#define AsyncRT_PTRTAG PTRTAG
-#endif
-
 typedef struct {
 	void (*submit)(Ptr this, const AsyncTask *tasks, usize tasks_size);
-	void (*resolve)(Ptr this, const AsyncFuture *futures, usize futures_size);
-} IAsyncRT;
+	Ptr (*alloc_task)(Ptr this, usize *io_size, uint n);
+	Ptr (*alloc_task_array)(Ptr this, usize *io_sizes, uint n);
+	void (*delete_task)(Ptr this, Ptr buf);
+} AsyncRT;
 
-#if AsyncRT_PTRTAG
-	struct AsyncRT {
-		Ptr value;
-	};
-
-	enum {
-		IAsyncRT_DummyAsync_ID,
-		IAsyncRT_Weaver_ID,
-		IAsyncRT_KNOWN
-	};
-
-	INTERFACE_REGISTRY(IAsyncRT, u8, 8)
-
-	Ptr AsyncRT_this(AsyncRT this) { return ptrstrip(this.value); }
-	const IAsyncRT *AsyncRT_iface(AsyncRT this) {
-		return &IAsyncRT__registry[ptrread(this.value)];
-	}
-
-#endif
-
-#include "AsyncRT_meta.h"
-
-void AsyncRT_submit(AsyncRT this, const AsyncTask *tasks, usize tasks_size) {
-	AsyncRT_iface(this)->submit(AsyncRT_this(this), tasks, tasks_size);
+void AsyncRT_submit(AsyncRT *this, const AsyncTask *tasks, usize tasks_size) {
+	this->submit(this, tasks, tasks_size);
 }
 
-void AsyncRT_resolve(AsyncRT this, const AsyncFuture *futures, usize futures_size) {
-	AsyncRT_iface(this)->resolve(AsyncRT_this(this), futures, futures_size);
+Ptr AsyncRT_alloc_task(AsyncRT *this, usize *io_size, uint n) {
+	return this->alloc_task(this, io_size, n);
+}
+
+Ptr AsyncRT_alloc_tasks(AsyncRT *this, usize *io_sizes, uint n) {
+	return this->alloc_task_array(this, io_sizes, n);
+}
+
+void AsyncRT_delete_task(AsyncRT *this, Ptr buf) {
+	this->delete_task(this, buf);
 }

@@ -38,7 +38,10 @@ uhash HASH_Ptr(Ptr value, uhash base) {
 	u32 : HASH_u32, \
 	u64 : HASH_u64, \
 	Ptr : HASH_Ptr, \
-	String : String_hash \
+	String : String_hash, \
+	StringSpan : StringSpan_hash, \
+	SmallString : SmallString_hash, \
+	default : HASH_Ptr \
 )(value, base)
 
 #define HASH_COMBINE HASH_u64

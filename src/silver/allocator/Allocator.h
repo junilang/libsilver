@@ -7,7 +7,8 @@
 #endif
 
 typedef enum : u8 {
-	AllocatorAttr_BIT_THREADSAFE
+	AllocatorAttr_BIT_THREADSAFE,
+	AllocatorAttr_BIT_ALIGNED,
 } AllocatorAttr;
 
 typedef struct {
@@ -15,6 +16,10 @@ typedef struct {
 	Ptr (*new)(Ptr this, usize size);
 	Ptr (*resize)(Ptr this, Ptr buf, usize size);
 	void (*delete)(Ptr this, Ptr buf);
+
+	Ptr (*new_aligned)(Ptr this, usize size, ualign align);
+	Ptr (*resize_aligned)(Ptr this, Ptr buf, usize size, ualign align);
+	Ptr (*delete_aligned)(Ptr this, Ptr buf);
 } IAllocator;
 
 #if Allocator_PTRTAG

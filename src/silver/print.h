@@ -17,6 +17,10 @@ PRINT_GENERATE_PRIMITIVE(llong, long long, "%lli")
 PRINT_GENERATE_PRIMITIVE(ullong, unsigned long long, "%llu")
 PRINT_GENERATE_PRIMITIVE(ptr, void*, "%p")
 
+PRINT_GENERATE_PRIMITIVE(float, float, "%f")
+PRINT_GENERATE_PRIMITIVE(double, double, "%lf")
+PRINT_GENERATE_PRIMITIVE(ldouble, long double, "%Lf")
+
 /*
 void PRINT_byte(unsigned char value, OutStream os) {
 	static const char hex_digits[] = "0123456789ABCDEF";
@@ -61,6 +65,9 @@ void PRINT_cstring(Str cstr, OutStream os) {
 	unsigned long : PRINT_ulong, \
 	long long : PRINT_llong, \
 	unsigned long long : PRINT_ullong, \
+	float : PRINT_float, \
+	double : PRINT_double, \
+	long double : PRINT_ldouble, \
 	bool : PRINT_bool, \
 	char* : PRINT_cstring, \
 	Str : PRINT_cstring, \
