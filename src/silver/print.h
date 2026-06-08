@@ -1,92 +1,133 @@
-/*
-void PRINT_bool(bool value, OutStream os) {
-	if (value)
-		OutStream_write(os, USTR("true"));
-	else
-		OutStream_write(os, USTR("false"));
+#define PRINT(stream_, ...) { __VA_OPT__(\
+	const OutStream stream = (stream_); \
+	PrintFmt fmt = PrintFmt_NULL; \
+	PRINT_0(stream, (&fmt), __VA_ARGS__) \
+) }
+
+#define PRINT_BUFFERED(buffer_size_, stream_, ...) { __VA_OPT__( \
+	constexpr usize buffer_size = (buffer_size_); \
+	const OutStream stream = (stream_); \
+	ubyte buffer_data[buffer_size]; \
+	BufferOutStream buffer = {.buffer=buffer_data,.capacity=buffer_size}; \
+	const OutStream buffer_os = BufferOutStream_upcast(&buffer); \
+	PrintFmt fmt = PrintFmt_NULL; \
+	PRINT_0(buffer_os, (&fmt), __VA_ARGS__) \
+	OutStream_write(stream, buffer_data, buffer.size); \
+) }
+
+#define PRINT_ITEM(S, F, V) _Generic((V), \
+	PrintFmt : PRINT_setfmt, \
+	char * : PRINT_cstring, \
+	const char * : PRINT_cstring, \
+	Printable : PRINT_Printable, \
+	StaticPrintable : PRINT_StaticPrintable, \
+	FmtPrintable : PRINT_FmtPrintable, \
+	StaticFmtPrintable : PRINT_StaticFmtPrintable, \
+	String : PRINT_String, \
+	SmallString : PRINT_SmallString, \
+	StringSpan : PRINT_StringSpan, \
+	signed char : PRINT_AnyInt, \
+	signed short : PRINT_AnyInt, \
+	signed int : PRINT_AnyInt, \
+	signed long : PRINT_AnyInt, \
+	signed long long : PRINT_AnyInt, \
+	unsigned char : PRINT_AnyUint,  \
+	unsigned short : PRINT_AnyUint, \
+	unsigned int : PRINT_AnyUint, \
+	unsigned long : PRINT_AnyUint, \
+	unsigned long long : PRINT_AnyUint \
+)(S, F, (V));
+
+[[gnu::always_inline]]
+static inline void PRINT_setfmt(OutStream os, PrintFmt *fmt, PrintFmt fmt_set) {
+	*fmt = fmt_set;
 }
 
-void PRINT_char(char value, OutStream os) {
-	OutStream_write(os, (ubyte*)&value, 1);
+[[gnu::always_inline]]
+static inline void PRINT_cstring(OutStream os, PrintFmt *fmt, const char *v) {
+	String_print(STRING(v), *fmt, os);
+	*fmt = PrintFmt_NULL;
 }
 
-void PRINT_cstring(Str cstr, OutStream os) {
-	if (!cstr) {
-		OutStream_write(os, USTR("(nullstr)"));
+#define PRINT_GENERATE(T) \
+	[[gnu::always_inline]] static inline \
+	void PRINT_##T(OutStream os, PrintFmt *fmt, T v) { \
+		T##_print(v, *fmt, os); \
+		*fmt = PrintFmt_NULL; \
 	}
 
-	OutStream_write(os, (const ubyte*)cstr, __builtin_strlen(cstr));
-}
+PRINT_GENERATE(AnyInt)
+PRINT_GENERATE(AnyUint)
+PRINT_GENERATE(String)
+PRINT_GENERATE(StringSpan)
+PRINT_GENERATE(SmallString)
+PRINT_GENERATE(Printable)
+PRINT_GENERATE(StaticPrintable)
+PRINT_GENERATE(FmtPrintable)
+PRINT_GENERATE(StaticFmtPrintable)
 
-#define PRINT_ITEM(S, A) _Generic((A), \
-	char : PRINT_char, \
-	unsigned char : PRINT_uchar, \
-	short : PRINT_short, \
-	unsigned short : PRINT_ushort, \
-	int : PRINT_int, \
-	unsigned int : PRINT_uint, \
-	long : PRINT_long, \
-	unsigned long : PRINT_ulong, \
-	long long : PRINT_llong, \
-	unsigned long long : PRINT_ullong, \
-	float : PRINT_float, \
-	double : PRINT_double, \
-	long double : PRINT_ldouble, \
-	bool : PRINT_bool, \
-	char* : PRINT_cstring, \
-	Str : PRINT_cstring, \
-	Ptr : PRINT_ptr, \
-	String : String_print, \
-	StringSpan : StringSpan_print, \
-	SmallString : SmallString_print, \
-	VString : VString_print, \
-	Printable : Printable_print, \
-	default : PRINT_ptr \
-)((A), (S))
-
-*/
-
-#define PRINT_X(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(GCC_ERROR_MAX_DEPTH_REACHED)
-
-#define PRINT_1(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_2(S, __VA_ARGS__))
-#define PRINT_2(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_3(S, __VA_ARGS__))
-#define PRINT_3(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_4(S, __VA_ARGS__))
-#define PRINT_4(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_5(S, __VA_ARGS__))
-#define PRINT_5(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_6(S, __VA_ARGS__))
-#define PRINT_6(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_7(S, __VA_ARGS__))
-#define PRINT_7(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_8(S, __VA_ARGS__))
-#define PRINT_8(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_9(S, __VA_ARGS__))
-#define PRINT_9(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_10(S, __VA_ARGS__))
-#define PRINT_10(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_11(S, __VA_ARGS__))
-#define PRINT_11(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_12(S, __VA_ARGS__))
-#define PRINT_12(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_13(S, __VA_ARGS__))
-#define PRINT_13(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_14(S, __VA_ARGS__))
-#define PRINT_14(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_15(S, __VA_ARGS__))
-#define PRINT_15(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_16(S, __VA_ARGS__))
-#define PRINT_16(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_17(S, __VA_ARGS__))
-#define PRINT_17(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_18(S, __VA_ARGS__))
-#define PRINT_18(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_19(S, __VA_ARGS__))
-#define PRINT_19(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_X(S, __VA_ARGS__))
-
-#define PRINT(stream, ...) { \
-	const OutStream PRINT__stream = (stream); \
-	PRINT_1(PRINT__stream, __VA_ARGS__) \
-}
-
-#ifndef PRINT_ATOMIC_BUFFER_SIZE
-	#define PRINT_ATOMIC_BUFFER_SIZE 256
-#endif
-
-//#define FPRINT(file, ...) PRINT(FileOutStream_upcast(file), __VA_ARGS__)
-
-#define PRINT_ATOMIC_(bs, os, ...) { \
-	ubyte PRINT__buffer[bs]; \
-	BufferOutStream PRINT__os = {.buffer=PRINT__buffer,.capacity=bs}; \
-	PRINT(BufferOutStream_upcast(&PRINT__os), __VA_ARGS__); \
-	OutStream_write(os, PRINT__buffer, PRINT__os.size); \
-}
-
-//#define FPRINT_ATOMIC_(bs, file, ...) PRINT_ATOMIC_(bs, FileOutStream_upcast(file), __VA_ARGS__)
-
-#define PRINT_ATOMIC(os, ...) PRINT_ATOMIC_(PRINT_ATOMIC_BUFFER_SIZE, os, __VA_ARGS__)
-//#define FPRINT_ATOMIC(file, ...) FPRINT_ATOMIC_(PRINT_ATOMIC_BUFFER_SIZE, file, __VA_ARGS__)
+#define PRINT_0(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_1(S, F, __VA_ARGS__))
+#define PRINT_1(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_2(S, F, __VA_ARGS__))
+#define PRINT_2(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_3(S, F, __VA_ARGS__))
+#define PRINT_3(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_4(S, F, __VA_ARGS__))
+#define PRINT_4(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_5(S, F, __VA_ARGS__))
+#define PRINT_5(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_6(S, F, __VA_ARGS__))
+#define PRINT_6(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_7(S, F, __VA_ARGS__))
+#define PRINT_7(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_8(S, F, __VA_ARGS__))
+#define PRINT_8(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_9(S, F, __VA_ARGS__))
+#define PRINT_9(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_10(S, F, __VA_ARGS__))
+#define PRINT_10(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_11(S, F, __VA_ARGS__))
+#define PRINT_11(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_12(S, F, __VA_ARGS__))
+#define PRINT_12(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_13(S, F, __VA_ARGS__))
+#define PRINT_13(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_14(S, F, __VA_ARGS__))
+#define PRINT_14(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_15(S, F, __VA_ARGS__))
+#define PRINT_15(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_16(S, F, __VA_ARGS__))
+#define PRINT_16(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_17(S, F, __VA_ARGS__))
+#define PRINT_17(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_18(S, F, __VA_ARGS__))
+#define PRINT_18(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_19(S, F, __VA_ARGS__))
+#define PRINT_19(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_20(S, F, __VA_ARGS__))
+#define PRINT_20(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_21(S, F, __VA_ARGS__))
+#define PRINT_21(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_22(S, F, __VA_ARGS__))
+#define PRINT_22(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_23(S, F, __VA_ARGS__))
+#define PRINT_23(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_24(S, F, __VA_ARGS__))
+#define PRINT_24(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_25(S, F, __VA_ARGS__))
+#define PRINT_25(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_26(S, F, __VA_ARGS__))
+#define PRINT_26(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_27(S, F, __VA_ARGS__))
+#define PRINT_27(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_28(S, F, __VA_ARGS__))
+#define PRINT_28(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_29(S, F, __VA_ARGS__))
+#define PRINT_29(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_30(S, F, __VA_ARGS__))
+#define PRINT_30(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_31(S, F, __VA_ARGS__))
+#define PRINT_31(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_32(S, F, __VA_ARGS__))
+#define PRINT_32(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_33(S, F, __VA_ARGS__))
+#define PRINT_33(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_34(S, F, __VA_ARGS__))
+#define PRINT_34(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_35(S, F, __VA_ARGS__))
+#define PRINT_35(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_36(S, F, __VA_ARGS__))
+#define PRINT_36(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_37(S, F, __VA_ARGS__))
+#define PRINT_37(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_38(S, F, __VA_ARGS__))
+#define PRINT_38(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_39(S, F, __VA_ARGS__))
+#define PRINT_39(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_40(S, F, __VA_ARGS__))
+#define PRINT_40(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_41(S, F, __VA_ARGS__))
+#define PRINT_41(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_42(S, F, __VA_ARGS__))
+#define PRINT_42(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_43(S, F, __VA_ARGS__))
+#define PRINT_43(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_44(S, F, __VA_ARGS__))
+#define PRINT_44(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_45(S, F, __VA_ARGS__))
+#define PRINT_45(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_46(S, F, __VA_ARGS__))
+#define PRINT_46(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_47(S, F, __VA_ARGS__))
+#define PRINT_47(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_48(S, F, __VA_ARGS__))
+#define PRINT_48(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_49(S, F, __VA_ARGS__))
+#define PRINT_49(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_50(S, F, __VA_ARGS__))
+#define PRINT_50(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_51(S, F, __VA_ARGS__))
+#define PRINT_51(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_52(S, F, __VA_ARGS__))
+#define PRINT_52(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_53(S, F, __VA_ARGS__))
+#define PRINT_53(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_54(S, F, __VA_ARGS__))
+#define PRINT_54(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_55(S, F, __VA_ARGS__))
+#define PRINT_55(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_56(S, F, __VA_ARGS__))
+#define PRINT_56(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_57(S, F, __VA_ARGS__))
+#define PRINT_57(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_58(S, F, __VA_ARGS__))
+#define PRINT_58(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_59(S, F, __VA_ARGS__))
+#define PRINT_59(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_60(S, F, __VA_ARGS__))
+#define PRINT_60(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_61(S, F, __VA_ARGS__))
+#define PRINT_61(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_62(S, F, __VA_ARGS__))
+#define PRINT_62(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_63(S, F, __VA_ARGS__))
+#define PRINT_63(S, F, V, ...) PRINT_ITEM(S, F, (V)); __VA_OPT__(PRINT_64(S, F, __VA_ARGS__))
+#define PRINT_64(S, F, V, ...) PRINT_TOO_MANY_ITEMS

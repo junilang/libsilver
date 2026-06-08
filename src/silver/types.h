@@ -1,40 +1,40 @@
-typedef __u8 u8;
+typedef __UINT8_TYPE__ u8;
 constexpr u8 u8_max = (u8)(~0ull);
 
-typedef __u16 u16;
+typedef __UINT16_TYPE__ u16;
 constexpr u16 u16_max = (u16)(~0ull);
 
-typedef __u32 u32;
+typedef __UINT32_TYPE__ u32;
 constexpr u32 u32_max = (u32)(~0ull);
 
-typedef __u64 u64;
+typedef __UINT64_TYPE__ u64;
 constexpr u64 u64_max = (u64)(~0ull);
 
-typedef __s8 i8;
+typedef __INT8_TYPE__ i8;
 constexpr i8 i8_max = (i8)(u8_max >> 1);
 constexpr i8 i8_min = -i8_max - 1;
 
-typedef __s16 i16;
+typedef __INT16_TYPE__ i16;
 constexpr i16 i16_max = (i16)(u16_max >> 1);
 constexpr i16 i16_min = -i16_max - 1;
 
-typedef __s32 i32;
+typedef __INT32_TYPE__ i32;
 constexpr i32 i32_max = (u32)(u32_max >> 1);
 constexpr i32 i32_min =	-i32_max - 1;
 
-typedef __s64 i64;
+typedef __INT64_TYPE__ i64;
 constexpr i64 i64_max = (i64)(u64_max >> 1);
 constexpr i64 i64_min = -i64_max - 1;
 
-typedef __u8 ubyte;
+typedef unsigned char ubyte;
 constexpr ubyte ubyte_max = u8_max;
 
-typedef __s8 ibyte;
+typedef signed char ibyte;
 constexpr ibyte ibyte_max = i8_max;
 constexpr ibyte ibyte_min = i8_min;
 
-typedef __kernel_size_t usize;
-typedef __kernel_ssize_t isize;
+typedef __SIZE_TYPE__ usize;
+typedef __PTRDIFF_TYPE__ isize;
 
 static_assert(sizeof(usize) == sizeof(isize));
 

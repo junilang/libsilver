@@ -3,7 +3,7 @@ typedef struct {
 	usize size;
 } String;
 
-#define String_NULL ((String){.data=nullptr,.size=0})
+#define String_NULL LITERAL(String,.data=nullptr,.size=0)
 
 void String_print(String this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, this.data, this.size);
@@ -18,7 +18,7 @@ typedef struct {
 	const ubyte *end;
 } StringSpan;
 
-#define StringSpan_NULL ((StringSpan){.begin=nullptr,.end=nullptr})
+#define StringSpan_NULL LITERAL(StringSpan,.begin=nullptr,.end=nullptr)
 
 void StringSpan_print(StringSpan this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, this.begin, (usize)(this.end - this.begin));
@@ -33,7 +33,7 @@ usize StringSpan_size(StringSpan this) {
 }
 
 #define USTR(str) (ConstPtr)(str), (sizeof(str) - 1)
-#define STRING(str) ((String){.data=(const ubyte*)(str), .size=__builtin_strlen(str)})
+#define STRING(str) LITERAL(String,.data=(ConstPtr)(str), .size=__builtin_strlen(str))
 
 #ifndef SmallString_PTRTAG
 	#define SmallString_PTRTAG PTRTAG
@@ -72,6 +72,7 @@ usize StringSpan_size(StringSpan this) {
 
 	#define SmallString_MAX SIZE_MAX
 
+	[[deprecated("pointer tagging disabled - SmallString = String")]]
 	typedef struct {
 		const ubyte *data;
 		usize size;

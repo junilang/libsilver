@@ -1,6 +1,9 @@
 #include "silver_linux/_include.h"
 #include "silver/_include.h"
-#include "silver_main.h"
+
+#if BUILD_NOLIBC
+	#include "silver_nolibc.h"
+#endif
 
 #if BUILD_TESTING
 
@@ -23,8 +26,4 @@
 		return 0;
 	}
 
-#endif
-
-#if BUILD_NOLIBC
-	LINUX_START_ASM(128, silver_main);
 #endif

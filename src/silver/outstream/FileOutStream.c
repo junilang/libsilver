@@ -6,8 +6,8 @@
 
 	void FileOutStream_flush(int fd) {}
 
+	IOutStream_GENERATE_KNOWN(FileOutStream, int)
+
 #else
 	#error "unsupported platform"
 #endif
-
-IOutStream_GENERATE_KNOWN(FileOutStream, int)

@@ -1,10 +1,7 @@
 int ZZentry(SilverTestContext *ctx) {
-	auto result = linux_write(linux_stdout, USTR("hello world!\n"));
+	auto os = FileOutStream_upcast(linux_stdout);
 
-	if (result < -1) {
-		linux_exit((int)(-result));
-	}
+	PRINT_BUFFERED(128, os, "hello world ", -80005, "\n");
 
-
-	return SilverTest_ERROR;
+	return SilverTest_OK;
 }

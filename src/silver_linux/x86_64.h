@@ -9,14 +9,3 @@
 #define LINUX_SYSCALL_REG_RESULT 0
 
 #define LINUX_SYSCALL_CLOBBER_LIST "rcx", "r11", "memory"
-
-#define LINUX_START_ASM(stack_align, main) __asm__ ( \
-	".global _start \n"  \
-	"_start: \n" \
-	"	movq %%rsp, %%rdi \n" \
-	"	call "#main" \n" \
-	"	movq %%rax, %%rdi \n" \
-	"	movq $60, %%rax \n" \
-	"	syscall \n" \
-	: : \
-)

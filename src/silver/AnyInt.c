@@ -51,5 +51,13 @@ void AnyUint_print(AnyUint val, PrintFmt fmt, OutStream os) {
 	);
 }
 
-IPrintable_GENERATE_KNOWN(AnyInt, AnyInt)
-IPrintable_GENERATE_KNOWN(AnyUint, AnyUint)
+void AnyUintPtr_print(AnyUint *val, PrintFmt fmt, OutStream os) {
+	AnyUint_print(*val, fmt, os);
+}
+
+void AnyIntPtr_print(AnyInt *val, PrintFmt fmt, OutStream os) {
+	AnyInt_print(*val, fmt, os);
+}
+
+IPrintable_GENERATE_KNOWN(AnyIntPtr, AnyInt*)
+IPrintable_GENERATE_KNOWN(AnyUintPtr, AnyUint*)

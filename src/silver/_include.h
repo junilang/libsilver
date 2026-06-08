@@ -30,9 +30,9 @@
 	#include "outstream/FileOutStream.c"
 	#include "outstream/BufferOutStream.c"
 
-	#include "print.h"
-
 	#include "AnyInt.c"
+
+	#include "print.h"
 
 	#include "SilverTest.c"
 
