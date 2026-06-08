@@ -15,6 +15,16 @@
 	OutStream_write(stream, buffer_data, buffer.size); \
 ) }
 
+#define PRINTB PRINT_BUFFERED
+
+#define FPRINT(file, ...) \
+	PRINT(FileOutStream_upcast(file), __VA_ARGS__)
+
+#define FPRINT_BUFFERED(buffer_size, file, ...) \
+	PRINT_BUFFERED(buffer_size, FileOutStream_upcast(file), __VA_ARGS__)
+
+#define FPRINTB FPRINT_BUFFERED
+
 #define PRINT_ITEM(S, F, V) _Generic((V), \
 	PrintFmt : PRINT_setfmt, \
 	char * : PRINT_cstring, \

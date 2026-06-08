@@ -1,5 +1,5 @@
-#include "silver_linux/_include.h"
-#include "silver/_include.h"
+#include "silver_os.h"
+#include "silver.h"
 
 #if BUILD_NOLIBC
 	#include "silver_nolibc.h"

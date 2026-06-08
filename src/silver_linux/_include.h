@@ -9,10 +9,13 @@
 		#include "x86_64.h"
 
 	#else
-		#error "unsupported platform"
+		#error "unsupported cpu architecture"
 
 	#endif
 
 	#include "syscall.h"
-	#include "fcntl.h"
+	#include "process.h"
+	#include "file.h"
+	#include "futex.h"
+	#include "memory.h"
 #endif

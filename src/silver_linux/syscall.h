@@ -1,7 +1,7 @@
 #define LINUX_SYSCALL_TOO_MANY_ARGS _Pragma("GCC error \"LINUX_SYSCALL: too many arguments\"")
 
 #define LINUX_SYSCALL_SETREG_X(N, arg) \
-	register long x##N __asm__(LINUX_SYSCALL_REG_##N) = (long)(arg);
+	register uword x##N __asm__(LINUX_SYSCALL_REG_##N) = (uword)(arg);
 
 #define LINUX_SYSCALL_SETREG(...) __VA_OPT__(LINUX_SYSCALL_SETREG_0(__VA_ARGS__))
 
@@ -57,7 +57,7 @@
 
 #define LINUX_SYSCALL_GENERATE(name, id, args, ...) \
 	[[gnu::always_inline]] static inline \
-	long name args { \
+	iword name args { \
 		LINUX_SYSCALL_SETREG(id, __VA_ARGS__) \
 		__asm__ volatile ( \
 			"syscall" \
@@ -65,12 +65,12 @@
 			: LINUX_SYSCALL_INPUT(id, __VA_ARGS__) \
 			: LINUX_SYSCALL_CLOBBER_LIST \
 		); \
-		return LINUX_SYSCALL_RESULT; \
+		return (iword)LINUX_SYSCALL_RESULT; \
 	}
 
 #define LINUX_SYSCALL_GENERATE_NORETURN(name, id, args, ...) \
 	[[gnu::always_inline, noreturn]] static inline \
-	long name args { \
+	iword name args { \
 		LINUX_SYSCALL_SETREG(id, __VA_ARGS__) \
 		__asm__ volatile ( \
 			"syscall" \
@@ -80,7 +80,3 @@
 		); \
 		__builtin_trap(); \
 	}
-
-LINUX_SYSCALL_GENERATE_NORETURN(linux_exit, __NR_exit,
-	(int status), status
-)
