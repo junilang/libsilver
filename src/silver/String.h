@@ -5,12 +5,12 @@ typedef struct {
 
 #define String_NULL ((String){.data=nullptr,.size=0})
 
-void String_print(String this, OutStream os) {
+void String_print(String this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, this.data, this.size);
 }
 
 uhash String_hash(String this, uhash base) {
-	return HASH_FN(this.data, this.size, base);
+	return memhash(this.data, this.size, base);
 }
 
 typedef struct {
@@ -20,19 +20,19 @@ typedef struct {
 
 #define StringSpan_NULL ((StringSpan){.begin=nullptr,.end=nullptr})
 
-void StringSpan_print(StringSpan this, OutStream os) {
+void StringSpan_print(StringSpan this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, this.begin, (usize)(this.end - this.begin));
 }
 
 uhash StringSpan_hash(StringSpan this, uhash base) {
-	return HASH_FN(this.begin, (usize)(this.end - this.begin), base);
+	return memhash(this.begin, (usize)(this.end - this.begin), base);
 }
 
 usize StringSpan_size(StringSpan this) {
 	return (usize)(this.end - this.begin);
 }
 
-#define USTR(str) (const ubyte*)(str), __builtin_strlen(str)
+#define USTR(str) (ConstPtr)(str), (sizeof(str) - 1)
 #define STRING(str) ((String){.data=(const ubyte*)(str), .size=__builtin_strlen(str)})
 
 #ifndef SmallString_PTRTAG
@@ -93,10 +93,10 @@ usize StringSpan_size(StringSpan this) {
 
 #endif
 
-void SmallString_print(SmallString this, OutStream os) {
+void SmallString_print(SmallString this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, SmallString_data(this), SmallString_size(this));
 }
 
 uhash SmallString_hash(SmallString this, uhash base) {
-	return HASH_FN(SmallString_data(this), SmallString_size(this), base);
+	return memhash(SmallString_data(this), SmallString_size(this), base);
 }

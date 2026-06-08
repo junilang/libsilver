@@ -5,10 +5,38 @@
 #if !LIBSILVER_INCLUDE
 	#define LIBSILVER_INCLUDE true
 
+	// macro utilities
 	#include "util.h"
-	#include "enum.h"
 	#include "flag.h"
+	#include "enum.h"
+	#include "panic.h"
+	#include "interface.h"
+
+	// core features
 	#include "types.h"
+	#include "atomic_types.h"
+	#include "atomic.h"
+	#include "memory.h"
+	#include "hash.h"
+	#include "ptrtag.h"
+	#include "lptrtag.h"
+
+	#include "outstream/OutStream.h"
+
+	#include "printable/Printable.h"
+
+	#include "String.h"
+
+	#include "outstream/FileOutStream.c"
+	#include "outstream/BufferOutStream.c"
+
+	#include "print.h"
+
+	#include "AnyInt.c"
+
+	#include "SilverTest.c"
+
+	#if 0
 	#include "panic.h"
 	#include "usize.h"
 	#include "hash.h"
@@ -27,11 +55,9 @@
 	#include "printable/Printable.h"
 
 	#include "allocator/Allocator.h"
+	#include "allocator/AlignedAllocator.h"
 
-	#include "String.h"
 	#include "VString.h"
-
-	#include "print.h"
 
 	#include "Vec.h"
 	#include "Vec32.h"
@@ -44,6 +70,8 @@
 
 	#include "allocator/Malloc.c"
 
-	#include "SilverTest.c"
+	#endif
+
+	//#include "SilverTest.c"
 
 #endif

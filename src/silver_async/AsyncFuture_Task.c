@@ -21,13 +21,13 @@ AsyncFuture AsyncFuture_Task_init(AsyncFuture_Task *this) {
 	return AsyncFuture_Task_upcast(this);
 }
 
-AsyncIntent AsyncFuture_Task_resolve(AsyncFuture_Task *this, AsyncResult *result) {
+AsyncIntent AsyncFuture_Task_resolve(AsyncFuture_Task *this, AsyncTask *out_task) {
 	if (
 		atomic_exchange_explicit(
 			&this->state, AsyncFuture_TaskState_RESOLVED, memory_order_acq_rel
 		) == AsyncFuture_TaskState_SET
 	) {
-		result->task = this->task;
+		*out_task = this->task;
 		return AsyncIntent_RESUME;
 	}
 
@@ -73,7 +73,7 @@ AsyncFuture AsyncFuture_TaskCount_init(AsyncFuture_TaskCount *this, u32 count) {
 	return AsyncFuture_TaskCount_upcast(this);
 }
 
-AsyncIntent AsyncFuture_TaskCount_resolve(AsyncFuture_TaskCount *this, AsyncResult *result) {
+AsyncIntent AsyncFuture_TaskCount_resolve(AsyncFuture_TaskCount *this, AsyncTask *out_task) {
 	if (atomic_fetch_sub_explicit(&this->count, 1, memory_order_acq_rel) != 1) {
 		return AsyncIntent_YIELD;
 	}
@@ -83,7 +83,7 @@ AsyncIntent AsyncFuture_TaskCount_resolve(AsyncFuture_TaskCount *this, AsyncResu
 			&this->state, AsyncFuture_TaskState_RESOLVED, memory_order_release
 		) == AsyncFuture_TaskState_SET
 	) {
-		result->task = this->task;
+		*out_task = this->task;
 		return AsyncIntent_RESUME;
 	}
 

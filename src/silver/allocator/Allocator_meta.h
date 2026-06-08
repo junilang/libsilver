@@ -3,7 +3,7 @@
 		.attr = &IAllocator_##N##_attr, \
 		.new = &IAllocator_##N##_new, \
 		.resize = &IAllocator_##N##_resize, \
-		.delete = &IAllocator_##N##_delete \
+		.delete = &IAllocator_##N##_delete, \
 	};
 
 #define IAllocator_GENERATE_METHODS(N) \

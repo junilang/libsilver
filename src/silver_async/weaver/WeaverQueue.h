@@ -1,16 +1,13 @@
-typedef struct {
-	u64 capacity;
-	u64 size;
-	AsyncTask tasks[];
-} WeaverQueue;
-
-usize ZZWeaverQueue_allocsize(usize capacity) {
-	#if Weaver_SAFE
-		return usize_pflx(offsetof(WeaverQueue, tasks), sizeof(AsyncTask), capacity);
-	#else
-		return offsetof(WeaverQueue, tasks) + sizeof(AsyncTask) * capacity;
+typedef union {
+	#if Weaver_CACHE_ALIGN
+		alignas(Weaver_CACHE_ALIGN) char align__;
 	#endif
-}
+	struct {
+		u64 capacity;
+		u64 size;
+		AsyncTask *tasks;
+	};
+} WeaverQueue;
 
 usize WeaverQueue_nextcapacity(usize capacity, usize target) {
 	while (capacity < target) {
@@ -19,6 +16,8 @@ usize WeaverQueue_nextcapacity(usize capacity, usize target) {
 
 	return capacity;
 }
+
+typedef u64 WeaverQinfo;
 
 #define WeaverQinfo_BITS 64
 
@@ -45,8 +44,6 @@ usize WeaverQueue_nextcapacity(usize capacity, usize target) {
 #define WeaverQinfo_POS_ONE (1ull << WeaverQinfo_POS_SHIFT)
 #define WeaverQinfo_POS_MAX ((1ull << WeaverQinfo_POS_BITS) - 1)
 #define WeaverQinfo_POS_MASK (WeaverQinfo_POS_MAX << WeaverQinfo_POS_SHIFT)
-
-typedef u64 WeaverQinfo;
 
 usize WeaverQinfo_pos(WeaverQinfo this) {
 	return (this & WeaverQinfo_POS_MASK) >> WeaverQinfo_POS_SHIFT;

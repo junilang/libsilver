@@ -27,7 +27,7 @@ AsyncFuture AsyncFuture_tag(Ptr this, AsyncFutureClass class) {
 	return (AsyncFuture){.value=lptrtag(this, AsyncFutureClass__BITS, class)};
 }
 
-AsyncIntent AsyncFuture_resolve(AsyncFuture this, AsyncResult *result);
+AsyncIntent AsyncFuture_resolve(AsyncFuture this, AsyncTask *out_task);
 
 #define AsyncFuture_NULL ((AsyncFuture){.value=nullptr})
 

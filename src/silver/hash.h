@@ -1,47 +1,57 @@
 typedef u64 uhash;
+constexpr uhash uhash_max = u64_max;
+constexpr u8 uhash_width = 64;
+
 
 #define FNV1a_BASE 0xcbf29ce484222325ULL
 #define FNV1a_PRIME 0x100000001b3ULL
 
-uhash FNV1a(const ubyte *bytes, usize size, uhash base) {
+uhash memhash(ConstPtr data, usize size, uhash base) {
+	const ubyte *bytes = data;
 	for (usize i = 0; i < size; i++) {
 		base = (base ^ bytes[i]) * FNV1a_PRIME;
 	}
 	return base;
 }
 
-uhash HASH_u8(u8 value, uhash base) {
+uhash u8_hash(u8 value, uhash base) {
 	return (base ^ value) * FNV1a_PRIME;
 }
 
-uhash HASH_u16(u16 value, uhash base) {
+uhash u16_hash(u16 value, uhash base) {
 	return (base ^ value) * FNV1a_PRIME;
 }
 
-uhash HASH_u32(u32 value, uhash base) {
+uhash u32_hash(u32 value, uhash base) {
 	return (base ^ value) * FNV1a_PRIME;
 }
 
-uhash HASH_u64(u64 value, uhash base) {
+uhash u64_hash(u64 value, uhash base) {
 	return (base ^ value) * FNV1a_PRIME;
 }
 
-uhash HASH_Ptr(Ptr value, uhash base) {
+uhash Ptr_hash(Ptr value, uhash base) {
 	return (base ^ (usize)value) * FNV1a_PRIME;
 }
 
-#define HASH_FN FNV1a
+#define HASH_COMBINE u64_hash
+
+uhash hash_combine(uhash a, uhash b) {
+	return HASH_COMBINE(a, b);
+}
+
 #define HASH_BASE FNV1a_BASE
+
+constexpr uhash hash_base = HASH_BASE;
+
 #define HASH(value, base) _Generic((value), \
-	u8 : HASH_u8, \
-	u16 : HASH_u16, \
-	u32 : HASH_u32, \
-	u64 : HASH_u64, \
-	Ptr : HASH_Ptr, \
+	u8 : u8_hash, \
+	u16 : u16_hash, \
+	u32 : u32_hash, \
+	u64 : u64_hash, \
+	Ptr : Ptr_hash, \
 	String : String_hash, \
 	StringSpan : StringSpan_hash, \
 	SmallString : SmallString_hash, \
 	default : HASH_Ptr \
 )(value, base)
-
-#define HASH_COMBINE HASH_u64

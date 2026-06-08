@@ -4,7 +4,7 @@
 
 Ptr lptrtag(const Ptr ptr, uint width, usize value) {
 	#if LPTRTAG_SAFE
-		const usize mask = (1ULL << width) - 1;
+		const usize mask = (1ull << width) - 1;
 
 		if (value > mask)
 			PANIC("lptrtag: tag overflow");
@@ -17,9 +17,9 @@ Ptr lptrtag(const Ptr ptr, uint width, usize value) {
 }
 
 Ptr lptrstrip(const Ptr ptr, uint width) {
-	return (Ptr)((usize)ptr & (UINTPTR_MAX << width));
+	return (Ptr)((usize)ptr & ((~0ull) << width));
 }
 
 usize lptrread(const Ptr ptr, uint width) {
-	return (usize)ptr & (((usize)1 << width) - 1);
+	return (usize)ptr & ((1ull << width) - 1);
 }

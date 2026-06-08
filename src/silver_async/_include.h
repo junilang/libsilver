@@ -21,8 +21,6 @@
 	#include "AsyncTask.h"
 	#include "AsyncFuture.h"
 
-	#include "AsyncResult.h"
-
 	#include "AsyncFuture_Mtx.c"
 	#include "AsyncFuture_Task.c"
 	#include "AsyncFuture.c"
@@ -30,7 +28,6 @@
 	//#include "async_helper.h"
 
 	#include "weaver/Weaver.c"
-	#include "rio/Rio.c"
 
 	#include "async_helper/_include.h"
 

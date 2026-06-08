@@ -5,9 +5,11 @@
 	#define PTRTAG_BITS 16
 	#define PTRTAG_ADDR_BITS 48
 	typedef u16 utag;
+	constexpr utag utag_max = u16_max;
+	constexpr u8 utag_width = 16;
 #else
 	#if PTRTAG
-		#warning "PTRTAG unsupported by platform (enabled by compiler)"
+		#error "pointer tagging unsupported by platform"
 	#endif
 
 	#define PTRTAG false
@@ -18,7 +20,7 @@
 #endif
 
 #if PTRTAG
-	#define PTRTAG_MAX ((1ULL << PTRTAG_BITS) - 1)
+	#define PTRTAG_MAX ((1ull << PTRTAG_BITS) - 1)
 
 	#if PTRTAG_LAM
 		#error "PTRTAG_LAM unimplemented"
@@ -28,8 +30,8 @@
 		#error "PTRTAG_CANONICAL unimplemented"
 	#endif
 
-	#define PTRTAG_LSB_MASK ((1ULL << PTRTAG_BITS) - 1)
-	#define PTRTAG_ADDR_MASK ((1ULL << PTRTAG_ADDR_BITS) - 1)
+	#define PTRTAG_LSB_MASK ((1ull << PTRTAG_BITS) - 1)
+	#define PTRTAG_ADDR_MASK ((1ull << PTRTAG_ADDR_BITS) - 1)
 	#define PTRTAG_MSB_MASK (~PTRTAG_ADDR_MASK)
 
 	Ptr ptrtag_msb(const Ptr ptr, utag tag) {
@@ -37,12 +39,8 @@
 			if ((usize)ptr & PTRTAG_MSB_MASK)
 				PANIC("ptrtag_msb: pointer already tagged");
 
-			GCC_DIAG_PUSH
-				GCC_DIAG_IGNORE(WTYPELIMITS)
-				if (tag > PTRTAG_MAX)
-					PANIC("ptrtag_msb: tag overflow");
-			GCC_DIAG_POP
-
+			if (tag > PTRTAG_MAX)
+				PANIC("ptrtag_msb: tag overflow");
 		#endif
 
 		return (Ptr)(
@@ -65,11 +63,8 @@
 			if ((usize)ptr & (PTRTAG_MSB_MASK))
 				PANIC("ptrtag_lsb: pointer already tagged");
 
-			GCC_DIAG_PUSH
-				GCC_DIAG_IGNORE(WTYPELIMITS)
-				if (tag > PTRTAG_MAX)
-					PANIC("ptrtag_msb: tag overflow");
-			GCC_DIAG_POP
+			if (tag > PTRTAG_MAX)
+				PANIC("ptrtag_msb: tag overflow");
 		#endif
 
 		return (Ptr)(

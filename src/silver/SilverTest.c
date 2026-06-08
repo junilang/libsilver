@@ -15,7 +15,7 @@ typedef struct {
 } SilverTestState;
 
 void SilverTest_run(SilverTestState *state, String name, SilverTest entry) {
-	FPRINT(stdout, "> ",name,"\n");
+	//FPRINT(stdout, "> ",name,"\n");
 
 	state->total++;
 
@@ -25,13 +25,13 @@ void SilverTest_run(SilverTestState *state, String name, SilverTest entry) {
 
 	if (code != SilverTest_OK) {
 		state->failed++;
-		FPRINT(stdout, "> ",name," failed: ",code,"\n");
+		//FPRINT(stdout, "> ",name," failed: ",code,"\n");
 	}
 }
 
 typedef void (*SilverTestSuite)(SilverTestState *state);
 
-int SilverTest_entry(int argc, char **argv, SilverTestSuite suite) {
+int SilverTest_entry(int argc, Str *argv, SilverTestSuite suite) {
 	SilverTestState state = {
 		.total = 0,
 		.failed = 0
@@ -40,7 +40,7 @@ int SilverTest_entry(int argc, char **argv, SilverTestSuite suite) {
 	suite(&state);
 
 	if (state.failed) {
-		FPRINT(stdout, "\n> ",state.failed," tests failed\n");
+		//FPRINT(stdout, "\n> ",state.failed," tests failed\n");
 		return 1;
 	}
 

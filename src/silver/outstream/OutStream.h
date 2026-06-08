@@ -3,7 +3,7 @@
 #endif
 
 typedef struct {
-	void (*write)(Ptr this, const ubyte *buffer, usize buffer_size);
+	void (*write)(Ptr this, ConstPtr buffer, usize buffer_size);
 	void (*flush)(Ptr this);
 } IOutStream;
 
@@ -37,7 +37,7 @@ typedef struct {
 
 #endif
 
-void OutStream_write(OutStream this, const ubyte *buffer, usize buffer_size) {
+void OutStream_write(OutStream this, ConstPtr buffer, usize buffer_size) {
 	#if BUILD_SAFE
 		if (!buffer) return;
 	#endif

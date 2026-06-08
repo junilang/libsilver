@@ -1,13 +1,14 @@
 #if !LIBSILVER_DEPENDS
 	#define LIBSILVER_DEPENDS true
 
-	#include <stdio.h>
-	#include <stdint.h>
-	#include <stddef.h>
-	#include <stdlib.h>
-	#include <string.h>
-	#include <stdbit.h>
-	#include <stdatomic.h>
-	#include <limits.h>
+	#ifdef __linux__
+		#if !LIBSILVER_LINUX_INCLUDE
+			#error "silver_linux not included"
+		#endif
+
+	#else
+		#error "unsupported platform"
+
+	#endif
 
 #endif

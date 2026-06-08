@@ -1,6 +1,6 @@
+#include "silver_linux/_include.h"
 #include "silver/_include.h"
-#include "silver_async/_include.h"
-#include "silver_sh/_include.h"
+#include "silver_main.h"
 
 #if BUILD_TESTING
 
@@ -14,7 +14,17 @@
 		TEST_SUITE_BEGIN TEST_SUITE_END
 	#endif
 
-	int main(int argc, char **argv) {
+	int main(int argc, Str *argv, Str *envp) {
 		return SilverTest_entry(argc, argv, &libsilver_testsuite);
 	}
+
+#else
+	int main(int argc, Str *arg, Str *envp) {
+		return 0;
+	}
+
+#endif
+
+#if BUILD_NOLIBC
+	LINUX_START_ASM(128, silver_main);
 #endif

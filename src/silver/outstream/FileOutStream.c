@@ -1,9 +1,13 @@
-void FileOutStream_write(FILE *this, const ubyte *buffer, usize buffer_size) {
-	fwrite(buffer, buffer_size, 1, this);
-}
+#ifdef __linux__
 
-void FileOutStream_flush(FILE *this) {
-	fflush(this);
-}
+	void FileOutStream_write(int fd, ConstPtr buffer, usize buffer_size) {
+		linux_write(fd, buffer, buffer_size);
+	}
 
-IOutStream_GENERATE_KNOWN(FileOutStream)
+	void FileOutStream_flush(int fd) {}
+
+#else
+	#error "unsupported platform"
+#endif
+
+IOutStream_GENERATE_KNOWN(FileOutStream, int)

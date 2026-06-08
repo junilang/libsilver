@@ -6,20 +6,17 @@
 	#define Allocator_SAFE BUILD_SAFE
 #endif
 
-typedef enum : u8 {
-	AllocatorAttr_BIT_THREADSAFE,
-	AllocatorAttr_BIT_ALIGNED,
-} AllocatorAttr;
+enum {
+	AllocatorAttr_BIT_THREADSAFE
+};
+
+typedef u8 AllocatorAttr;
 
 typedef struct {
 	AllocatorAttr (*attr)(Ptr this);
 	Ptr (*new)(Ptr this, usize size);
 	Ptr (*resize)(Ptr this, Ptr buf, usize size);
 	void (*delete)(Ptr this, Ptr buf);
-
-	Ptr (*new_aligned)(Ptr this, usize size, ualign align);
-	Ptr (*resize_aligned)(Ptr this, Ptr buf, usize size, ualign align);
-	Ptr (*delete_aligned)(Ptr this, Ptr buf);
 } IAllocator;
 
 #if Allocator_PTRTAG
@@ -28,7 +25,7 @@ typedef struct {
 	} Allocator;
 
 	enum {
-		IAllocator_Malloc_ID,
+		//IAllocator_Malloc_ID,
 		IAllocator_KNOWN
 	};
 
@@ -64,7 +61,7 @@ Ptr Allocator_new(Allocator this, usize size) {
 
 Ptr Allocator_znew(Allocator this, usize size) {
 	Ptr buf = Allocator_new(this, size);
-	memset(buf, 0, size);
+	__builtin_memset(buf, 0, size);
 	return buf;
 }
 

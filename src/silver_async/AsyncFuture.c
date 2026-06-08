@@ -27,17 +27,17 @@ AsyncFuture ZZAsyncFuture_upcast_helper(AsyncFuture this) {
 	AsyncFuture : ZZAsyncFuture_upcast_helper \
 )(future)
 
-AsyncIntent AsyncFuture_resolve(AsyncFuture this, AsyncResult *result) {
+AsyncIntent AsyncFuture_resolve(AsyncFuture this, AsyncTask *out_task) {
 	Ptr data = AsyncFuture_data(this);
 	switch (AsyncFuture_class(this)) {
 		case AsyncFutureClass_MTX:
-			return AsyncFuture_Mtx_resolve(data, result);
+			return AsyncFuture_Mtx_resolve(data);
 		case AsyncFutureClass_MTX_COUNT:
-			return AsyncFuture_MtxCount_resolve(data, result);
+			return AsyncFuture_MtxCount_resolve(data);
 		case AsyncFutureClass_TASK:
-			return AsyncFuture_Task_resolve(data, result);
+			return AsyncFuture_Task_resolve(data, out_task);
 		case AsyncFutureClass_TASK_COUNT:
-			return AsyncFuture_TaskCount_resolve(data, result);
+			return AsyncFuture_TaskCount_resolve(data, out_task);
 		default:;
 	}
 

@@ -1,3 +1,4 @@
+/*
 #define PANIC__LINE_(line) #line
 #define PANIC__LINE(line) PANIC__LINE_(line)
 
@@ -21,6 +22,10 @@
 	fflush(stderr); \
 	abort(); \
 }
+*/
+
+#define PANIC(...) { __builtin_trap(); }
+#define PANICF PANIC
 
 #if BUILD_DEBUG
 	#define UNREACHABLE PANIC("unreachable")

@@ -1,38 +1,4 @@
-#define PRINT_GENERATE_PRIMITIVE(N, T, Fmt) \
-	void PRINT_##N(T value, OutStream os) { \
-		char buf[32]; \
-		auto sz = snprintf(buf, 32, Fmt, value); \
-		OutStream_write(os, (ubyte*)buf, (usize)sz); \
-	}
-
-PRINT_GENERATE_PRIMITIVE(char, char, "%i")
-PRINT_GENERATE_PRIMITIVE(uchar, unsigned char, "%u")
-PRINT_GENERATE_PRIMITIVE(short, short, "%hi")
-PRINT_GENERATE_PRIMITIVE(ushort, unsigned short, "%hu")
-PRINT_GENERATE_PRIMITIVE(int, int, "%i")
-PRINT_GENERATE_PRIMITIVE(uint, unsigned int, "%u")
-PRINT_GENERATE_PRIMITIVE(long, long, "%li")
-PRINT_GENERATE_PRIMITIVE(ulong, unsigned long, "%lu")
-PRINT_GENERATE_PRIMITIVE(llong, long long, "%lli")
-PRINT_GENERATE_PRIMITIVE(ullong, unsigned long long, "%llu")
-PRINT_GENERATE_PRIMITIVE(ptr, void*, "%p")
-
-PRINT_GENERATE_PRIMITIVE(float, float, "%f")
-PRINT_GENERATE_PRIMITIVE(double, double, "%lf")
-PRINT_GENERATE_PRIMITIVE(ldouble, long double, "%Lf")
-
 /*
-void PRINT_byte(unsigned char value, OutStream os) {
-	static const char hex_digits[] = "0123456789ABCDEF";
-	char buf[2] = {
-		hex_digits[(value >> 4)],
-		hex_digits[value & 0b1111]
-	};
-
-	OutStream_write(os, (ubyte*)buf, 2);
-}
-*/
-
 void PRINT_bool(bool value, OutStream os) {
 	if (value)
 		OutStream_write(os, USTR("true"));
@@ -40,11 +6,9 @@ void PRINT_bool(bool value, OutStream os) {
 		OutStream_write(os, USTR("false"));
 }
 
-/*
 void PRINT_char(char value, OutStream os) {
 	OutStream_write(os, (ubyte*)&value, 1);
 }
-*/
 
 void PRINT_cstring(Str cstr, OutStream os) {
 	if (!cstr) {
@@ -80,6 +44,8 @@ void PRINT_cstring(Str cstr, OutStream os) {
 	default : PRINT_ptr \
 )((A), (S))
 
+*/
+
 #define PRINT_X(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(GCC_ERROR_MAX_DEPTH_REACHED)
 
 #define PRINT_1(S, A, ...) PRINT_ITEM(S, A); __VA_OPT__(PRINT_2(S, __VA_ARGS__))
@@ -111,7 +77,7 @@ void PRINT_cstring(Str cstr, OutStream os) {
 	#define PRINT_ATOMIC_BUFFER_SIZE 256
 #endif
 
-#define FPRINT(file, ...) PRINT(FileOutStream_upcast(file), __VA_ARGS__)
+//#define FPRINT(file, ...) PRINT(FileOutStream_upcast(file), __VA_ARGS__)
 
 #define PRINT_ATOMIC_(bs, os, ...) { \
 	ubyte PRINT__buffer[bs]; \
@@ -120,7 +86,7 @@ void PRINT_cstring(Str cstr, OutStream os) {
 	OutStream_write(os, PRINT__buffer, PRINT__os.size); \
 }
 
-#define FPRINT_ATOMIC_(bs, file, ...) PRINT_ATOMIC_(bs, FileOutStream_upcast(file), __VA_ARGS__)
+//#define FPRINT_ATOMIC_(bs, file, ...) PRINT_ATOMIC_(bs, FileOutStream_upcast(file), __VA_ARGS__)
 
 #define PRINT_ATOMIC(os, ...) PRINT_ATOMIC_(PRINT_ATOMIC_BUFFER_SIZE, os, __VA_ARGS__)
-#define FPRINT_ATOMIC(file, ...) FPRINT_ATOMIC_(PRINT_ATOMIC_BUFFER_SIZE, file, __VA_ARGS__)
+//#define FPRINT_ATOMIC(file, ...) FPRINT_ATOMIC_(PRINT_ATOMIC_BUFFER_SIZE, file, __VA_ARGS__)

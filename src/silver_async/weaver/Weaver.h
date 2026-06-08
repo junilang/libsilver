@@ -4,22 +4,42 @@ enum : umtx {
 	Weaver_LOCK_DOWN
 };
 
-typedef struct {
-	AsyncRT iface;
+#if Weaver_CACHE_ALIGN
+	typedef struct {
+		// read only section
+		alignas(Weaver_CACHE_ALIGN) struct {
+			AsyncRT iface;
+			Allocator alc;
+			u16 threads_size;
+		};
 
-	Allocator queue_alc;
-	WeaverQueue *queue[2];
+		WeaverQueue queue[2];
 
-	_Atomic WeaverQinfo qinfo;
-	_Atomic WeaverQinfo mqinfo;
+		alignas(Weaver_CACHE_ALIGN) WeaverQinfo qinfo;
+		alignas(Weaver_CACHE_ALIGN) WeaverQinfo mqinfo;
 
-	_Atomic umtx lock;
-	_Atomic u32 threads_sync;
+		WeaverThread threads[];
+	} Weaver;
 
-	u16 threads_size;
 
-	WeaverThread threads[];
-} Weaver;
+#else
+	typedef struct {
+		AsyncRT iface;
+		Allocator alc;
+
+		WeaverQueue queue[2];
+
+		_Atomic WeaverQinfo qinfo;
+		_Atomic WeaverQinfo mqinfo;
+
+		_Atomic umtx lock;
+		_Atomic u32 threads_sync;
+
+		u16 threads_size;
+
+		WeaverThread threads[];
+	} Weaver;
+#endif
 
 usize ZZWeaver_allocsize(u16 threads_size) {
 	return offsetof(Weaver, threads) + (sizeof(WeaverThread) * threads_size);
