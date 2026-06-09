@@ -7,7 +7,7 @@ int ZZentry(SilverTestContext *ctx) {
 
 	auto res = linux_openat2(AT_FDCWD, "tests/syscall/open.txt", &open_args, sizeof(open_args));
 	if (res < 0) {
-		FPRINT_BUFFERED(128, Stdout, "openat2 error: ",res,"\n");
+		PRINTB(128, Stdout, "openat2 error: ",res,"\n");
 		return 1;
 	}
 
@@ -16,18 +16,18 @@ int ZZentry(SilverTestContext *ctx) {
 	ubyte data[128];
 	res = linux_read(fd, data, sizeof(data));
 	if (res < 0) {
-		FPRINT_BUFFERED(128, Stdout, "read error: ",res,"\n");
+		PRINTB(128, Stdout, "read error: ",res,"\n");
 		return 1;
 	}
 
 	usize data_size = (usize)res;
 
-	FPRINT_BUFFERED(128, Stdout, "read ",data_size," bytes: \n");
-	FPRINT(Stdout, LITERAL(String, .data=data,.size=data_size), "\n");
+	PRINTB(128, Stdout, "read ",data_size," bytes: \n");
+	PRINT(Stdout, LITERAL(String, .data=data,.size=data_size), "\n");
 
 	res = linux_close(fd);
 	if (res < 0) {
-		FPRINT_BUFFERED(128, Stdout, "close error: ",res,"\n");
+		PRINTB(128, Stdout, "close error: ",res,"\n");
 		return 1;
 	}
 

@@ -1,29 +1,21 @@
 #define PRINT(stream_, ...) { __VA_OPT__(\
-	const OutStream stream = (stream_); \
-	PrintFmt fmt = PrintFmt_NULL; \
-	PRINT_0(stream, (&fmt), __VA_ARGS__) \
+	const OutStream PRINT_stream__ = (stream_); \
+	PrintFmt PRINT_fmt__ = PrintFmt_Null; \
+	PRINT_0(PRINT_stream__, (&PRINT_fmt__), __VA_ARGS__) \
 ) }
 
 #define PRINT_BUFFERED(buffer_size_, stream_, ...) { __VA_OPT__( \
-	constexpr usize buffer_size = (buffer_size_); \
-	const OutStream stream = (stream_); \
-	ubyte buffer_data[buffer_size]; \
-	BufferOutStream buffer = {.buffer=buffer_data,.capacity=buffer_size}; \
-	const OutStream buffer_os = BufferOutStream_upcast(&buffer); \
-	PrintFmt fmt = PrintFmt_NULL; \
-	PRINT_0(buffer_os, (&fmt), __VA_ARGS__) \
-	OutStream_write(stream, buffer_data, buffer.size); \
+	constexpr usize PRINT_buffer_size__ = (buffer_size_); \
+	const OutStream PRINT_stream__ = (stream_); \
+	ubyte PRINT_buffer_data__[PRINT_buffer_size__]; \
+	BufferOutStream PRINT_buffer__ = {.buffer=PRINT_buffer_data__,.capacity=PRINT_buffer_size__}; \
+	const OutStream PRINT_buffer_os__ = BufferOutStream_upcast(&PRINT_buffer__); \
+	PrintFmt PRINT_fmt__ = PrintFmt_Null; \
+	PRINT_0(PRINT_buffer_os__, (&PRINT_fmt__), __VA_ARGS__) \
+	OutStream_write(PRINT_stream__, PRINT_buffer_data__, PRINT_buffer__.size); \
 ) }
 
 #define PRINTB PRINT_BUFFERED
-
-#define FPRINT(file, ...) \
-	PRINT(FileOutStream_upcast(file), __VA_ARGS__)
-
-#define FPRINT_BUFFERED(buffer_size, file, ...) \
-	PRINT_BUFFERED(buffer_size, FileOutStream_upcast(file), __VA_ARGS__)
-
-#define FPRINTB FPRINT_BUFFERED
 
 #define PRINT_ITEM(S, F, V) _Generic((V), \
 	PrintFmt : PRINT_setfmt, \
@@ -36,16 +28,17 @@
 	String : PRINT_String, \
 	SmallString : PRINT_SmallString, \
 	StringSpan : PRINT_StringSpan, \
-	signed char : PRINT_AnyInt, \
-	signed short : PRINT_AnyInt, \
-	signed int : PRINT_AnyInt, \
-	signed long : PRINT_AnyInt, \
-	signed long long : PRINT_AnyInt, \
-	unsigned char : PRINT_AnyUint,  \
-	unsigned short : PRINT_AnyUint, \
-	unsigned int : PRINT_AnyUint, \
-	unsigned long : PRINT_AnyUint, \
-	unsigned long long : PRINT_AnyUint \
+	signed char : PRINT_IntFmt_Signed, \
+	signed short : PRINT_IntFmt_Signed, \
+	signed int : PRINT_IntFmt_Signed, \
+	signed long : PRINT_IntFmt_Signed, \
+	signed long long : PRINT_IntFmt_Signed, \
+	unsigned char : PRINT_IntFmt_Unsigned,  \
+	unsigned short : PRINT_IntFmt_Unsigned, \
+	unsigned int : PRINT_IntFmt_Unsigned, \
+	unsigned long : PRINT_IntFmt_Unsigned, \
+	unsigned long long : PRINT_IntFmt_Unsigned, \
+	default : PRINT_pointer \
 )(S, F, (V));
 
 [[gnu::always_inline]]
@@ -56,18 +49,27 @@ static inline void PRINT_setfmt(OutStream os, PrintFmt *fmt, PrintFmt fmt_set) {
 [[gnu::always_inline]]
 static inline void PRINT_cstring(OutStream os, PrintFmt *fmt, const char *v) {
 	String_print(STRING(v), *fmt, os);
-	*fmt = PrintFmt_NULL;
+	*fmt = PrintFmt_Null;
+}
+
+[[gnu::always_inline]]
+static inline void PRINT_pointer(OutStream os, PrintFmt *fmtp, ConstPtr v) {
+	PrintFmt fmt = *fmtp;
+	if (!fmt.value)
+		fmt.value = FIELD_SET(IntFmt_Base, Hex) | FLAG(IntFmt, Header);
+	IntFmt_Unsigned_print((usize)v, fmt, os);
+	*fmtp = PrintFmt_Null;
 }
 
 #define PRINT_GENERATE(T) \
 	[[gnu::always_inline]] static inline \
 	void PRINT_##T(OutStream os, PrintFmt *fmt, T v) { \
 		T##_print(v, *fmt, os); \
-		*fmt = PrintFmt_NULL; \
+		*fmt = PrintFmt_Null; \
 	}
 
-PRINT_GENERATE(AnyInt)
-PRINT_GENERATE(AnyUint)
+PRINT_GENERATE(IntFmt_Unsigned)
+PRINT_GENERATE(IntFmt_Signed)
 PRINT_GENERATE(String)
 PRINT_GENERATE(StringSpan)
 PRINT_GENERATE(SmallString)

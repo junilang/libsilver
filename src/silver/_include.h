@@ -8,15 +8,15 @@
 	// macro utilities
 	#include "util.h"
 	#include "flag.h"
+	#include "field.h"
 	#include "enum.h"
 	#include "panic.h"
 	#include "interface.h"
 
 	// core features
 	#include "types.h"
-	#include "atomic_types.h"
-	#include "atomic.h"
 	#include "memory.h"
+
 	#include "hash.h"
 	#include "ptrtag.h"
 	#include "lptrtag.h"
@@ -27,26 +27,17 @@
 
 	#include "String.h"
 
-	#include "outstream/FileOutStream.c"
 	#include "outstream/BufferOutStream.c"
+	#include "outstream/RawFileOutStream.c"
 
-	#include "AnyInt.c"
+	#include "IntFmt.c"
 
 	#include "print.h"
 
 	#include "SilverTest.c"
 
 	#if 0
-	#include "panic.h"
-	#include "usize.h"
-	#include "hash.h"
-
 	#include "whitespace.h"
-
-	#include "ptrtag.h"
-	#include "lptrtag.h"
-
-	#include "interface.h"
 
 	#include "outstream/OutStream.h"
 	#include "outstream/FileOutStream.c"

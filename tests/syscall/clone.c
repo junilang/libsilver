@@ -8,7 +8,7 @@ typedef union {
 [[noreturn]] void ZZthread(uword arg) {
 	auto const this = (ZZThreadData*)arg;
 
-	FPRINTB(128, Stdout, "child thread: ",this->tid,"\n");
+	PRINTB(128, Stdout, "child thread: ",this->tid,"\n");
 	linux_exit(0);
 }
 
@@ -28,7 +28,7 @@ int ZZentry(SilverTestContext *ctx) {
 
 	constexpr usize page_size = 4096;
 
-	FPRINTB(128, Stdout, "page size is ",page_size,"\n");
+	PRINTB(128, Stdout, "page size is ",page_size,"\n");
 
 	const usize stack_size = page_size * 16;
 	const usize guard_size = page_size;
@@ -40,14 +40,14 @@ int ZZentry(SilverTestContext *ctx) {
 	);
 
 	if (linux_mmap_iserror(res)) {
-		FPRINTB(128, Stdout, "mmap error: ",res,"\n");
+		PRINTB(128, Stdout, "mmap error: ",res,"\n");
 		return 1;
 	}
 
 	auto stack_begin = (ubyte*)res;
 	auto stack_end = stack_begin + stack_size;
 
-	FPRINTB(128, Stdout, "allocated stack[",stack_size,"] at ",(usize)stack_begin,"\n");
+	PRINTB(128, Stdout, "allocated stack[",stack_size,"] at ",stack_begin,"\n");
 
 	auto thread_data = (ZZThreadData*)stack_begin;
 	auto stack = (ubyte*)(thread_data + 1);
@@ -69,10 +69,10 @@ int ZZentry(SilverTestContext *ctx) {
 
 	res = linux_clone3_safe(&clone_args, sizeof(clone_args), &ZZthread, (usize)thread_data);
 	if (res < 0) {
-		FPRINTB(128, Stdout, "clone3 error: ",res,"\n");
+		PRINTB(128, Stdout, "clone3 error: ",res,"\n");
 	}
 
-	FPRINTB(128, Stdout, "parent\n");
+	PRINTB(128, Stdout, "parent\n");
 
 	return 0;
 }

@@ -1,32 +1,31 @@
-typedef struct {
-	u32 count;
+constexpr u8 Rc_Tagbits = 2;
+
+typedef union {
+	alignas(1ull << Rc_Tagbits) char align__;
+	struct {
+		u32 count;
+	};
 } RcState;
 
-#define Rc_BITS 2
-
 typedef enum : u8 {
-	RcClass_OWNER,
-	RcClass_WEAK,
-	RcClass_CONST
+	RcClass_Owner,
+	RcClass_Weak,
+	RcClass_Const
 } RcClass;
 
-#define Rc_ALIGN (\
-	(1 << Rc_BITS) > alignof(RcState) ? \
-	(1 << Rc_BITS) : alignof(RcState) \
-)
+typedef union {
+	Ptr value;
+	usize raw_value;
+} Rc;
 
-#define Rc_MEMBER alignas(Rc_ALIGN) RcState
-
-typedef UNIQUEPTR(Rc);
-
-Rc ZZRc_setclass(RcState *state, RcClass class) {
-	return lptrtag(state, Rc_BITS, class);
+Rc Rc_setclass(RcState *state, RcClass class) {
+	return (Rc){.value=lptrtag(state, Rc_Tagbits, class)};
 }
 
-#define Rc_CONST ZZRc_setclass(nullptr, RcClass_CONST)
+constexpr Rc Rc_Const = {.raw_value=(RcClass_Const)};
 
-RcState *Rc_state(Rc rc) {
-	return lptrstrip(rc, Rc_BITS);
+RcState *Rc_state(Rc this) {
+	return lptrstrip(this.value, Rc_Tagbits);
 }
 
 RcClass Rc_class(Rc rc) {

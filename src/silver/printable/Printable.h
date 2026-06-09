@@ -6,7 +6,7 @@ typedef struct {
 	u32 value;
 } PrintFmt;
 
-constexpr PrintFmt PrintFmt_NULL = { .value = 0 };
+constexpr PrintFmt PrintFmt_Null = { .value = 0 };
 
 typedef void (*PrintFn)(Ptr this, PrintFmt fmt, IARG(OutStream, os));
 
@@ -20,8 +20,6 @@ typedef struct {
 	} Printable;
 
 	enum {
-		IPrintable_UintPrintable_ID,
-		IPrintable_IntPrintable_ID,
 		IPrintable_KNOWN
 	};
 

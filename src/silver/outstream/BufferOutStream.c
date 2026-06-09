@@ -17,11 +17,15 @@ void BufferOutStream_write(BufferOutStream *this, ConstPtr buffer, usize buffer_
 		}
 	#endif
 
-	memcopy(this->buffer + index, buffer, buffer_size);
+	memcpy(this->buffer + index, buffer, buffer_size);
 
 	this->size = index + (u32)buffer_size;
 }
 
 void BufferOutStream_flush(BufferOutStream *this) {}
+
+OutStreamAttr BufferOutStream_attr(BufferOutStream *this) {
+	return 0;
+}
 
 IOutStream_GENERATE_KNOWN(BufferOutStream, BufferOutStream*)

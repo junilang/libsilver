@@ -34,7 +34,7 @@
 	#define PTRTAG_ADDR_MASK ((1ull << PTRTAG_ADDR_BITS) - 1)
 	#define PTRTAG_MSB_MASK (~PTRTAG_ADDR_MASK)
 
-	Ptr ptrtag_msb(const Ptr ptr, utag tag) {
+	Ptr ptrtag_msb(ConstPtr ptr, utag tag) {
 		#if PTRTAG_SAFE
 			if ((usize)ptr & PTRTAG_MSB_MASK)
 				PANIC("ptrtag_msb: pointer already tagged");
@@ -48,17 +48,20 @@
 		);
 	}
 
-	Ptr ptrstrip_msb(const Ptr ptr) {
+	#define CONSTEXPR_ptrtag_msb(ptr, tag) \
+		( (usize)(ptr) | ((usize)(tag) << PTRTAG_ADDR_BITS) )
+
+	Ptr ptrstrip_msb(ConstPtr ptr) {
 		return (Ptr)(
 			(usize)ptr & PTRTAG_ADDR_MASK
 		);
 	}
 
-	utag ptrread_msb(const Ptr ptr) {
+	utag ptrread_msb(ConstPtr ptr) {
 		return (utag)((usize)ptr >> PTRTAG_ADDR_BITS);
 	}
 
-	Ptr ptrtag_lsb(const Ptr ptr, utag tag) {
+	Ptr ptrtag_lsb(ConstPtr ptr, utag tag) {
 		#if PTRTAG_SAFE
 			if ((usize)ptr & (PTRTAG_MSB_MASK))
 				PANIC("ptrtag_lsb: pointer already tagged");
@@ -72,23 +75,28 @@
 		);
 	}
 
-	Ptr ptrstrip_lsb(const Ptr ptr) {
+	#define CONSTEXPR_ptrtag_lsb(ptr, tag) \
+		( ((usize)(ptr) << PTRTAG_BITS) | (usize)(tag) )
+
+	Ptr ptrstrip_lsb(ConstPtr ptr) {
 		return (Ptr)((usize)ptr >> PTRTAG_BITS);
 	}
 
-	utag ptrread_lsb(const Ptr ptr) {
+	utag ptrread_lsb(ConstPtr ptr) {
 		return (utag)((usize)ptr & PTRTAG_LSB_MASK);
 	}
 
 	#if PTRTAG_MODE_LSB
 		#define PTRTAG_DEFAULT(N) N##_lsb
+		#define CONSTEXPR_ptrtag CONSTEXPR_ptrtag_lsb
 	#else
 		#define PTRTAG_DEFAULT(N) N##_msb
+		#define CONSTEXPR_ptrtag CONSTEXPR_ptrtag_msb
 	#endif
 
-	Ptr ptrtag(const Ptr ptr, utag tag) { return PTRTAG_DEFAULT(ptrtag)(ptr, tag); }
-	Ptr ptrstrip(const Ptr ptr) { return PTRTAG_DEFAULT(ptrstrip)(ptr); }
-	utag ptrread(const Ptr ptr) { return PTRTAG_DEFAULT(ptrread)(ptr); }
+	Ptr ptrtag(ConstPtr ptr, utag tag) { return PTRTAG_DEFAULT(ptrtag)(ptr, tag); }
+	Ptr ptrstrip(ConstPtr ptr) { return PTRTAG_DEFAULT(ptrstrip)(ptr); }
+	utag ptrread(ConstPtr ptr) { return PTRTAG_DEFAULT(ptrread)(ptr); }
 
 	#undef PTRTAG_DEFAULT
 

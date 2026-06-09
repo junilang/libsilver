@@ -2,7 +2,7 @@
 	#define LPTRTAG_SAFE BUILD_SAFE
 #endif
 
-Ptr lptrtag(const Ptr ptr, uint width, usize value) {
+Ptr lptrtag(ConstPtr ptr, u8 width, usize value) {
 	#if LPTRTAG_SAFE
 		const usize mask = (1ull << width) - 1;
 
@@ -16,10 +16,10 @@ Ptr lptrtag(const Ptr ptr, uint width, usize value) {
 	return (Ptr)((usize)ptr | value);
 }
 
-Ptr lptrstrip(const Ptr ptr, uint width) {
+Ptr lptrstrip(ConstPtr ptr, u8 width) {
 	return (Ptr)((usize)ptr & ((~0ull) << width));
 }
 
-usize lptrread(const Ptr ptr, uint width) {
+usize lptrread(ConstPtr ptr, u8 width) {
 	return (usize)ptr & ((1ull << width) - 1);
 }

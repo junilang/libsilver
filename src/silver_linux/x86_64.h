@@ -20,6 +20,7 @@ static_assert(sizeof(uword) == sizeof(void*));
 static_assert(sizeof(uword) == 8);
 
 constexpr uword uword_max = (uword)(~0ull);
+constexpr uword uword_min = 0;
 constexpr __UINT8_TYPE__ uword_width = WORD_WIDTH;
 
 
