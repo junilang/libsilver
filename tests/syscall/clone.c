@@ -1,5 +1,14 @@
-[[noreturn]] int ZZthread() {
-	FPRINTB(128, Stdout, "child thread\n");
+typedef union {
+	alignas(16) char align__;
+	struct {
+		int tid;
+	};
+} ZZThreadData;
+
+[[noreturn]] void ZZthread(uword arg) {
+	auto const this = (ZZThreadData*)arg;
+
+	FPRINTB(128, Stdout, "child thread: ",this->tid,"\n");
 	linux_exit(0);
 }
 
@@ -35,8 +44,13 @@ int ZZentry(SilverTestContext *ctx) {
 		return 1;
 	}
 
-	auto stack = (Ptr)res;
-	FPRINTB(128, Stdout, "allocated stack[",stack_size,"] at ",(usize)stack,"\n");
+	auto stack_begin = (ubyte*)res;
+	auto stack_end = stack_begin + stack_size;
+
+	FPRINTB(128, Stdout, "allocated stack[",stack_size,"] at ",(usize)stack_begin,"\n");
+
+	auto thread_data = (ZZThreadData*)stack_begin;
+	auto stack = (ubyte*)(thread_data + 1);
 
 	/*
 	res = linux_mprotect(stack, guard_size, PROT_NONE);
@@ -47,16 +61,13 @@ int ZZentry(SilverTestContext *ctx) {
 	*/
 
 	struct clone_args clone_args = {\
-		.flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD,
+		.flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD | CLONE_CHILD_SETTID,
 		.stack = (usize)stack,
-		.stack_size = stack_size,
+		.stack_size = (usize)(stack_end - stack),
+		.child_tid = (usize)&thread_data->tid
 	};
 
-	res = linux_clone3(&clone_args, sizeof(clone_args));
-	if (res == 0) {
-		ZZthread();
-	}
-
+	res = linux_clone3_safe(&clone_args, sizeof(clone_args), &ZZthread, (usize)thread_data);
 	if (res < 0) {
 		FPRINTB(128, Stdout, "clone3 error: ",res,"\n");
 	}

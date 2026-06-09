@@ -3,6 +3,7 @@ typedef long long AnyInt;
 
 enum {
 	AnyIntFmt_BIT_Negative,
+	AnyIntFmt_BIT_Capitalize,
 };
 
 typedef u32 AnyIntFmt;
