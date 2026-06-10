@@ -5,6 +5,8 @@
 #if !LIBSILVER_ASYNC_INCLUDE
 	#define LIBSILVER_ASYNC_INCLUDE true
 
+	#if 0
+
 	#include "cpu.h"
 
 	#ifdef __linux__
@@ -30,5 +32,7 @@
 	#include "weaver/Weaver.c"
 
 	#include "async_helper/_include.h"
+
+	#endif
 
 #endif

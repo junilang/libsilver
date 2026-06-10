@@ -1,6 +1,9 @@
 #if !LIBSILVER_ASYNC_DEPENDS
 	#define LIBSILVER_ASYNC_DEPENDS true
 
+
+
+	#if 0
 	#include <sched.h>
 
 	#ifdef __linux__
@@ -19,6 +22,8 @@
 
 	#ifdef __x86_64__
 		#include <x86gprintrin.h>
+
+	#endif
 
 	#endif
 

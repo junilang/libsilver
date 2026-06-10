@@ -9,6 +9,8 @@ typedef union {
 	auto const this = (ZZThreadData*)arg;
 
 	PRINTB(128, Stdout, "child thread: ",this->tid,"\n");
+
+	PRINTB(128, Stdout, "setup tls\n");
 	linux_exit(0);
 }
 

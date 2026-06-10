@@ -42,19 +42,16 @@
 	default : PRINT_pointer \
 )(S, F, (V));
 
-[[gnu::always_inline]]
-static inline void PRINT_setfmt(OutStream os, PrintFmt *fmt, PrintFmt fmt_set) {
+void PRINT_setfmt(OutStream os, PrintFmt *fmt, PrintFmt fmt_set) {
 	*fmt = fmt_set;
 }
 
-[[gnu::always_inline]]
-static inline void PRINT_cstring(OutStream os, PrintFmt *fmt, const char *v) {
+void PRINT_cstring(OutStream os, PrintFmt *fmt, const char *v) {
 	String_print(STRING(v), *fmt, os);
 	*fmt = PrintFmt_Null;
 }
 
-[[gnu::always_inline]]
-static inline void PRINT_bool(OutStream os, PrintFmt *fmt, bool v) {
+void PRINT_bool(OutStream os, PrintFmt *fmt, bool v) {
 	if (v)
 		OutStream_write(os, USTR("true"));
 	else
@@ -62,8 +59,7 @@ static inline void PRINT_bool(OutStream os, PrintFmt *fmt, bool v) {
 	*fmt = PrintFmt_Null;
 }
 
-[[gnu::always_inline]]
-static inline void PRINT_pointer(OutStream os, PrintFmt *fmtp, ConstPtr v) {
+void PRINT_pointer(OutStream os, PrintFmt *fmtp, ConstPtr v) {
 	PrintFmt fmt = *fmtp;
 	if (!fmt.value)
 		fmt.value = FIELD_SET(IntFmt_Base, Hex) | FLAG(IntFmt, Header);
@@ -72,7 +68,6 @@ static inline void PRINT_pointer(OutStream os, PrintFmt *fmtp, ConstPtr v) {
 }
 
 #define PRINT_GENERATE(T) \
-	[[gnu::always_inline]] static inline \
 	void PRINT_##T(OutStream os, PrintFmt *fmt, T v) { \
 		T##_print(v, *fmt, os); \
 		*fmt = PrintFmt_Null; \

@@ -16,10 +16,14 @@
 	// core features
 	#include "types.h"
 	#include "memory.h"
-	#include "hash.h"
+	#include "chkdop.h"
 	#include "ptrtag.h"
 	#include "lptrtag.h"
 	#include "chars.h"
+
+	#include "hash/hash_crc32_x86.h"
+	#include "hash/hash_fnv1a.h"
+	#include "hash/hash.h"
 
 	#include "outstream/OutStream.h"
 	#include "printable/Printable.h"

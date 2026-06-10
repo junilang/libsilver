@@ -9,8 +9,8 @@ void String_print(String this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, this.data, this.size);
 }
 
-uhash String_hash(String this, uhash base) {
-	return memhash(this.data, this.size, base);
+uhash String_hash(uhash base, String this) {
+	return memhash(base, this.data, this.size);
 }
 
 typedef struct {
@@ -24,8 +24,8 @@ void StringSpan_print(StringSpan this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, this.begin, (usize)(this.end - this.begin));
 }
 
-uhash StringSpan_hash(StringSpan this, uhash base) {
-	return memhash(this.begin, (usize)(this.end - this.begin), base);
+uhash StringSpan_hash(uhash base, StringSpan this) {
+	return memhash(base, this.begin, (usize)(this.end - this.begin));
 }
 
 usize StringSpan_size(StringSpan this) {
@@ -98,6 +98,6 @@ void SmallString_print(SmallString this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, SmallString_data(this), SmallString_size(this));
 }
 
-uhash SmallString_hash(SmallString this, uhash base) {
-	return memhash(SmallString_data(this), SmallString_size(this), base);
+uhash SmallString_hash(uhash base, SmallString this) {
+	return memhash(base, SmallString_data(this), SmallString_size(this));
 }
