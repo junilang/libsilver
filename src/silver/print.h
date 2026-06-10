@@ -1,12 +1,12 @@
-#define PRINT(stream_, ...) { __VA_OPT__(\
-	const OutStream PRINT_stream__ = (stream_); \
+#define PRINT(stream, ...) { __VA_OPT__(\
+	const OutStream PRINT_stream__ = (stream); \
 	PrintFmt PRINT_fmt__ = PrintFmt_Null; \
 	PRINT_0(PRINT_stream__, (&PRINT_fmt__), __VA_ARGS__) \
 ) }
 
-#define PRINT_BUFFERED(buffer_size_, stream_, ...) { __VA_OPT__( \
-	constexpr usize PRINT_buffer_size__ = (buffer_size_); \
-	const OutStream PRINT_stream__ = (stream_); \
+#define PRINT_BUFFERED(buffer_size, stream, ...) { __VA_OPT__( \
+	constexpr usize PRINT_buffer_size__ = (buffer_size); \
+	const OutStream PRINT_stream__ = (stream); \
 	ubyte PRINT_buffer_data__[PRINT_buffer_size__]; \
 	BufferOutStream PRINT_buffer__ = {.buffer=PRINT_buffer_data__,.capacity=PRINT_buffer_size__}; \
 	const OutStream PRINT_buffer_os__ = BufferOutStream_upcast(&PRINT_buffer__); \
@@ -21,6 +21,7 @@
 	PrintFmt : PRINT_setfmt, \
 	char * : PRINT_cstring, \
 	const char * : PRINT_cstring, \
+	bool : PRINT_bool, \
 	Printable : PRINT_Printable, \
 	StaticPrintable : PRINT_StaticPrintable, \
 	FmtPrintable : PRINT_FmtPrintable, \
@@ -49,6 +50,15 @@ static inline void PRINT_setfmt(OutStream os, PrintFmt *fmt, PrintFmt fmt_set) {
 [[gnu::always_inline]]
 static inline void PRINT_cstring(OutStream os, PrintFmt *fmt, const char *v) {
 	String_print(STRING(v), *fmt, os);
+	*fmt = PrintFmt_Null;
+}
+
+[[gnu::always_inline]]
+static inline void PRINT_bool(OutStream os, PrintFmt *fmt, bool v) {
+	if (v)
+		OutStream_write(os, USTR("true"));
+	else
+		OutStream_write(os, USTR("false"));
 	*fmt = PrintFmt_Null;
 }
 

@@ -1,3 +1,11 @@
+#ifndef LIBSILVER_TEST_INCLUDE
+
+#define LIBSILVER_TEST_INCLUDE true
+
+#if !LIBSILVER_INCLUDE
+	#include "silver.h"
+#endif
+
 enum {
 	SilverTest_OK = 0,
 	SilverTest_ERROR = 1,
@@ -46,3 +54,5 @@ int SilverTest_entry(int argc, Str *argv, SilverTestSuite suite) {
 
 	return 0;
 }
+
+#endif

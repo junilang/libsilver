@@ -5,6 +5,12 @@
 #if !LIBSILVER_LINUX_INCLUDE
 	#define LIBSILVER_LINUX_INCLUDE true
 
+	#ifndef LIBSILVER_OS_INCLUDE
+		#define LIBSILVER_OS_INCLUDE true
+	#else
+		#error "only one system interface can be included"
+	#endif
+
 	#ifdef __x86_64__
 		#include "x86_64.h"
 
