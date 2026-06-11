@@ -1,5 +1,5 @@
 LINUX_SYSCALL_GENERATE(linux_mmap, __NR_mmap,
-	(void *addr, uword len, uword prot, uword flags, linux_fd fd, uword off),
+	(const void *addr, uword len, uword prot, uword flags, linux_fd fd, uword off),
 	addr, len, prot, flags, fd, off
 )
 

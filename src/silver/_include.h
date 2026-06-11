@@ -35,4 +35,10 @@
 	#include "IntFmt.c"
 	#include "print.h"
 
+	#include "allocator/Alc.h"
+
+	#if __linux__
+		#include "allocator/OsAlc_linux.c"
+	#endif
+
 #endif

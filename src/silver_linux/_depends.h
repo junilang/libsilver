@@ -12,5 +12,6 @@
 	#include <linux/signal.h>
 	#include <linux/sysinfo.h>
 	#include <linux/time_types.h>
+	#include <linux/auxvec.h>
 
 #endif

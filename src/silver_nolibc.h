@@ -27,7 +27,6 @@ int __libc_start_main(
 		}
 	}
 
-
 	int exit_code = main(argc, argv, argv + (argc + 1));
 
 	if (fini_fn) {

@@ -24,4 +24,5 @@
 	#include "file.h"
 	#include "futex.h"
 	#include "memory.h"
+	#include "envinfo.h"
 #endif

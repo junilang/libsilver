@@ -2,12 +2,10 @@ typedef unsigned long long IntFmt_Unsigned;
 typedef signed long long IntFmt_Signed;
 
 enum {
-	IntFmt_Base_FIELD,
-	IntFmt_Base_END = IntFmt_Base_FIELD + 1,
-	IntFmt_Spacing_FIELD,
-	IntFmt_Spacing_END = IntFmt_Spacing_FIELD + 4,
-	IntFmt_Delimiter_FIELD,
-	IntFmt_Delimiter_END = IntFmt_Delimiter_FIELD + 2,
+	FIELD_DEFINE(IntFmt_Base, 2),
+	FIELD_DEFINE(IntFmt_Spacing, 5),
+	FIELD_DEFINE(IntFmt_Delimiter, 2),
+	FIELD_DEFINE(IntFmt_Digits, 8), // up to 255 digits
 	IntFmt_BIT_Negative,
 	IntFmt_BIT_Capitalize,
 	IntFmt_BIT_Header,
@@ -34,17 +32,19 @@ String IntFmt_Unsigned_tostr(IntFmt_Unsigned val, IntFmt fmt, ubyte buf[IntFmt_B
 	auto be = buf + IntFmt_Bufsize;
 	auto bp = buf + IntFmt_Bufsize;
 
-	auto const base = FIELD_CGET(IntFmt_Base, fmt);
+	auto const base = FIELD_GET_CAST(IntFmt_Base, fmt);
 	const bool capitalize = fmt & FLAG(IntFmt, Capitalize);
 	const bool header = fmt & FLAG(IntFmt, Header);
 	const bool negative = fmt & FLAG(IntFmt, Negative);
+
+	const u8 digits = FIELD_GET(IntFmt_Digits, fmt);
 
 	u8 delimiter;
 	u8 spacing = FIELD_GET(IntFmt_Spacing, fmt);
 	if (!spacing)
 		spacing = u8_max;
 	else {
-		switch (FIELD_CGET(IntFmt_Delimiter, fmt)) {
+		switch (FIELD_GET_CAST(IntFmt_Delimiter, fmt)) {
 			case IntFmt_Delimiter_Space:
 				delimiter = ' ';
 				break;
@@ -58,12 +58,12 @@ String IntFmt_Unsigned_tostr(IntFmt_Unsigned val, IntFmt fmt, ubyte buf[IntFmt_B
 	}
 
 	u8 spc = spacing;
-	u8 wid = 0;
+	u8 dig = 0;
 
 	if (val == 0) {
 		*(--bp) = '0';
 		spc--;
-		wid++;
+		dig++;
 		goto skip_body;
 	}
 
@@ -78,19 +78,17 @@ String IntFmt_Unsigned_tostr(IntFmt_Unsigned val, IntFmt fmt, ubyte buf[IntFmt_B
 		if (spc == 0) {
 			*(--bp) = delimiter;
 			spc = spacing;
-			wid++;
 		}
 		*(--bp) = '0' + (ubyte)(val % 10);
 		val /= 10;
 		spc--;
-		wid++;
+		dig++;
 	}
 
 	if (0) base_bin: while (val > 0) {
 		if (spc == 0) {
 			*(--bp) = delimiter;
 			spc = spacing;
-			wid++;
 		}
 		--bp;
 		if (val & 1)
@@ -99,14 +97,13 @@ String IntFmt_Unsigned_tostr(IntFmt_Unsigned val, IntFmt fmt, ubyte buf[IntFmt_B
 			*bp = '0';
 		val >>= 1;
 		spc--;
-		wid++;
+		dig++;
 	}
 
 	if (0) base_hex: while (val > 0) {
 		if (spc == 0) {
 			*(--bp) = delimiter;
 			spc = spacing;
-			wid++;
 		}
 		--bp;
 		ubyte c = val & 0b1111;
@@ -118,24 +115,33 @@ String IntFmt_Unsigned_tostr(IntFmt_Unsigned val, IntFmt fmt, ubyte buf[IntFmt_B
 			*bp = 'a' + (c - 10);
 		val >>= 4;
 		spc--;
-		wid++;
+		dig++;
 	}
 
 	if (0) base_oct: while (val > 0) {
 		if (spc == 0) {
 			*(--bp) = delimiter;
 			spc = spacing;
-			wid++;
 		}
 		--bp;
 		ubyte c = val & 0b111;
 		*bp = '0' + c;
 		val >>= 3;
 		spc--;
-		wid++;
+		dig++;
 	}
 
 	skip_body:;
+
+	while (dig < digits) {
+		if (spc == 0) {
+			*(--bp) = delimiter;
+			spc = spacing;
+		}
+		*(--bp) = '0';
+		spc--;
+		dig++;
+	}
 
 	if (header) {
 		bp -= 2;
