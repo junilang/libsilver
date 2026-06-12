@@ -23,7 +23,7 @@ Ptr OsAlc_new(Ptr this, AlcReq req, ConstPtr hint) {
 		align = alignof(OsAlc_Header);
 
 	usize offset;
-	if (align <  sizeof(OsAlc_Header))
+	if (align < sizeof(OsAlc_Header))
 		offset = sizeof(OsAlc_Header);
 	else
 		offset = align;

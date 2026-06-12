@@ -6,11 +6,13 @@ typedef enum : u8 {
 } AlcNrq_Intent;
 
 typedef u64 AlcNrq; enum {
-	AlcNrq_CommonData_END = AlcReq_CommonData_END,
+	AlcNrq_CommonData_END = AlcReq_END - 1,
 	FIELD_DEFINE(AlcNrq_Intent, 2),
-	FIELD_DEFINE(AlcNrq_Alts, 3)
+	FIELD_DEFINE(AlcNrq_Alts, 3),
+	AlcNrq_END
 };
 
+static_assert(AlcNrq_END <= 64);
 static_assert(FIELD_MAX(AlcNrq_Intent) >= AlcNrq_Intent_MAX - 1);
 
 typedef enum : u8 {
@@ -23,7 +25,7 @@ typedef enum : u8 {
 typedef u64 AlcNrs; enum {
 	AlcNrs_Size_END = AlcSize_END,
 	FIELD_DEFINE(AlcNrs_Offer, 2),
-	FIELD_DEFINE(AlcNrs_RefuseReason, 3),
+	FIELD_DEFINE(AlcNrs_RefuseReason, 4),
 	FIELD_DEFINE(AlcNrs_Alts, 3),
 };
 

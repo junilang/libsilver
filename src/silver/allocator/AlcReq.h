@@ -17,25 +17,28 @@ ualign AlcAlign_get(AlcAlign align) {
 	return (ualign)(1u << align);
 }
 
+AlcAlign AlcAlign_set(ualign align) {
+	return (AlcAlign)__builtin_ctzg(align, 0);
+}
+
 typedef enum : u8 {
 	AlcRelative_None,
 	AlcRelative_Local,
 	AlcRelative_S16,
-	AlcRelative_S32,
 	AlcRelative_U16,
+	AlcRelative_S32,
 	AlcRelative_U32,
 	AlcRelative_MAX,
 } AlcRelative;
 
 typedef u64 AlcSize;
-constexpr u8 AlcSize_width = 48;
+constexpr u8 AlcSize_width = 36; // supports at most 64GB allocations
 constexpr AlcSize AlcSize_max = (1ull << AlcSize_width) - 1;
 
 typedef u64 AlcReq; enum {
 	FIELD_DEFINE(AlcSize, AlcSize_width),
 	FIELD_DEFINE(AlcAlign, 4),
 	FIELD_DEFINE(AlcRelative, 3),
-	AlcReq_CommonData_END = AlcRelative_END,
 	AlcReq_BIT_Zero,
 	AlcReq_END
 };
@@ -47,6 +50,7 @@ static_assert(FIELD_MAX(AlcRelative) >= AlcRelative_MAX);
 typedef enum : u8 {
 	AlcRes_Ok = 0,
 	AlcRes_ErrInternal,
+	AlcRes_ErrTooLarge,
 	AlcRes_ErrNoMemory,
 	AlcRes_ErrInvalidAlign,
 	AlcRes_ErrInvalidRelative,
@@ -60,7 +64,7 @@ Ptr AlcRes_set(AlcRes err) {
 	return (Ptr)(-(isize)err);
 }
 
-AlcRes AlcRes_get(Ptr result) {
+AlcRes AlcRes_get(ConstPtr result) {
 	isize c = (isize)result;
 	if (c <= -1 && c >= -4095) {
 		u16 err = (u16)(-c);

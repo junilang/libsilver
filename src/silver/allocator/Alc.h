@@ -71,7 +71,7 @@ typedef struct {
 
 #endif
 
-[[nodiscard]]
+[[nodiscard, gnu::malloc]]
 Ptr Alc_new(Alc this, AlcReq req, ConstPtr hint) {
 	return Alc_iface(this)->new(Alc_this(this), req, hint);
 }
