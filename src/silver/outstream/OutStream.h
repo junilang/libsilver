@@ -2,20 +2,26 @@
 	#define OutStream_PTRTAG PTRTAG
 #endif
 
+typedef u32 OutStreamAttr;
+
 typedef struct {
-	void (*write)(Ptr this, const ubyte *buffer, usize buffer_size);
+	void (*write)(Ptr this, ConstPtr buffer, usize buffer_size);
 	void (*flush)(Ptr this);
+	OutStreamAttr (*attr)(Ptr this);
 } IOutStream;
 
 
 #if OutStream_PTRTAG
 	typedef struct {
-		Ptr value;
+		union {
+			Ptr value;
+			usize raw_value;
+		};
 	} OutStream;
 
 	enum {
-		IOutStream_FileOutStream_ID,
 		IOutStream_BufferOutStream_ID,
+		IOutStream_RawFileOutStream_ID,
 		IOutStream_KNOWN
 	};
 
@@ -26,6 +32,9 @@ typedef struct {
 		return &IOutStream__registry[ptrread(this.value)];
 	}
 
+	#define CONSTEXPR_OutStream_upcast(name, this) \
+		{.raw_value=CONSTEXPR_ptrtag((this), IOutStream_##name##_ID)}
+
 #else
 	typedef struct {
 		Ptr this;
@@ -35,9 +44,12 @@ typedef struct {
 	Ptr OutStream_this(OutStream this) { return this.this; }
 	const IOutStream *OutStream_iface(OutStream this) { return this.iface; }
 
+	#define CONSTEXPR_OutStream_upcast(name, this) \
+		{.this=(Ptr)(usize)(this), .iface=&IOutStream_##name}
+
 #endif
 
-void OutStream_write(OutStream this, const ubyte *buffer, usize buffer_size) {
+void OutStream_write(OutStream this, ConstPtr buffer, usize buffer_size) {
 	#if BUILD_SAFE
 		if (!buffer) return;
 	#endif
@@ -47,6 +59,10 @@ void OutStream_write(OutStream this, const ubyte *buffer, usize buffer_size) {
 
 void OutStream_flush(OutStream this) {
 	OutStream_iface(this)->flush(OutStream_this(this));
+}
+
+OutStreamAttr OutStream_attr(OutStream this) {
+	return OutStream_iface(this)->attr(OutStream_this(this));
 }
 
 #include "OutStream_meta.h"

@@ -3,11 +3,8 @@
 	I I##__registry[I##_KNOWN + Slots] = {}; \
 	usize I##__registry_index = I##_KNOWN; \
 	void I##__register_known(Id id, const I *iface) { \
-		GCC_DIAG_PUSH \
-		GCC_DIAG_IGNORE(WTYPELIMITS) \
-			if (id >= I##_KNOWN) \
-				PANIC(#I"__register_known: id > known"); \
-		GCC_DIAG_POP \
+		if (id >= I##_KNOWN) \
+			PANIC(#I"__register_known: id > known"); \
 		I##__registry[(usize)id] = *iface; \
 	} \
 	Id I##__register(const I *iface) { \
@@ -27,7 +24,7 @@
 	}
 
 #define INTERFACE_REGISTER_KNOWN(I, N) \
-	void __attribute__((constructor(140))) I##_##N##__ctor() { \
+	[[gnu::constructor(140)]] void I##_##N##__ctor() { \
 		I##__register_known(I##_##N##_ID, &I##_##N); \
 	}
 
@@ -63,7 +60,7 @@
 	#define IPASS(C, N) IMACRO(IPASS, C, N)
 
 	#define IWRAP_true(C, N) N
-	#define IWRAP_false(C, N) (C){.this=N##_this,.iface=N##_iface}
+	#define IWRAP_false(C, N) ((C){.this=N##_this,.iface=N##_iface})
 	#define IWRAP(C, N) IMACRO(IWRAP, C, N)
 
 #else

@@ -23,12 +23,14 @@ constexpr usize async_TASK_FORK_SYNC_OFFSET =
 
 #define async_BEGIN \
 	AsyncIntent async_TOK(_entry)( \
-		AsyncRT *const async_rt__, Ptr const async_vdata__, AsyncTaskState const async_state__, \
-		AsyncResult *const async_result__ \
+		AsyncRT *const async_rt__, Ptr const async_vdata__, AsyncTaskArgs const async_args__, \
+		AsyncTaskIO *const async_io__ \
 	) { \
 		[[maybe_unused]] \
-		auto async_fork_id__ = async_GET_FORK_ID(async_state__); \
+		auto const async_context__ = AsyncTaskArgs_context(async_args__); \
+		auto const async_state__ = AsyncTaskArgs_state(async_args__); \
 		auto const async_label__ = async_GET_LABEL(async_state__); \
+		auto async_fork_id__ = async_GET_FORK_ID(async_state__); \
 		async_TOK(_Task) *const async_data__ = async_vdata__; \
 		async_LOCALS \
 		switch (async_label__) { \
@@ -49,22 +51,22 @@ constexpr usize async_TASK_FORK_SYNC_OFFSET =
 			case async_Return_NONE: \
 				return AsyncIntent_YIELD; \
 			case async_Return_RESUME: \
-				async_result__->task = async_data__->return_task__; \
+				async_io__->out_task = async_data__->return_task__; \
 				return AsyncIntent_RESUME; \
 			case async_Return_SUSPEND: \
-				async_result__->task = async_data__->return_task__; \
+				async_io__->out_task = async_data__->return_task__; \
 				return AsyncIntent_SUSPEND; \
 			case async_Return_RESOLVE: \
-				return AsyncFuture_resolve(async_data__->return_future__, async_result__); \
+				return AsyncFuture_resolve(async_data__->return_future__, &async_io__->out_task); \
 			case async_Return_JOIN_RESUME: \
 				async_RETURN_JOIN_SYNC \
-				async_result__->task = AsyncTask_upcast(async_data__->return_join_data__, \
+				async_io__->out_task = AsyncTask_upcast(async_data__->return_join_data__, \
 					async_MAKE_TASK_STATE(0, async_data__->return_join_label__) \
 				); \
 				return AsyncIntent_RESUME; \
 			case async_Return_JOIN_SUSPEND: \
 				async_RETURN_JOIN_SYNC \
-				async_result__->task = AsyncTask_upcast(async_data__->return_join_data__, \
+				async_io__->out_task = AsyncTask_upcast(async_data__->return_join_data__, \
 					async_MAKE_TASK_STATE(0, async_data__->return_join_label__) \
 				); \
 				return AsyncIntent_SUSPEND; \
@@ -73,8 +75,8 @@ constexpr usize async_TASK_FORK_SYNC_OFFSET =
 	}
 
 #define async_LABEL(label) \
-	[[fallthrough]]; case async_TOK(_Label_##label): \
-	[[maybe_unused]] async_label_##label##__:
+	[[fallthrough]]; case async_TOK(_Label_##label):; \
+	[[maybe_unused]] async_label_##label##__:;
 
 #define async_SELF(label) \
 	AsyncTask_upcast(async_data__, async_MAKE_TASK_STATE(async_fork_id__, async_TOK(_Label_##label)))

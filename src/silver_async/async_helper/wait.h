@@ -14,7 +14,7 @@
 	if (AsyncFuture_set((future), async_self__)) { \
 		return AsyncIntent_YIELD; \
 	} \
-	async_result__->task = async_self; \
+	async_io__->out_task = async_self; \
 	return AsyncIntent_RESUME; \
 }
 
@@ -27,7 +27,7 @@
 	if (AsyncFuture_set((future), async_self__)) { \
 		return AsyncIntent_YIELD; \
 	} \
-	async_result__->task = async_self; \
+	async_io__->out_task = async_self; \
 	return AsyncIntent_SUSPEND; \
 }
 

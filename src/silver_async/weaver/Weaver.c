@@ -14,14 +14,24 @@
 	#define Weaver_RESUME_IMMEDIATE true
 #endif
 
-#if Weaver_DEBUG
-	_Thread_local u32 t_WeaverThread_id = 0;
+#ifndef Weaver_IMMEDIATE_NOSYNC
+	#define Weaver_IMMEDIATE_NOSYNC true
+#endif
 
-	#define Weaver_DBG(...) FPRINT_ATOMIC( \
-		stderr, "[",t_WeaverThread_id,"] ",__func__,": "__VA_OPT__(,)__VA_ARGS__,"\n" \
-	)
-#else
-	#define Weaver_DBG(...)
+#ifndef Weaver_SWAP_SLEEP
+	#define Weaver_SWAP_SLEEP false
+#endif
+
+#ifndef Weaver_SPIN_YIELD
+	#define Weaver_SPIN_YIELD CPU_YIELD
+#endif
+
+#ifndef Weaver_ATOMIC_EXPLICIT
+	#define Weaver_ATOMIC_EXPLICIT true
+#endif
+
+#ifndef Weaver_CACHE_ALIGN
+	#define Weaver_CACHE_ALIGN CPU_HDI_SIZE
 #endif
 
 #include "WeaverQueue.h"

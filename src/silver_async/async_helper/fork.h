@@ -56,7 +56,7 @@ void async_FORK_submit_rest(
 	async_FORK_SET_STATE(n) \
 	if (n != 1) \
 		async_FORK_submit_rest(async_rt__, async_data__, n - 1, async_TOK(_Label_##label)); \
-	async_result__->task = AsyncTask_upcast( \
+	async_io__->out_task = AsyncTask_upcast( \
 		async_data__, async_MAKE_TASK_STATE(1, async_TOK(_Label_##label)) \
 	); \
 	return AsyncIntent_RESUME; \
@@ -73,7 +73,7 @@ void async_FORK_submit_rest(
 		async_FORK_submit_all(async_rt__, async_data__, n, async_TOK(_Label_##label)); \
 		return AsyncIntent_YIELD; \
 	} else { \
-		async_result__->task = AsyncTask_upcast( \
+		async_io__->out_task = AsyncTask_upcast( \
 			async_data__, async_MAKE_TASK_STATE(1, async_TOK(_Label_##label)) \
 		); \
 		return AsyncIntent_SUSPEND; \

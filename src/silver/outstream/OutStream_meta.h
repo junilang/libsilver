@@ -4,27 +4,30 @@
 		.flush = &IOutStream_##N##_flush \
 	};
 
-#define IOutStream_GENERATE_METHODS(N) \
-	extern void IOutStream_##N##_write(Ptr this, const ubyte *buffer, usize buffer_size) { \
-		N##_write(this, buffer, buffer_size); \
+#define IOutStream_GENERATE_METHODS(N, E) \
+	extern void IOutStream_##N##_write(Ptr this, ConstPtr buffer, usize buffer_size) { \
+		N##_write((E)(usize)this, buffer, buffer_size); \
 	} \
 	extern void IOutStream_##N##_flush(Ptr this) { \
-		N##_flush(this); \
+		N##_flush((E)(usize)this); \
+	} \
+	extern OutStreamAttr IOutStream_##N##_attr(Ptr this) { \
+		return N##_attr((E)(usize)this); \
 	}
 
 #if OutStream_PTRTAG
-	#define IOutStream_GENERATE_UPCAST(N) \
-		OutStream N##_upcast(Ptr this) { \
-			return (OutStream){ptrtag(this, IOutStream_##N##_ID)}; \
+	#define IOutStream_GENERATE_UPCAST(N, E) \
+		OutStream N##_upcast(E this) { \
+			return (OutStream){.value=ptrtag((Ptr)(usize)this, IOutStream_##N##_ID)}; \
 		}
 
 	#define IOutStream_REGISTER(N) INTERFACE_REGISTER(IOutStream, N)
 	#define IOutStream_REGISTER_KNOWN(N) INTERFACE_REGISTER_KNOWN(IOutStream, N)
 
 #else
-	#define IOutStream_GENERATE_UPCAST(N) \
-		OutStream N##_upcast(Ptr this) { \
-			return (OutStream){.this=this,.iface=&IOutStream_##N}; \
+	#define IOutStream_GENERATE_UPCAST(N, E) \
+		OutStream N##_upcast(E this) { \
+			return (OutStream){.this=(Ptr)(usize)this,.iface=&IOutStream_##N}; \
 		}
 
 	#define IOutStream_REGISTER(N)
@@ -32,14 +35,14 @@
 
 #endif
 
-#define IOutStream_GENERATE_(N, REGISTER) \
-	IOutStream_GENERATE_METHODS(N) \
+#define IOutStream_GENERATE_(N, E, REGISTER) \
+	IOutStream_GENERATE_METHODS(N, E) \
 	IOutStream_GENERATE_INTERFACE(N) \
-	IOutStream_GENERATE_UPCAST(N) \
+	IOutStream_GENERATE_UPCAST(N, E) \
 	REGISTER(N)
 
-#define IOutStream_GENERATE(N) \
-	IOutStream_GENERATE_(N, IOutStream_REGISTER)
+#define IOutStream_GENERATE(N, E) \
+	IOutStream_GENERATE_(N, E, IOutStream_REGISTER)
 
-#define IOutStream_GENERATE_KNOWN(N) \
-	IOutStream_GENERATE_(N, IOutStream_REGISTER_KNOWN)
+#define IOutStream_GENERATE_KNOWN(N, E) \
+	IOutStream_GENERATE_(N, E, IOutStream_REGISTER_KNOWN)

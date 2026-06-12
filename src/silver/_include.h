@@ -5,45 +5,42 @@
 #if !LIBSILVER_INCLUDE
 	#define LIBSILVER_INCLUDE true
 
+	// macro utilities
 	#include "util.h"
-	#include "enum.h"
 	#include "flag.h"
-	#include "types.h"
+	#include "field.h"
+	#include "enum.h"
 	#include "panic.h"
-	#include "usize.h"
-	#include "hash.h"
-
-	#include "whitespace.h"
-
-	#include "ptrtag.h"
-	#include "lptrtag.h"
-
 	#include "interface.h"
 
-	#include "outstream/OutStream.h"
-	#include "outstream/FileOutStream.c"
-	#include "outstream/BufferOutStream.c"
+	// core features
+	#include "types.h"
+	#include "memory.h"
+	#include "chkdop.h"
+	#include "ptrtag.h"
+	#include "lptrtag.h"
+	#include "chars.h"
 
+	#include "hash/hash_crc32_x86.h"
+	#include "hash/hash_fnv1a.h"
+	#include "hash/hash.h"
+
+	#include "outstream/OutStream.h"
 	#include "printable/Printable.h"
 
-	#include "allocator/Allocator.h"
+	#include "outstream/BufferOutStream.c"
+	#include "outstream/RawFileOutStream.c"
 
 	#include "String.h"
-	#include "VString.h"
-
+	#include "IntFmt.c"
 	#include "print.h"
 
-	#include "Vec.h"
-	#include "Vec32.h"
+	#include "allocator/Alc.h"
 
-	#include "trie/Trie.h"
+	#if __linux__
+		#include "allocator/OsAlc_linux.c"
+	#endif
 
-	#include "Rc.h"
-	#include "Arc.h"
-
-
-	#include "allocator/Malloc.c"
-
-	#include "SilverTest.c"
+	#include "arena/ArenaAlc.c"
 
 #endif

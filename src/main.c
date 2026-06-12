@@ -1,8 +1,8 @@
-#include "silver/_include.h"
-#include "silver_async/_include.h"
-#include "silver_sh/_include.h"
+#include "silver_os.h"
+#include "silver.h"
 
 #if BUILD_TESTING
+	#include "silver_test.h"
 
 	#define TEST_SUITE_BEGIN void libsilver_testsuite(SilverTestState *state) {
 	#define TEST_RUN(test, name) SilverTest_run(state, STRING(name), &test##_entry);
@@ -14,7 +14,8 @@
 		TEST_SUITE_BEGIN TEST_SUITE_END
 	#endif
 
-	int main(int argc, char **argv) {
+	int main(int argc, Str *argv, Str *envp) {
 		return SilverTest_entry(argc, argv, &libsilver_testsuite);
 	}
+
 #endif

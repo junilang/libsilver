@@ -1,13 +1,16 @@
 #if !LIBSILVER_DEPENDS
 	#define LIBSILVER_DEPENDS true
 
-	#include <stdio.h>
-	#include <stdint.h>
-	#include <stddef.h>
-	#include <stdlib.h>
-	#include <string.h>
-	#include <stdbit.h>
-	#include <stdatomic.h>
-	#include <limits.h>
+	#ifndef LIBSILVER_OS_INCLUDE
+		#include "../silver_os.h"
+	#endif
+
+	#ifndef LIBSILVER_INIT_INCLUDE
+		#include "../silver_init.h"
+	#endif
+
+	#if BUILD_ASAN
+		#include <sanitizer/asan_interface.h>
+	#endif
 
 #endif

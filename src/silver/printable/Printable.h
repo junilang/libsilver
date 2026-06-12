@@ -3,7 +3,15 @@
 #endif
 
 typedef struct {
-	void (*print)(Ptr this, IARG(OutStream, os));
+	u32 value;
+} PrintFmt;
+
+constexpr PrintFmt PrintFmt_Null = { .value = 0 };
+
+typedef void (*PrintFn)(Ptr this, PrintFmt fmt, IARG(OutStream, os));
+
+typedef struct {
+	PrintFn print;
 } IPrintable;
 
 #if Printable_PTRTAG
@@ -33,8 +41,36 @@ typedef struct {
 
 #endif
 
-void Printable_print(Printable this, OutStream os) {
-	Printable_iface(this)->print(Printable_this(this), IPASS(OutStream, os));
+void Printable_print(Printable this, PrintFmt fmt, OutStream os) {
+	Printable_iface(this)->print(Printable_this(this), fmt, IPASS(OutStream, os));
+}
+
+typedef struct {
+	Printable this;
+	PrintFmt fmt;
+} FmtPrintable;
+
+void FmtPrintable_print(FmtPrintable this, PrintFmt fmt, OutStream os) {
+	Printable_print(this.this, this.fmt, os);
+}
+
+typedef struct {
+	Ptr this;
+	PrintFn print;
+} StaticPrintable;
+
+void StaticPrintable_print(StaticPrintable this, PrintFmt fmt, OutStream os) {
+	this.print(this.this, fmt, os);
+}
+
+typedef struct {
+	Ptr this;
+	PrintFn print;
+	PrintFmt fmt;
+} StaticFmtPrintable;
+
+void StaticFmtPrintable_print(StaticFmtPrintable this, PrintFmt fmt, OutStream os) {
+	this.print(this.this, this.fmt, os);
 }
 
 #include "Printable_meta.h"

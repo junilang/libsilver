@@ -64,8 +64,44 @@ Ptr WeaverThread_main(Ptr vthis) {
 	if (0) Brun: {
 		if (AsyncTask_isnull(pending_task)) goto fetch_task;
 
-		pending_task = WeaverThread_runtask(this, rt, pending_task);
-		goto load_state;
+		AsyncTaskIO task_io;
+		AsyncIntent intent = AsyncTask_call(pending_task, 0, (AsyncRT*)rt, &task_io);
+		switch (intent) {
+			case AsyncIntent_CALL:
+				#if Weaver_CALL_IMMEDIATE
+					goto immediate;
+				#else
+					goto suspend_task;
+				#endif
+			case AsyncIntent_RESUME:
+				#if Weaver_RESUME_IMMEDIATE
+					goto immediate;
+				#else
+					goto suspend_task;
+				#endif
+			case AsyncIntent_SUSPEND:
+				goto suspend_task;
+			case AsyncIntent_YIELD:
+				goto load_state;
+			default:
+		}
+
+		UNREACHABLE;
+
+		if (0) immediate: {
+			pending_task = task_io.out_task;
+			#if Weaver_IMMEDIATE_NOSYNC
+				goto Brun;
+			#else
+				goto load_state;
+			#endif
+		}
+
+		if (0) suspend_task: {
+			Weaver_submit(rt, &task_io.out_task, 1);
+			goto load_state;
+		}
+
 	}
 
 	if (0) fetch_task: {

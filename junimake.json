@@ -18,14 +18,15 @@
 		"BUILD_ASAN": "false",
 		"BUILD_TSAN": "false",
 		"BUILD_UBSAN": "false",
-		"BUILD_ASM": "false"
+		"BUILD_ASM": "false",
+		"BUILD_NOLIBC": "false"
 	},
 
 	"flags": [
 		"-std=gnu23",
-		"-lpthread",
-		"-fwhole-program",
 		"-pedantic",
+		"-lgcc",
+		"-fwhole-program",
 		"-Wall",
 		"-Wextra",
 		"-Werror=vla",
@@ -45,7 +46,8 @@
 			"BUILD_TESTING": "true",
 			"BUILD_ASAN": "true",
 			"BUILD_UBSAN": "true",
-			"BUILD_ASM": "true"
+			"BUILD_ASM": "true",
+			"BUILD_NOLIBC": "true"
 		}
 	},
 
@@ -96,5 +98,13 @@
 		"macros": {
 			"BUILD_TESTING": "true"
 		}
+	},
+
+	"profile_nolibc": {
+		"flags": [ "-nolibc" ],
+		"macros": {
+			"BUILD_NOLIBC": "true"
+		}
 	}
+
 }

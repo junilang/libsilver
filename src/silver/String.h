@@ -3,14 +3,14 @@ typedef struct {
 	usize size;
 } String;
 
-#define String_NULL ((String){.data=nullptr,.size=0})
+#define String_NULL LITERAL(String,.data=nullptr,.size=0)
 
-void String_print(String this, OutStream os) {
+void String_print(String this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, this.data, this.size);
 }
 
-uhash String_hash(String this, uhash base) {
-	return HASH_FN(this.data, this.size, base);
+uhash String_hash(uhash base, String this) {
+	return memhash(base, this.data, this.size);
 }
 
 typedef struct {
@@ -18,22 +18,22 @@ typedef struct {
 	const ubyte *end;
 } StringSpan;
 
-#define StringSpan_NULL ((StringSpan){.begin=nullptr,.end=nullptr})
+#define StringSpan_NULL LITERAL(StringSpan,.begin=nullptr,.end=nullptr)
 
-void StringSpan_print(StringSpan this, OutStream os) {
+void StringSpan_print(StringSpan this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, this.begin, (usize)(this.end - this.begin));
 }
 
-uhash StringSpan_hash(StringSpan this, uhash base) {
-	return HASH_FN(this.begin, (usize)(this.end - this.begin), base);
+uhash StringSpan_hash(uhash base, StringSpan this) {
+	return memhash(base, this.begin, (usize)(this.end - this.begin));
 }
 
 usize StringSpan_size(StringSpan this) {
 	return (usize)(this.end - this.begin);
 }
 
-#define USTR(str) (const ubyte*)(str), __builtin_strlen(str)
-#define STRING(str) ((String){.data=(const ubyte*)(str), .size=__builtin_strlen(str)})
+#define USTR(str) (ConstPtr)(str), (sizeof(str) - 1)
+#define STRING(str) LITERAL(String,.data=(ConstPtr)(str), .size=__builtin_strlen(str))
 
 #ifndef SmallString_PTRTAG
 	#define SmallString_PTRTAG PTRTAG
@@ -72,6 +72,7 @@ usize StringSpan_size(StringSpan this) {
 
 	#define SmallString_MAX SIZE_MAX
 
+	[[deprecated("pointer tagging disabled - SmallString = String")]]
 	typedef struct {
 		const ubyte *data;
 		usize size;
@@ -93,10 +94,10 @@ usize StringSpan_size(StringSpan this) {
 
 #endif
 
-void SmallString_print(SmallString this, OutStream os) {
+void SmallString_print(SmallString this, PrintFmt fmt, OutStream os) {
 	OutStream_write(os, SmallString_data(this), SmallString_size(this));
 }
 
-uhash SmallString_hash(SmallString this, uhash base) {
-	return HASH_FN(SmallString_data(this), SmallString_size(this), base);
+uhash SmallString_hash(uhash base, SmallString this) {
+	return memhash(base, SmallString_data(this), SmallString_size(this));
 }

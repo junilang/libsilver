@@ -8,7 +8,7 @@ typedef struct {
 	#define BufferOutStream_SAFE BUILD_SAFE
 #endif
 
-void BufferOutStream_write(BufferOutStream *this, const ubyte *buffer, usize buffer_size) {
+void BufferOutStream_write(BufferOutStream *this, ConstPtr buffer, usize buffer_size) {
 	auto const index = this->size;
 
 	#if BufferOutStream_SAFE
@@ -24,4 +24,8 @@ void BufferOutStream_write(BufferOutStream *this, const ubyte *buffer, usize buf
 
 void BufferOutStream_flush(BufferOutStream *this) {}
 
-IOutStream_GENERATE_KNOWN(BufferOutStream)
+OutStreamAttr BufferOutStream_attr(BufferOutStream *this) {
+	return 0;
+}
+
+IOutStream_GENERATE_KNOWN(BufferOutStream, BufferOutStream*)

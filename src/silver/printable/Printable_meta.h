@@ -4,8 +4,8 @@
 	};
 
 #define IPrintable_GENERATE_METHODS(N, E) \
-	extern void IPrintable_##N##_print(Ptr this, IARG(OutStream, os)) { \
-		N##_print((E)(usize)this, IWRAP(OutStream, os)); \
+	extern void IPrintable_##N##_print(Ptr this, PrintFmt fmt,  IARG(OutStream, os)) { \
+		N##_print((E)(usize)this, fmt, IWRAP(OutStream, os)); \
 	}
 
 #if Printable_PTRTAG
@@ -28,11 +28,25 @@
 
 #endif
 
+#define IPrintable_GENERATE_STATIC(N, E) \
+	FmtPrintable N##_fmtrepr(E this, PrintFmt fmt) { \
+		return (FmtPrintable){.this=N##_repr(this),.fmt=fmt}; \
+	} \
+	StaticPrintable N##_srepr(E this) { \
+		return (StaticPrintable){.this=(Ptr)(usize)this,.print=&IPrintable_##N##_print}; \
+	} \
+	StaticFmtPrintable N##_sfmtrepr(E this, PrintFmt fmt) { \
+		return (StaticFmtPrintable){\
+			.this=(Ptr)(usize)this,.print=&IPrintable_##N##_print,.fmt=fmt \
+		}; \
+	}
+
 #define IPrintable_GENERATE_(N, E, REGISTER) \
 	IPrintable_GENERATE_METHODS(N, E) \
 	IPrintable_GENERATE_INTERFACE(N) \
 	REGISTER(N) \
-	IPrintable_GENERATE_UPCAST(N, E)
+	IPrintable_GENERATE_UPCAST(N, E) \
+	IPrintable_GENERATE_STATIC(N, E)
 
 #define IPrintable_GENERATE_KNOWN(N, E) \
 	IPrintable_GENERATE_(N, E, IPrintable_REGISTER_KNOWN)

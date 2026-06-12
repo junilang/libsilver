@@ -60,7 +60,7 @@ AsyncFuture AsyncFuture_Mtx_init(AsyncFuture_Mtx *this) {
 	return AsyncFuture_Mtx_upcast(this);
 }
 
-AsyncIntent AsyncFuture_Mtx_resolve(AsyncFuture_Mtx *this, AsyncResult *result) {
+AsyncIntent AsyncFuture_Mtx_resolve(AsyncFuture_Mtx *this) {
 	ZZAsyncFuture_Mtx_resolve(&this->state);
 	return AsyncIntent_YIELD;
 }
@@ -88,7 +88,7 @@ AsyncFuture AsyncFuture_MtxCount_init(AsyncFuture_MtxCount *this, u32 count) {
 	return AsyncFuture_MtxCount_upcast(this);
 }
 
-AsyncIntent AsyncFuture_MtxCount_resolve(AsyncFuture_MtxCount *this, AsyncResult *result) {
+AsyncIntent AsyncFuture_MtxCount_resolve(AsyncFuture_MtxCount *this) {
 	if (atomic_fetch_sub_explicit(&this->count, 1, memory_order_acq_rel) == 1)
 		ZZAsyncFuture_Mtx_resolve(&this->state);
 
