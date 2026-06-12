@@ -51,6 +51,7 @@ typedef enum : u8 {
 	AlcRes_ErrInvalidAlign,
 	AlcRes_ErrInvalidRelative,
 	AlcRes_ErrUnsupported,
+	AlcRes_ErrUnimplemented,
 	AlcRes_ErrUnknown,
 	AlcRes_MAX
 } AlcRes;

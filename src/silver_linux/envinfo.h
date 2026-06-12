@@ -25,12 +25,3 @@ linux_envinfo global_linux_envinfo__ = {};
 uword env_pagesz() {
 	return global_linux_envinfo__.pagesz;
 }
-
-void load_envinfo(int argc, const char **argv) {
-	const char **envp = argv + (argc + 1);
-	while (*envp) {
-		envp++;
-	}
-	envp++;
-	linux_envinfo_fromauxv(&global_linux_envinfo__, envp);
-}

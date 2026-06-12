@@ -42,7 +42,7 @@ typedef struct {
 	}
 
 	bool Alc_equal(Alc this, Alc other) {
-		return this.value = other.value;
+		return this.value == other.value;
 	}
 
 	#define CONSTEXPR_Alc_upcast(name, this) \
@@ -63,7 +63,7 @@ typedef struct {
 	}
 
 	bool Alc_equal(Alc this, Alc other) {
-		return this.value = other.value && this.iface == other.iface;
+		return this.value == other.value && this.iface == other.iface;
 	}
 
 	#define CONSTEXPR_Alc_upcast(name, this) \

@@ -1,4 +1,4 @@
-int ZZentry() {
+int ZZentry(SilverTestContext *ctx) {
 	PrintFmt fmt = {
 		//FIELD_SET(IntFmt_Base, Hex) |
 		FIELD_SETN(IntFmt_Spacing, 4) |
