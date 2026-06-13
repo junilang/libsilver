@@ -34,6 +34,7 @@ usize StringSpan_size(StringSpan this) {
 
 #define USTR(str) (ConstPtr)(str), (sizeof(str) - 1)
 #define STRING(str) LITERAL(String,.data=(ConstPtr)(str), .size=__builtin_strlen(str))
+#define STRING_INIT(str) {.data=(ConstPtr)(str), .size=__builtin_strlen(str)}
 
 #ifndef SmallString_PTRTAG
 	#define SmallString_PTRTAG PTRTAG

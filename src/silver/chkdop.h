@@ -135,7 +135,3 @@ XTYPES
 #undef XS
 
 #undef XTYPES
-
-bool usize_chkdflx(usize base, usize elem, usize n, usize *result) {
-	return chkdmul(elem, n, &elem) || chkdadd(base, elem, result);
-}

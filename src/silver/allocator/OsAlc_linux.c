@@ -2,6 +2,7 @@ typedef struct {
 	usize map_size;
 	u32 req_size_offset;
 	u32 base_offset;
+	char data[];
 } OsAlc_Header;
 
 Ptr OsAlc_new(Ptr this, AlcReq req, ConstPtr hint) {
@@ -22,16 +23,9 @@ Ptr OsAlc_new(Ptr this, AlcReq req, ConstPtr hint) {
 	if (align < alignof(OsAlc_Header))
 		align = alignof(OsAlc_Header);
 
-	usize offset;
-	if (align < sizeof(OsAlc_Header))
-		offset = sizeof(OsAlc_Header);
-	else
-		offset = align;
-
+	usize offset = usize_align(sizeof(OsAlc_Header), align);
 	usize req_size = FIELD_GET(AlcSize, req);
-
-	usize next_page = req_size + offset;
-	next_page = (next_page + (page_size - 1)) & (~(page_size - 1));
+	usize next_page = usize_align(req_size + offset, page_size);
 
 	iword res = linux_mmap(hint, next_page,
 		PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0
@@ -94,17 +88,10 @@ AlcNrs OsAlc_negotiate(Ptr this, AlcNrq req, ConstPtr hint, usize *alts) {
 
 	// we know the page will be aligned to page_size so we can do a
 	// straightforward calculation
-	usize offset;
-	if (align < sizeof(OsAlc_Header))
-		offset = sizeof(OsAlc_Header);
-	else
-		offset = align;
 
-	// now we have the page offset for the user's memory buffer
+	usize offset = usize_align(sizeof(OsAlc_Header), align);
 	usize req_size = FIELD_GET(AlcSize, req);
-
-	usize next_page = req_size + offset;
-	next_page = (next_page + (page_size - 1)) & (~(page_size - 1));
+	usize next_page = usize_align(req_size + offset, page_size);
 
 	switch (FIELD_GET_CAST(AlcNrq_Intent, req)) {
 		case AlcNrq_Intent_Least: {

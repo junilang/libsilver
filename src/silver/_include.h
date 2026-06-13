@@ -17,6 +17,7 @@
 	#include "types.h"
 	#include "memory.h"
 	#include "chkdop.h"
+	#include "sizeutil.h"
 	#include "ptrtag.h"
 	#include "lptrtag.h"
 	#include "chars.h"

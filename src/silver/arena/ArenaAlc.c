@@ -14,55 +14,107 @@ typedef struct {
 
 static_assert(alignof(ArenaAlc) == ArenaAlc_unit);
 
-AlcRes ArenaAlc_init(ArenaAlc *this, Alc provider, usize chunk_size) {
-	this->provider = provider;
+AlcRes ArenaAlc_pushchunk(ArenaAlc *this, usize least_size) {
+	auto current = this->head;
+	ArenaAlc_Chunk *next;
+	if (current) next = current->next;
+	else next = nullptr;
 
-	chunk_size = (chunk_size + (ArenaAlc_unit - 1)) & (~((usize)ArenaAlc_unit - 1));
-	this->chunk_size = (ArenaAlc_Units)(chunk_size / 8);
-
-	ArenaAlc_Chunk *head = ArenaAlc_Chunk_allocate(
-		provider, nullptr,
-		// chunk size is still in bytes here
-		chunk_size / 2, chunk_size
-	);
-
-	switch (AlcRes_get(head)) {
-		default:
-			return AlcRes_get(head);
-		case AlcRes_Ok:
+	if (next && (next->off_end * ArenaAlc_unit >= least_size)) {
+		this->head = next;
+		return AlcRes_Ok;
 	}
 
-	this->head = head;
+	auto chunk = ArenaAlc_Chunk_allocate(
+		this->provider, current, least_size, this->chunk_size * ArenaAlc_unit
+	);
+	{
+		auto res = AlcRes_get(chunk);
+		switch (res) {
+			default:
+				return res;
+			case AlcRes_Ok:
+		}
+	}
+
+	if (current)
+		current->next = chunk;
+	chunk->prev = current;
+	chunk->next = next;
+	this->head = chunk;
+
+	return AlcRes_Ok;
+}
+
+AlcRes ArenaAlc_init(ArenaAlc *this, Alc provider, usize chunk_size) {
+	if (!chunk_size)
+		return AlcRes_ErrInvalidSize;
+
+	this->provider = provider;
+	this->chunk_size = (ArenaAlc_Units)(usize_align(chunk_size, ArenaAlc_unit) / 8);
+	this->head = nullptr;
+
+	auto res = ArenaAlc_pushchunk(this, 0);
+	switch (res) {
+		default:
+			return res;
+		case AlcRes_Ok:
+	}
 
 	return AlcRes_Ok;
 }
 
 Ptr ArenaAlc_new(ArenaAlc *this, AlcReq req, ConstPtr hint) {
-	usize size = FIELD_GET(AlcSize, req);
+	usize req_size = FIELD_GET(AlcSize, req);
+	if (!req_size) return AlcRes_set(AlcRes_ErrInvalidSize);
 
-	ualign align = AlcAlign_get(FIELD_GET(AlcAlign, req));
+	auto align = AlcAlign_get(FIELD_GET(AlcAlign, req));
 	if (align < ArenaAlc_unit)
 		align = ArenaAlc_unit;
 
-	// ceil size to alignment multiple
-	size = (size + (align - 1)) & (~((usize)align - 1));
+	req_size = usize_align(req_size, align);
 
-	ArenaAlc_Chunk *chunk = this->head;
+	auto size = (ArenaAlc_Units)(req_size / ArenaAlc_unit);
 
-	// get searchable address
+	// TODO search evicted buffers before allocating new
+
+	bool chunk_is_new = false;
+
+	try_again:;
+	auto chunk = this->head;
+	// calculate aligned address of buffer data and convert back to units
 	usize ptr = (usize)&chunk->data + (chunk->off_head * ArenaAlc_unit) + sizeof(ArenaAlc_Buffer);
-	// ceil address to alignment multiple
-	ptr = (ptr + (align - 1)) & (~((usize)align - 1));
+	ptr = usize_align(ptr, align);
 
-	usize end = ptr + size;
-	auto new_head = (ArenaAlc_Units)((end - (usize)&chunk->data) / ArenaAlc_unit);
+	auto offset = (ArenaAlc_Units)((ptr - (usize)&chunk->data) / ArenaAlc_unit);
+	auto new_head = offset + size;
 
-	// buffer would overflow
-	if (new_head > chunk->off_end)
-		return AlcRes_set(AlcRes_ErrNoMemory);
+	if (new_head > chunk->off_end) {
+		// we already tried allocating a new chunk
+		if (chunk_is_new)
+			return AlcRes_set(AlcRes_ErrInternal);
+
+		usize least_size = sizeof(ArenaAlc_Buffer) + req_size;
+		// we only need to worry about alignment if the
+		// requested alignment is more than a unit
+		if (align > ArenaAlc_unit) {
+			least_size = align + usize_align(least_size, align);
+		}
+
+		auto res = ArenaAlc_pushchunk(this, least_size);
+		switch (res) {
+			default:
+				return AlcRes_set(res);
+			case AlcRes_Ok:
+		}
+
+		chunk_is_new = true;
+		goto try_again;
+	}
 
 	auto header = (ArenaAlc_Buffer*)(ptr - sizeof(ArenaAlc_Buffer));
-	header->off_end = (ArenaAlc_Units)(size / ArenaAlc_unit);
+	header->off_size = size;
+	header->off_global = offset;
 	chunk->off_head = new_head;
 
 	return (Ptr)ptr;

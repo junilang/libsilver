@@ -2,6 +2,7 @@ typedef STRUCTDECL(ArenaAlc_Chunk);
 
 struct ArenaAlc_Chunk {
 	ArenaAlc_Chunk *prev;
+	ArenaAlc_Chunk *next;
 	ArenaAlc_Units off_head;
 	ArenaAlc_Units off_end;
 	alignas(ArenaAlc_unit) ubyte data[]; // data aligned to units
@@ -15,14 +16,9 @@ ArenaAlc_Chunk *ArenaAlc_Chunk_allocate(
 	AlcAlign req_align = AlcAlign_set(alignof(ArenaAlc_Chunk));
 	AlcRelative req_relative = hint ? AlcRelative_Local : AlcRelative_None;
 
-
 	// ensure space for chunk header and align sizes to unit
-
-	least_size += sizeof(ArenaAlc_Chunk);
-	least_size = (least_size + (ArenaAlc_unit - 1)) & (~((usize)ArenaAlc_unit - 1));
-
-	size += sizeof(ArenaAlc_Chunk);
-	size = (size + (ArenaAlc_unit - 1)) & (~((usize)ArenaAlc_unit - 1));
+	least_size = usize_align(least_size + sizeof(ArenaAlc_Chunk), ArenaAlc_unit);
+	size = usize_align(size + sizeof(ArenaAlc_Chunk), ArenaAlc_unit);
 
 	AlcNrs offer;
 	if (size <= least_size) { // negotiate using least intent

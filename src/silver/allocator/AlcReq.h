@@ -47,18 +47,30 @@ static_assert(AlcReq_END <= 64);
 static_assert(FIELD_MAX(AlcAlign) >= AlcAlign_MAX);
 static_assert(FIELD_MAX(AlcRelative) >= AlcRelative_MAX);
 
+#define XS \
+	X(Ok) \
+	X(ErrInternal) \
+	X(ErrTooLarge) \
+	X(ErrNoMemory) \
+	X(ErrInvalidSize) \
+	X(ErrInvalidAlign) \
+	X(ErrInvalidRelative) \
+	X(ErrUnsupported) \
+	X(ErrUnimplemented) \
+	X(ErrUnknown)
+
 typedef enum : u8 {
-	AlcRes_Ok = 0,
-	AlcRes_ErrInternal,
-	AlcRes_ErrTooLarge,
-	AlcRes_ErrNoMemory,
-	AlcRes_ErrInvalidAlign,
-	AlcRes_ErrInvalidRelative,
-	AlcRes_ErrUnsupported,
-	AlcRes_ErrUnimplemented,
-	AlcRes_ErrUnknown,
+	#define X(N) AlcRes_##N,
+		XS
+	#undef X
 	AlcRes_MAX
 } AlcRes;
+
+const String AlcRes_repr[] = {
+	#define X(N) [AlcRes_##N] = STRING_INIT(#N),
+		XS
+	#undef X
+};
 
 Ptr AlcRes_set(AlcRes err) {
 	return (Ptr)(-(isize)err);
