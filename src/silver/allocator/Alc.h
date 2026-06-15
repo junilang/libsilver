@@ -3,15 +3,31 @@
 
 typedef u32 AlcAttr; enum {
 	AlcAttr_BIT_ThreadSafe,
-	AlcAttr_BIT_NoResize
+	AlcAttr_BIT_FeatureResize,
+	AlcAttr_BIT_FeatureStaticOffer,
+	AlcAttr_BIT_FeatureLock,
+	AlcAttr_BIT_FeatureRelativeLocal,
+	AlcAttr_BIT_FeatureRelativeS16,
+	AlcAttr_BIT_FeatureRelativeU16,
+	AlcAttr_BIT_FeatureRelativeS32,
+	AlcAttr_BIT_FeatureRelativeU32
 };
 
+typedef enum : u8 {
+	AlcLockIntent_Lock,
+	AlcLockIntent_Unlock
+} AlcLockIntent;
+
 typedef struct {
-	Ptr (*new)(Ptr this, AlcReq req, ConstPtr hint);
-	Ptr (*resize)(Ptr this, Ptr mem, AlcReq req, ConstPtr hint);
+	AlcAttr (*attr)(Ptr this);
+
+	Ptr (*new)(Ptr this, AlcReq req, ConstPtr hint, usize *out_size);
+	Ptr (*resize)(Ptr this, Ptr mem, AlcReq req, ConstPtr hint, usize *out_size);
 	AlcRes (*delete)(Ptr this, Ptr mem, AlcReq req);
 	AlcNrs (*negotiate)(Ptr this, AlcNrq nrq, ConstPtr hint, usize *alts);
-	AlcAttr (*attr)(Ptr this);
+
+	AlcOffer (*offer)(Ptr this, AlcReq req, ConstPtr hint, AlcOffer *alts);
+	AlcRes (*lock)(Ptr this, AlcLockIntent intent);
 } IAlc;
 
 #ifndef Alc_PTRTAG

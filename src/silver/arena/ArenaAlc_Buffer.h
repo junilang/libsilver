@@ -1,6 +1,6 @@
 typedef struct {
-	ArenaAlc_Units off_global; // distance from beginning of chunk data section to buffer data section
-	ArenaAlc_Units off_size; // size of data section
+	ArenaAlc_Units off_chunk; // distance from chunk pointer buffer pointer
+	ArenaAlc_Units off_size; // distance from buffer pointer to end of data
 	alignas(ArenaAlc_unit) char data[];
 } ArenaAlc_Buffer;
 

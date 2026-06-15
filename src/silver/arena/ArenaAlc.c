@@ -1,6 +1,11 @@
 // the smallest unit of memory ArenaAlc operates on
 // this allows for usage of 32 bit internal offsets
-constexpr ualign ArenaAlc_unit = 8;
+typedef u64 ArenaAlc_Unit;
+constexpr u8 ArenaAlc_Unit_width = 64;
+constexpr ualign ArenaAlc_unit = sizeof(ArenaAlc_Unit);
+
+static_assert(sizeof(ArenaAlc_Unit) == ArenaAlc_unit);
+
 typedef u32 ArenaAlc_Units;
 
 #include "ArenaAlc_Chunk.h"
@@ -14,21 +19,27 @@ typedef struct {
 
 static_assert(alignof(ArenaAlc) == ArenaAlc_unit);
 
+/*
+ArenaAlc_Chunk *ArenaAlc_findchunk(ArenaAlc_Chunk *chunk, usize least_size) {
+	while (chunk) {
+		if (chunk->off_end * ArenaAlc_unit >= least_size)
+			return chunk;
+	}
+
+	return nullptr;
+}
+
 AlcRes ArenaAlc_pushchunk(ArenaAlc *this, usize least_size) {
 	auto current = this->head;
 	ArenaAlc_Chunk *next;
 	if (current) next = current->next;
 	else next = nullptr;
 
-	if (next && (next->off_end * ArenaAlc_unit >= least_size)) {
-		this->head = next;
-		return AlcRes_Ok;
-	}
-
-	auto chunk = ArenaAlc_Chunk_allocate(
-		this->provider, current, least_size, this->chunk_size * ArenaAlc_unit
-	);
-	{
+	ArenaAlc_Chunk *chunk = ArenaAlc_findchunk(next, least_size);
+	if (!chunk) {
+		chunk = ArenaAlc_Chunk_allocate(
+			this->provider, current, least_size, this->chunk_size * ArenaAlc_unit
+		);
 		auto res = AlcRes_get(chunk);
 		switch (res) {
 			default:
@@ -45,6 +56,7 @@ AlcRes ArenaAlc_pushchunk(ArenaAlc *this, usize least_size) {
 
 	return AlcRes_Ok;
 }
+*/
 
 AlcRes ArenaAlc_init(ArenaAlc *this, Alc provider, usize chunk_size) {
 	if (!chunk_size)
@@ -54,17 +66,11 @@ AlcRes ArenaAlc_init(ArenaAlc *this, Alc provider, usize chunk_size) {
 	this->chunk_size = (ArenaAlc_Units)(usize_align(chunk_size, ArenaAlc_unit) / 8);
 	this->head = nullptr;
 
-	auto res = ArenaAlc_pushchunk(this, 0);
-	switch (res) {
-		default:
-			return res;
-		case AlcRes_Ok:
-	}
-
 	return AlcRes_Ok;
 }
 
 Ptr ArenaAlc_new(ArenaAlc *this, AlcReq req, ConstPtr hint) {
+	/*
 	usize req_size = FIELD_GET(AlcSize, req);
 	if (!req_size) return AlcRes_set(AlcRes_ErrInvalidSize);
 
@@ -114,10 +120,11 @@ Ptr ArenaAlc_new(ArenaAlc *this, AlcReq req, ConstPtr hint) {
 
 	auto header = (ArenaAlc_Buffer*)(ptr - sizeof(ArenaAlc_Buffer));
 	header->off_size = size;
-	header->off_global = offset;
+	//header->off_global = offset;
 	chunk->off_head = new_head;
 
 	return (Ptr)ptr;
+	*/
 }
 
 Ptr ArenaAlc_resize(ArenaAlc *this, Ptr mem, AlcReq req, ConstPtr hint) {

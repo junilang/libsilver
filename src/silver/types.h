@@ -34,10 +34,12 @@ typedef unsigned char ubyte;
 constexpr ubyte ubyte_max = (ubyte)(~0ull);
 constexpr ubyte ubyte_min = 0;
 #define BYTE_WIDTH __CHAR_BIT__
+constexpr u8 ubyte_width = BYTE_WIDTH;
 
 typedef signed char ibyte;
 constexpr ibyte ibyte_max = (ibyte)(ubyte_max >> 1);
 constexpr ibyte ibyte_min = -ibyte_max - 1;
+constexpr u8 ibyte_width = BYTE_WIDTH;
 
 
 typedef uword usize;
@@ -46,6 +48,8 @@ constexpr usize usize_min = 0;
 constexpr u8 usize_width = uword_width;
 #ifndef SIZE_WIDTH
 	#define SIZE_WIDTH WORD_WIDTH
+#elif SIZE_WIDTH != WORD_WIDTH
+	#error
 #endif
 
 typedef iword isize;

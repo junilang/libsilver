@@ -3,22 +3,42 @@ typedef STRUCTDECL(ArenaAlc_Chunk);
 struct ArenaAlc_Chunk {
 	ArenaAlc_Chunk *prev;
 	ArenaAlc_Chunk *next;
-	ArenaAlc_Units off_head;
+	ArenaAlc_Units prev_maxfree;
+	ArenaAlc_Units maxfree;
+	union {
+		ArenaAlc_Units bitmap_units;
+		ArenaAlc_Units off_head;
+	};
 	ArenaAlc_Units off_end;
-	alignas(ArenaAlc_unit) ubyte data[]; // data aligned to units
+	alignas(ArenaAlc_unit) ubyte data[];
 };
 
 static_assert(alignof(ArenaAlc_Chunk) == ArenaAlc_unit);
 
+// bytes per bitmap byte
+constexpr uint ArenaAlc_bitfactor = ArenaAlc_unit * ubyte_width;
+
+// bitmap adjusted size
+usize ArenaAlc_Chunk_bmasize(usize size) {
+	size = usize_align(size, ArenaAlc_unit);
+	size +=
+		// number of bitmap bytes (unit aligned) to cover size of bytes
+		usize_align((size + (ArenaAlc_bitfactor - 1)) / ArenaAlc_bitfactor, ArenaAlc_unit)
+		// chunk header - already aligned
+		+ sizeof(ArenaAlc_Chunk)
+	;
+
+	return size;
+}
+
 ArenaAlc_Chunk *ArenaAlc_Chunk_allocate(
 	const Alc provider, ConstPtr hint, usize least_size, usize size
 ) {
-	AlcAlign req_align = AlcAlign_set(alignof(ArenaAlc_Chunk));
+	AlcAlign req_align = AlcAlign_set(ArenaAlc_unit);
 	AlcRelative req_relative = hint ? AlcRelative_Local : AlcRelative_None;
 
-	// ensure space for chunk header and align sizes to unit
-	least_size = usize_align(least_size + sizeof(ArenaAlc_Chunk), ArenaAlc_unit);
-	size = usize_align(size + sizeof(ArenaAlc_Chunk), ArenaAlc_unit);
+	least_size = ArenaAlc_Chunk_bmasize(least_size);
+	size = ArenaAlc_Chunk_bmasize(size);
 
 	AlcNrs offer;
 	if (size <= least_size) { // negotiate using least intent
@@ -62,11 +82,11 @@ ArenaAlc_Chunk *ArenaAlc_Chunk_allocate(
 			for (u8 i = 0; i < alts; i++) {
 				offer_size = alt_offers[i];
 				if (offer_size >= least_size)
-					goto set_size;
+					size = offer_size;
 			}
-		} else set_size: {
+		} else
 			size = offer_size;
-		}
+
 
 		// no agreeable size found, try to allocate
 		// with the original requested size anyway
@@ -89,10 +109,31 @@ ArenaAlc_Chunk *ArenaAlc_Chunk_allocate(
 	if (AlcRes_get(chunk)) // propagate error
 		return chunk;
 
-	chunk->off_head = 0;
-	chunk->off_end = (ArenaAlc_Units)(
-		(size - __builtin_offsetof(ArenaAlc_Chunk, data)) / ArenaAlc_unit
+	if (least_size + ArenaAlc_unit > size) {
+		size = least_size;
+	}
+
+	size -= sizeof(ArenaAlc_Chunk);
+
+	// compute bitmap size (unit aligned)
+	usize bitmap_size = usize_align(
+		(size + ArenaAlc_bitfactor) / (ArenaAlc_bitfactor + 1), ArenaAlc_unit
 	);
+
+	auto bitmap_units = (ArenaAlc_Units)(bitmap_size / ArenaAlc_unit);
+	auto data_units = (ArenaAlc_Units)((size - bitmap_size) / ArenaAlc_unit);
+
+	// already zeroed
+	auto bitmap = (ArenaAlc_Unit*)chunk->data;
+
+	// number of units the bitmap covers that are past the end of the allocated buffer
+	usize lost_units = bitmap_units * ArenaAlc_bitfactor - data_units;
+
+	// set upper bits on last bitmap unit to account for inaccessible bytes
+	bitmap[bitmap_units - 1] = ~((ArenaAlc_Unit)(~0ull) >> lost_units);
+
+	chunk->bitmap_units = bitmap_units;
+	chunk->off_end = 0;
 
 	return chunk;
 }

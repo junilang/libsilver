@@ -17,6 +17,7 @@ ualign AlcAlign_get(AlcAlign align) {
 	return (ualign)(1u << align);
 }
 
+// align must be power of 2
 AlcAlign AlcAlign_set(ualign align) {
 	return (AlcAlign)__builtin_ctzg(align, 0);
 }
@@ -31,6 +32,14 @@ typedef enum : u8 {
 	AlcRelative_MAX,
 } AlcRelative;
 
+typedef enum : u8 {
+	AlcIntent_Least,
+	AlcIntent_Exact,
+	AlcIntent_Range,
+	AlcIntent_Loose,
+	AlcIntent_MAX
+} AlcIntent;
+
 typedef u64 AlcSize;
 constexpr u8 AlcSize_width = 36; // supports at most 64GB allocations
 constexpr AlcSize AlcSize_max = (1ull << AlcSize_width) - 1;
@@ -39,50 +48,13 @@ typedef u64 AlcReq; enum {
 	FIELD_DEFINE(AlcSize, AlcSize_width),
 	FIELD_DEFINE(AlcAlign, 4),
 	FIELD_DEFINE(AlcRelative, 3),
+	FIELD_DEFINE(AlcIntent, 2),
 	AlcReq_BIT_Zero,
+	AlcReq_BIT_ReportSize,
 	AlcReq_END
 };
 
 static_assert(AlcReq_END <= 64);
-static_assert(FIELD_MAX(AlcAlign) >= AlcAlign_MAX);
-static_assert(FIELD_MAX(AlcRelative) >= AlcRelative_MAX);
-
-#define XS \
-	X(Ok) \
-	X(ErrInternal) \
-	X(ErrTooLarge) \
-	X(ErrNoMemory) \
-	X(ErrInvalidSize) \
-	X(ErrInvalidAlign) \
-	X(ErrInvalidRelative) \
-	X(ErrUnsupported) \
-	X(ErrUnimplemented) \
-	X(ErrUnknown)
-
-typedef enum : u8 {
-	#define X(N) AlcRes_##N,
-		XS
-	#undef X
-	AlcRes_MAX
-} AlcRes;
-
-const String AlcRes_repr[] = {
-	#define X(N) [AlcRes_##N] = STRING_INIT(#N),
-		XS
-	#undef X
-};
-
-Ptr AlcRes_set(AlcRes err) {
-	return (Ptr)(-(isize)err);
-}
-
-AlcRes AlcRes_get(ConstPtr result) {
-	isize c = (isize)result;
-	if (c <= -1 && c >= -4095) {
-		u16 err = (u16)(-c);
-		if (err > AlcRes_ErrUnknown)
-			return AlcRes_ErrUnknown;
-		return (AlcRes)err;
-	}
-	return AlcRes_Ok;
-}
+static_assert(FIELD_MAX(AlcAlign) >= AlcAlign_MAX - 1);
+static_assert(FIELD_MAX(AlcRelative) >= AlcRelative_MAX - 1);
+static_assert(FIELD_MAX(AlcIntent) >= AlcIntent_MAX - 1);
