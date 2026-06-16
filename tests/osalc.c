@@ -1,8 +1,8 @@
 int ZZentry(SilverTestContext *ctx) {
-	usize res_alts[4];
+	AlcOffer offers[4] = {};
 
-	AlcNrq req = FIELD_SET(AlcNrq_Intent, Loose) |
-		FIELD_SETN(AlcNrq_Alts, 4) |
+	AlcReq req = FIELD_SET(AlcIntent, Loose) |
+		FIELD_SETN(AlcOffersSize, 4) |
 		FIELD_SET(AlcAlign, 128B) |
 		FIELD_SETN(AlcSize, 8072);
 
@@ -12,30 +12,29 @@ int ZZentry(SilverTestContext *ctx) {
 			FIELD_SETN(IntFmt_Spacing, 4) |
 			FIELD_SETN(IntFmt_Digits, 64)
 		}), req,
-		"\nintent=", FIELD_GET(AlcNrq_Intent, req),
-		" alts=", FIELD_GET(AlcNrq_Alts, req),
+		"\nintent=", FIELD_GET(AlcIntent, req),
+		" offers_size=", FIELD_GET(AlcOffersSize, req),
 		" align=", FIELD_GET(AlcAlign, req),
 		" size=", FIELD_GET(AlcSize, req),
 		"\n"
 	);
 
-	AlcNrs res = Alc_negotiate(OsAlc, req, nullptr, res_alts);
+	AlcRes res = Alc_query(OsAlc, req, nullptr, offers);
 
-	switch (FIELD_GET_CAST(AlcNrs_Offer, res)) {
+	switch (res) {
 		default: {
 			PRINTB(128, Stdout, "offer refused :(\n");
 			return 1;
 		}
 
-		case AlcNrs_Offer_Accept:;
+		case AlcRes_Ok:;
 	}
 
 	usize offer = FIELD_GET(AlcSize, res);
 	PRINTB(128, Stdout, "offer: ",offer,"\n");
 
-	u8 alts_size = FIELD_GET(AlcNrs_Alts, res);
-	for (u8 i = 0; i < alts_size; i++) {
-		PRINTB(128, Stdout, "alt[",i,"]: ",res_alts[i],"\n");
+	for (AlcOffersSize i = 0; i < 4; i++) {
+		PRINTB(128, Stdout, "alt[",i,"]: ",offers[i],"\n");
 	}
 
 	Ptr mem = Alc_new(OsAlc,

@@ -1,11 +1,11 @@
 #define XS \
 	X(Ok) \
-	X(ErrInternal) \
-	X(ErrTooLarge) \
-	X(ErrNoMemory) \
 	X(ErrInvalidSize) \
 	X(ErrInvalidAlign) \
 	X(ErrInvalidRelative) \
+	X(ErrInvalidFlags) \
+	X(ErrInternal) \
+	X(ErrNoMemory) \
 	X(ErrUnsupported) \
 	X(ErrUnimplemented) \
 	X(ErrUnknown)
@@ -42,8 +42,14 @@ AlcRes AlcRes_get(ConstPtr result) {
 
 typedef u64 AlcOffer; enum {
 	AlcOffer_Size_END = AlcSize_END,
-	FIELD_DEFINE(AlcRes, 4),
-	FIELD_DEFINE(AlcOffer_Num, 4)
+	AlcPromiseId_FIELD,
+	AlcPromiseId_END = 63,
+	AlcOffer_MAX
 };
 
-static_assert(FIELD_MAX(AlcRes) >= AlcRes_MAX - 1);
+static_assert(AlcOffer_MAX <= 64);
+
+typedef struct {
+	AlcOffer offer;
+	usize data;
+} AlcPromise;

@@ -1,10 +1,12 @@
 #define IAlc_GENERATE_INTERFACE(N) \
 	const IAlc IAlc_##N = { \
+		.attr = &IAlc_##N##_attr, \
 		.new = &IAlc_##N##_new, \
 		.resize = &IAlc_##N##_resize, \
 		.delete = &IAlc_##N##_delete, \
-		.negotiate = &IAlc_##N##_negotiate, \
-		.attr = &IAlc_##N##_attr, \
+		.query = &IAlc_##N##_query, \
+		.resolve = &IAlc_##N##_resolve, \
+		.lock = &IAlc_##N##_lock, \
 	};
 
 #define IAlc_GENERATE_METHODS(N, E) \
@@ -20,8 +22,14 @@
 	extern AlcRes IAlc_##N##_delete(Ptr this, Ptr mem, AlcReq req) { \
 		return N##_delete((E)(usize)this, mem, req); \
 	} \
-	extern AlcNrs IAlc_##N##_negotiate(Ptr this, AlcNrq nrq, ConstPtr hint, usize *alts) { \
-		return N##_negotiate((E)(usize)this, nrq, hint, alts); \
+	extern AlcRes IAlc_##N##_query(Ptr this, AlcReq req, ConstPtr hint, Ptr offers) { \
+		return N##_query((E)(usize)this, req, hint, offers); \
+	} \
+	extern Ptr IAlc_##N##_resolve(Ptr this, AlcPromise *offers, AlcOffersSize offers_size, AlcOffersSize accept_index) { \
+		return N##_resolve((E)(usize)this, offers, offers_size, accept_index); \
+	} \
+	extern AlcRes IAlc_##N##_lock(Ptr this, AlcLockIntent intent) { \
+		return N##_lock((E)(usize)this, intent); \
 	}
 
 #if Alc_PTRTAG

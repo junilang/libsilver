@@ -66,25 +66,33 @@ AlcRes OsAlc_delete(Ptr this, Ptr mem, AlcReq req) {
 	return AlcRes_Ok;
 }
 
-AlcNrs OsAlc_negotiate(Ptr this, AlcNrq req, ConstPtr hint, usize *alts) {
+AlcRes OsAlc_query(Ptr this, AlcReq req, ConstPtr hint, Ptr offers_) {
+	if (req & FLAG(AlcReq, Promise))
+		return AlcRes_ErrUnsupported;
+
 	usize page_size = env_pagesz();
 
 	switch (FIELD_GET_CAST(AlcRelative, req)) {
 		default:
-			return FIELD_SET(AlcNrs_Offer, Refuse) | FIELD_SETN(AlcNrs_RefuseReason, AlcRes_ErrInvalidRelative);
+			return AlcRes_ErrInvalidRelative;
 		case AlcRelative_None:
 		case AlcRelative_Local:;
 	}
 
-	u8 alts_size = FIELD_GET(AlcNrq_Alts, req);
-
 	ualign align = AlcAlign_get(FIELD_GET_CAST(AlcAlign, req));
 
 	if (align > page_size)
-		return FIELD_SET(AlcNrs_Offer, Refuse) | FIELD_SETN(AlcNrs_RefuseReason, AlcRes_ErrInvalidAlign);
+		return AlcRes_ErrInvalidAlign;
 
 	if (align < alignof(OsAlc_Header))
 		align = alignof(OsAlc_Header);
+
+	u8 offers_size = FIELD_GET(AlcOffersSize, req);
+	AlcOffer *offers = offers_;
+
+	if (offers_size == 0)
+		return AlcRes_Ok;
+
 
 	// we know the page will be aligned to page_size so we can do a
 	// straightforward calculation
@@ -93,51 +101,65 @@ AlcNrs OsAlc_negotiate(Ptr this, AlcNrq req, ConstPtr hint, usize *alts) {
 	usize req_size = FIELD_GET(AlcSize, req);
 	usize next_page = usize_align(req_size + offset, page_size);
 
-	switch (FIELD_GET_CAST(AlcNrq_Intent, req)) {
-		case AlcNrq_Intent_Least: {
+	switch (FIELD_GET_CAST(AlcIntent, req)) {
+		case AlcIntent_Least: {
 			intent_least:;
 			usize offer = next_page - offset;
 
-			// offer higher alternatives
-			for (u8 i = 0; i < alts_size; i++) {
-				alts[i] = offer + page_size * (i + 1);
+			for (u8 i = 0; i < offers_size; i++) {
+				AlcSize size = offer + page_size * i;
+				if (size > AlcSize_max)
+					break;
+				offers[i] = FIELD_SETN(AlcSize, size);
 			}
 
-			return FIELD_SETN(AlcSize, next_page - offset) | FIELD_SETN(AlcNrs_Alts, alts_size);
+			return AlcRes_Ok;
 		}
 
-		case AlcNrq_Intent_Loose: {
+		case AlcIntent_Loose: {
 			if (next_page == page_size) // cannot offer lower
 				goto intent_least;
 
 			usize higher = next_page - offset;
 			usize lower = higher - page_size;
-			usize offer;
+
+			if (higher > AlcSize_max) {
+				offers[0] = lower;
+				return AlcRes_Ok;
+			}
 
 			if ((higher - req_size) > (req_size - lower)) {
-				offer = lower;
-				if (alts_size)
-					alts[0] = higher;
+				offers[0] = lower;
+				if (offers_size > 1)
+					offers[1] = higher;
 			} else {
-				offer = higher;
-				if (alts_size)
-					alts[0] = lower;
+				offers[0] = higher;
+				if (offers_size > 1)
+					offers[1] = lower;
 			}
 
-			for (u8 i = 1; i < alts_size; i++) {
-				alts[i] = higher + page_size * (i + 1);
+			for (AlcOffersSize i = 2; i < offers_size; i++) {
+				offers[i] = higher + page_size * (i - 1);
 			}
 
-			return FIELD_SETN(AlcSize, offer) | FIELD_SETN(AlcNrs_Alts, alts_size);
+			return AlcRes_Ok;
 		}
 
 		default:
-			return FIELD_SET(AlcNrs_Offer, Refuse) | FIELD_SETN(AlcNrs_RefuseReason, AlcRes_ErrUnimplemented);
+			return AlcRes_ErrUnsupported;
 	}
 }
 
+Ptr OsAlc_resolve(Ptr this, AlcPromise *offers, AlcOffersSize offers_size, AlcOffersSize accept_index) {
+	return AlcRes_set(AlcRes_ErrUnsupported);
+}
+
+AlcRes OsAlc_lock(Ptr this, AlcLockIntent intent) {
+	return AlcRes_ErrUnsupported;
+}
+
 AlcAttr OsAlc_attr(Ptr this) {
-	return FLAG(AlcAttr, ThreadSafe, NoResize);
+	return FLAG(AlcAttr, ThreadSafe, FeatureRelativeLocal);
 }
 
 IAlc_GENERATE_KNOWN(OsAlc, Ptr)

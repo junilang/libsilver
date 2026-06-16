@@ -44,13 +44,18 @@ typedef u64 AlcSize;
 constexpr u8 AlcSize_width = 36; // supports at most 64GB allocations
 constexpr AlcSize AlcSize_max = (1ull << AlcSize_width) - 1;
 
+typedef u8 AlcOffersSize;
+constexpr AlcOffersSize Alc_ResolveNone = u8_max;
+
 typedef u64 AlcReq; enum {
 	FIELD_DEFINE(AlcSize, AlcSize_width),
 	FIELD_DEFINE(AlcAlign, 4),
 	FIELD_DEFINE(AlcRelative, 3),
 	FIELD_DEFINE(AlcIntent, 2),
+	FIELD_DEFINE(AlcOffersSize, 3), // up to 7 offers
 	AlcReq_BIT_Zero,
-	AlcReq_BIT_ReportSize,
+	AlcReq_BIT_EmbedSize,
+	AlcReq_BIT_Promise,
 	AlcReq_END
 };
 

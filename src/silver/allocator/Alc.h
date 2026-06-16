@@ -1,11 +1,14 @@
 #include "AlcReq.h"
-#include "AlcNrq.h"
+#include "AlcRes.h"
 
 typedef u32 AlcAttr; enum {
 	AlcAttr_BIT_ThreadSafe,
 	AlcAttr_BIT_FeatureResize,
-	AlcAttr_BIT_FeatureStaticOffer,
+	AlcAttr_BIT_FeatureRequest,
+	AlcAttr_BIT_FeaturePromise,
 	AlcAttr_BIT_FeatureLock,
+	AlcAttr_BIT_FeatureZero,
+	AlcAttr_BIT_FeatureEmbedSize,
 	AlcAttr_BIT_FeatureRelativeLocal,
 	AlcAttr_BIT_FeatureRelativeS16,
 	AlcAttr_BIT_FeatureRelativeU16,
@@ -21,12 +24,13 @@ typedef enum : u8 {
 typedef struct {
 	AlcAttr (*attr)(Ptr this);
 
-	Ptr (*new)(Ptr this, AlcReq req, ConstPtr hint, usize *out_size);
-	Ptr (*resize)(Ptr this, Ptr mem, AlcReq req, ConstPtr hint, usize *out_size);
+	Ptr (*new)(Ptr this, AlcReq req, ConstPtr hint);
+	Ptr (*resize)(Ptr this, Ptr mem, AlcReq req, ConstPtr hint);
 	AlcRes (*delete)(Ptr this, Ptr mem, AlcReq req);
-	AlcNrs (*negotiate)(Ptr this, AlcNrq nrq, ConstPtr hint, usize *alts);
 
-	AlcOffer (*offer)(Ptr this, AlcReq req, ConstPtr hint, AlcOffer *alts);
+	AlcRes (*query)(Ptr this, AlcReq req, ConstPtr hint, Ptr offers);
+	Ptr (*resolve)(Ptr this, AlcPromise *offers, u8 offers_size, u8 accept_index);
+
 	AlcRes (*lock)(Ptr this, AlcLockIntent intent);
 } IAlc;
 
@@ -103,8 +107,21 @@ AlcRes Alc_delete(Alc this, Ptr mem, AlcReq req) {
 }
 
 [[nodiscard]]
-AlcNrs Alc_negotiate(Alc this, AlcNrq req, ConstPtr hint, usize *alts) {
-	return Alc_iface(this)->negotiate(Alc_this(this), req, hint, alts);
+AlcRes Alc_query(Alc this, AlcReq req, ConstPtr hint, Ptr offers) {
+	return Alc_iface(this)->query(Alc_this(this), req, hint, offers);
+}
+
+[[nodiscard, gnu::malloc]]
+Ptr Alc_resolve(Alc this, AlcPromise *offers, AlcOffersSize offers_size, AlcOffersSize accept_index) {
+	return Alc_iface(this)->resolve(Alc_this(this), offers, offers_size, accept_index);
+}
+
+AlcRes Alc_lock(Alc this) {
+	return Alc_iface(this)->lock(Alc_this(this), AlcLockIntent_Lock);
+}
+
+AlcRes Alc_unlock(Alc this) {
+	return Alc_iface(this)->lock(Alc_this(this), AlcLockIntent_Lock);
 }
 
 AlcAttr Alc_attr(Alc this) {
