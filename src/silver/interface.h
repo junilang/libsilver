@@ -19,7 +19,7 @@
 
 #define INTERFACE_REGISTER(I, N) \
 	I##__registry_Id I##_##N##_ID; \
-	void __attribute__((constructor(150))) I##_##N##__ctor() { \
+	[[gnu::constructor(150)]] void I##_##N##__ctor() { \
 		I##_##N##_ID= I##__register(&I##_##N); \
 	}
 
@@ -30,7 +30,7 @@
 
 // ON WINDOWS: pass interfaces as two pointers instead of 16byte struct
 // 	on native abi boundaries (function pointers) because the windows abi
-// 	is unable to pass split structs across multiple registers, and passes
+// 	is unable to split structs across multiple registers, and passes
 // 	a pointer instead
 
 #ifndef IFACESPLIT

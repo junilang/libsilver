@@ -25,8 +25,8 @@ u32 memcrc32(u32 base, ConstPtr data, usize size) {
 
 	if (size < 8) goto rest;
 
-	ualign align;
-	if ((align = (usize)bytes & 0b1111)) {
+	ualign align = (usize)bytes & 0b1111;
+	if (align) {
 		for (ualign i = 0; i < align; i++) {
 			base = u8_crc32(base, bytes[i]);
 		}
@@ -84,8 +84,8 @@ u64 memcrc64(u64 base, ConstPtr data, usize size) {
 
 	if (size < 8) goto rest;
 
-	ualign align;
-	if ((align = (usize)bytes & 0b1111)) {
+	ualign align = (usize)bytes & 0b1111;
+	if (align) {
 		for (ualign i = 0; i < align; i++) {
 			base = u8_crc64(base, bytes[i]);
 		}

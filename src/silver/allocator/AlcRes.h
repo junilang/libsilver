@@ -51,5 +51,5 @@ static_assert(AlcOffer_MAX <= 64);
 
 typedef struct {
 	AlcOffer offer;
-	usize data;
+	usize data[3];
 } AlcPromise;

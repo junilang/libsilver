@@ -10,92 +10,86 @@ struct ArenaAlc_Chunk {
 		ArenaAlc_Units off_head;
 	};
 	ArenaAlc_Units off_end;
-	alignas(ArenaAlc_unit) ubyte data[];
+	alignas(ArenaAlc_Unit_size) ubyte data[];
 };
 
-static_assert(alignof(ArenaAlc_Chunk) == ArenaAlc_unit);
-
-// bytes per bitmap byte
-constexpr uint ArenaAlc_bitfactor = ArenaAlc_unit * ubyte_width;
+static_assert(alignof(ArenaAlc_Chunk) == ArenaAlc_Unit_size);
 
 // bitmap adjusted size
-usize ArenaAlc_Chunk_bmasize(usize size) {
-	size = usize_align(size, ArenaAlc_unit);
-	size +=
-		// number of bitmap bytes (unit aligned) to cover size of bytes
-		usize_align((size + (ArenaAlc_bitfactor - 1)) / ArenaAlc_bitfactor, ArenaAlc_unit)
-		// chunk header - already aligned
-		+ sizeof(ArenaAlc_Chunk)
-	;
+usize ArenaAlc_Chunk_bmasize(/* size of usable memory in bytes */ usize size) {
+	// align size to units
+	size = usize_align(size, ArenaAlc_Unit_size);
+
+	// number of bytes covered by unit of bitmap
+	constexpr uint bitfactor = ArenaAlc_Unit_size * ArenaAlc_Unit_width;
+
+	// calculate units of bitmap needed to cover usable memory
+	usize bitmap_units = (size + (bitfactor - 1)) / bitfactor;
+
+	size += bitmap_units * ArenaAlc_Unit_size;
+
+	// add size of header (already aligned to units)
+	size += sizeof(ArenaAlc_Chunk);
 
 	return size;
 }
 
-ArenaAlc_Chunk *ArenaAlc_Chunk_allocate(
-	const Alc provider, ConstPtr hint, usize least_size, usize size
+ArenaAlc_Chunk *ArenaAlc_Chunk_allocate_bm(
+	const Alc provider, ConstPtr hint, usize least_usable_size, usize size
 ) {
-	AlcAlign req_align = AlcAlign_set(ArenaAlc_unit);
+	AlcAlign req_align = AlcAlign_set(ArenaAlc_Unit_size);
 	AlcRelative req_relative = hint ? AlcRelative_Local : AlcRelative_None;
 
-	least_size = ArenaAlc_Chunk_bmasize(least_size);
+	usize least_size = ArenaAlc_Chunk_bmasize(least_usable_size);
 	size = ArenaAlc_Chunk_bmasize(size);
 
-	AlcNrs offer;
 	if (size <= least_size) { // negotiate using least intent
-		AlcNrq request =
-			FIELD_SETN(AlcSize, least_size) |
-			FIELD_SETN(AlcAlign, req_align) |
-			FIELD_SETN(AlcRelative, req_relative) |
-			FIELD_SET(AlcNrq_Intent, Least) |
-			FLAG(AlcReq, Zero)
-		;
+		size = least_size;
 
-		offer = Alc_negotiate(provider, request, hint, nullptr);
-		switch (FIELD_GET_CAST(AlcNrs_Offer, offer)) {
-			default: goto negotiate_failed;
-			case AlcNrs_Offer_Accept:
-		}
-
-		size = FIELD_GET(AlcSize, offer);
-
-	} else { // negotiate loosely around requested size
-		usize alt_offers[2];
-
-		AlcNrq request =
+		AlcReq request =
 			FIELD_SETN(AlcSize, size) |
 			FIELD_SETN(AlcAlign, req_align) |
 			FIELD_SETN(AlcRelative, req_relative) |
-			FIELD_SETN(AlcNrq_Alts, 2) |
-			FIELD_SET(AlcNrq_Intent, Loose) |
+			FIELD_SET(AlcIntent, Least) |
+			FIELD_SETN(AlcOffersSize, 1) |
 			FLAG(AlcReq, Zero)
 		;
 
-		offer = Alc_negotiate(provider, request, hint, alt_offers);
-		switch (FIELD_GET_CAST(AlcNrs_Offer, offer)) {
-			default: goto negotiate_failed;
-			case AlcNrs_Offer_Accept:
+		AlcOffer offer = 0;
+		auto res = Alc_query(provider, request, hint, &offer);
+		switch (res) {
+			default: return AlcRes_set(res);
+			case AlcRes_Ok:
 		}
 
-		usize offer_size = FIELD_GET(AlcSize, offer);
-		if (offer_size < least_size) {
-			const u8 alts = FIELD_GET(AlcNrs_Alts, offer);
-			for (u8 i = 0; i < alts; i++) {
-				offer_size = alt_offers[i];
-				if (offer_size >= least_size)
-					size = offer_size;
+		if (offer)
+			size = FIELD_GET(AlcSize, offer);
+
+	} else { // negotiate loosely around requested size
+		AlcReq request =
+			FIELD_SETN(AlcSize, size) |
+			FIELD_SETN(AlcAlign, req_align) |
+			FIELD_SETN(AlcRelative, req_relative) |
+			FIELD_SET(AlcIntent, Loose) |
+			FIELD_SETN(AlcOffersSize, 2) |
+			FLAG(AlcReq, Zero)
+		;
+
+		AlcOffer offers[2] = {};
+		auto res = Alc_query(provider, request, hint, offers);
+		switch (res) {
+			default: return AlcRes_set(res);
+			case AlcRes_Ok:
+		}
+
+		for (uint i = 0; i < 2; i++) {
+			if (!offers[i]) break;
+			usize offer_size = FIELD_GET(AlcSize, offers[i]);
+			if (offer_size >= least_size) {
+				size = offer_size;
+				break;
 			}
-		} else
-			size = offer_size;
-
-
-		// no agreeable size found, try to allocate
-		// with the original requested size anyway
-	}
-
-	if (0) negotiate_failed: {
-		AlcRes reason = FIELD_GET(AlcNrs_RefuseReason, offer);
-		if (!reason) reason = AlcRes_ErrUnknown;
-		return AlcRes_set(reason);
+		}
 	}
 
 	AlcReq request =
@@ -109,31 +103,26 @@ ArenaAlc_Chunk *ArenaAlc_Chunk_allocate(
 	if (AlcRes_get(chunk)) // propagate error
 		return chunk;
 
-	if (least_size + ArenaAlc_unit > size) {
-		size = least_size;
-	}
-
 	size -= sizeof(ArenaAlc_Chunk);
 
-	// compute bitmap size (unit aligned)
-	usize bitmap_size = usize_align(
-		(size + ArenaAlc_bitfactor) / (ArenaAlc_bitfactor + 1), ArenaAlc_unit
-	);
+	auto units = (ArenaAlc_Units)(size / ArenaAlc_Unit_size);
 
-	auto bitmap_units = (ArenaAlc_Units)(bitmap_size / ArenaAlc_unit);
-	auto data_units = (ArenaAlc_Units)((size - bitmap_size) / ArenaAlc_unit);
-
-	// already zeroed
-	auto bitmap = (ArenaAlc_Unit*)chunk->data;
-
-	// number of units the bitmap covers that are past the end of the allocated buffer
-	usize lost_units = bitmap_units * ArenaAlc_bitfactor - data_units;
-
-	// set upper bits on last bitmap unit to account for inaccessible bytes
-	bitmap[bitmap_units - 1] = ~((ArenaAlc_Unit)(~0ull) >> lost_units);
+	// example: when unit width = 64, we need a 1 unit bitmap for 64 memory units,
+	// 	in total 65, so to get number of bitmap units from total size, we divide
+	// 	the total number of units by unit_width + 1 (ceil)
+	ArenaAlc_Units bitmap_units = (units + ArenaAlc_Unit_width) / (ArenaAlc_Unit_width + 1);
 
 	chunk->bitmap_units = bitmap_units;
 	chunk->off_end = 0;
+
+	auto bitmap = (ArenaAlc_Unit*)chunk->data;
+
+	ArenaAlc_Units rest_units = units - bitmap_units;
+	ArenaAlc_Units usable_units = bitmap_units * ArenaAlc_Unit_width;
+	if (usable_units > rest_units) {
+		// set last bits of bitmap to 1 to signify unusable memory
+		bitmap[bitmap_units - 1] = (ArenaAlc_Unit)(~0ull) >> (usable_units - rest_units);
+	}
 
 	return chunk;
 }

@@ -42,6 +42,6 @@
 		#include "allocator/OsAlc_linux.c"
 	#endif
 
-	//#include "arena/ArenaAlc.c"
+	#include "arena/ArenaAlc.c"
 
 #endif

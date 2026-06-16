@@ -10,9 +10,8 @@
 
 	#if __has_builtin(__builtin_memcpy) && defined(__OPTIMIZE__)
 
-		[[gnu::always_inline]] static inline
 		Ptr memcpy(Ptr restrict dst, ConstPtr restrict src, usize size) {
-			return __builtin_memcpy(dst, src, size):
+			return __builtin_memcpy(dst, src, size);
 		}
 
 	#else
@@ -30,7 +29,6 @@
 
 	#if __has_builtin(__builtin_memset) && defined(__OPTIMIZE__)
 
-		[[gnu::always_inline]] static inline
 		Ptr memset(Ptr dst, int val, usize size) {
 			return __builtin_memset(dst, val, size);
 		}
@@ -50,8 +48,7 @@
 
 	#if __has_builtin(__builtin_memmove) && defined(__OPTIMIZE__)
 
-		[[gnu::always_inline]] static inline
-		Ptr memset(Ptr dst, Ptr src, usize size) {
+		Ptr memmove(Ptr dst, Ptr src, usize size) {
 			return __builtin_memmove(dst, src, size);
 		}
 
@@ -89,7 +86,6 @@
 
 	#if __has_builtin(__builtin_memcmp) && defined(__OPTIMIZE__)
 
-		[[gnu::always_inline]] static inline
 		int memcmp(ConstPtr a, ConstPtr b, usize size) {
 			return __builtin_memcmp(a, b, size);
 		}
@@ -113,7 +109,6 @@
 
 	#if __has_builtin(__builtin_strlen) && defined(__OPTIMIZE__)
 
-		[[gnu::always_inline]] static inline
 		usize strlen(Str str) {
 			return __builtin_strlen(str);
 		}
