@@ -47,8 +47,8 @@
 			char **envp = argv + (argc + 1);
 
 			#if __linux__
-				global_env__ = envp;
 				{
+					global_env__ = envp;
 					char **it = envp;
 					while (*it) {
 						it++;

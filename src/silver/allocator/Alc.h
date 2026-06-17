@@ -1,38 +1,7 @@
-#include "AlcReq.h"
 #include "AlcRes.h"
+#include "AlcReq.h"
 
-typedef u32 AlcAttr; enum {
-	AlcAttr_BIT_ThreadSafe,
-	AlcAttr_BIT_FeatureResize,
-	AlcAttr_BIT_FeatureRequest,
-	AlcAttr_BIT_FeaturePromise,
-	AlcAttr_BIT_FeatureLock,
-	AlcAttr_BIT_FeatureZero,
-	AlcAttr_BIT_FeatureEmbedSize,
-	AlcAttr_BIT_FeatureRelativeLocal,
-	AlcAttr_BIT_FeatureRelativeS16,
-	AlcAttr_BIT_FeatureRelativeU16,
-	AlcAttr_BIT_FeatureRelativeS32,
-	AlcAttr_BIT_FeatureRelativeU32
-};
-
-typedef enum : u8 {
-	AlcLockIntent_Lock,
-	AlcLockIntent_Unlock
-} AlcLockIntent;
-
-typedef struct {
-	AlcAttr (*attr)(Ptr this);
-
-	Ptr (*new)(Ptr this, AlcReq req, ConstPtr hint);
-	Ptr (*resize)(Ptr this, Ptr mem, AlcReq req, ConstPtr hint);
-	AlcRes (*delete)(Ptr this, Ptr mem, AlcReq req);
-
-	AlcRes (*query)(Ptr this, AlcReq req, ConstPtr hint, Ptr offers);
-	Ptr (*resolve)(Ptr this, AlcPromise *offers, u8 offers_size, u8 accept_index);
-
-	AlcRes (*lock)(Ptr this, AlcLockIntent intent);
-} IAlc;
+typedef Ptr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 
 #ifndef Alc_PTRTAG
 	#define Alc_PTRTAG PTRTAG
@@ -53,8 +22,8 @@ typedef struct {
 
 	INTERFACE_REGISTRY(IAlc, utag, 8)
 
-	const IAlc *Alc_iface(Alc this) {
-		return &IAlc__registry[ptrread(this.value)];
+	IAlc Alc_iface(Alc this) {
+		return IAlc__registry[ptrread(this.value)];
 	}
 
 	Ptr Alc_this(Alc this) {
@@ -71,10 +40,10 @@ typedef struct {
 #else
 	typedef struct {
 		Ptr this;
-		const IAlc *iface;
+		IAlc iface;
 	} Alc;
 
-	const IAlc *Alc_iface(Alc this) {
+	IAlc Alc_iface(Alc this) {
 		return this.iface;
 	}
 
@@ -92,40 +61,44 @@ typedef struct {
 #endif
 
 [[nodiscard, gnu::malloc]]
-Ptr Alc_new(Alc this, AlcReq req, ConstPtr hint) {
-	return Alc_iface(this)->new(Alc_this(this), req, hint);
-}
-
-[[nodiscard]]
-Ptr Alc_resize(Alc this, Ptr mem, AlcReq req, ConstPtr hint) {
-	return Alc_iface(this)->resize(Alc_this(this), mem, req, hint);
-}
-
-[[nodiscard]]
-AlcRes Alc_delete(Alc this, Ptr mem, AlcReq req) {
-	return Alc_iface(this)->delete(Alc_this(this), mem, req);
-}
-
-[[nodiscard]]
-AlcRes Alc_query(Alc this, AlcReq req, ConstPtr hint, Ptr offers) {
-	return Alc_iface(this)->query(Alc_this(this), req, hint, offers);
-}
-
-[[nodiscard, gnu::malloc]]
-Ptr Alc_resolve(Alc this, AlcPromise *offers, AlcOffersSize offers_size, AlcOffersSize accept_index) {
-	return Alc_iface(this)->resolve(Alc_this(this), offers, offers_size, accept_index);
-}
-
-AlcRes Alc_lock(Alc this) {
-	return Alc_iface(this)->lock(Alc_this(this), AlcLockIntent_Lock);
-}
-
-AlcRes Alc_unlock(Alc this) {
-	return Alc_iface(this)->lock(Alc_this(this), AlcLockIntent_Lock);
+Ptr Alc_invoke(Alc this, AlcReq *req, Ptr arg, Ptr mem) {
+	return Alc_iface(this)(Alc_this(this), req, arg, mem);
 }
 
 AlcAttr Alc_attr(Alc this) {
-	return Alc_iface(this)->attr(Alc_this(this));
+	// do not check for errors, all allocator implementations
+	// 	must be able to report their attributes
+	return (AlcAttr)(usize)Alc_invoke(this, &(AlcReq) {
+		.intent = AlcIntent_Attr
+	} ,nullptr, nullptr);
+}
+
+constexpr ualign Alc_default_align = alignof(Ptr);
+
+[[nodiscard, gnu::malloc]]
+Ptr Alc_new(Alc this, usize size) {
+	return Alc_invoke(this, &(AlcReq) {
+		.intent = AlcIntent_New,
+		.size = size,
+		.align = Alc_default_align
+	}, nullptr, nullptr);
+}
+
+[[nodiscard]]
+AlcRes Alc_delete(Alc this, Ptr mem) {
+	return AlcRes_get(
+		Alc_invoke(this, &(AlcReq) {
+			.intent = AlcIntent_Delete,
+		}, nullptr, mem)
+	);
+}
+
+[[nodiscard, gnu::malloc]]
+Ptr Alc_resize(Alc this, Ptr mem, usize size) {
+	return Alc_invoke(this, &(AlcReq) {
+		.intent = AlcIntent_Resize,
+		.size = size
+	}, nullptr, mem);
 }
 
 #include "Alc_meta.h"

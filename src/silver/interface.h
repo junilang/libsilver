@@ -2,30 +2,30 @@
 	typedef Id I##__registry_Id; \
 	I I##__registry[I##_KNOWN + Slots] = {}; \
 	usize I##__registry_index = I##_KNOWN; \
-	void I##__register_known(Id id, const I *iface) { \
+	void I##__register_known(Id id, I iface) { \
 		if (id >= I##_KNOWN) \
 			PANIC(#I"__register_known: id > known"); \
-		I##__registry[(usize)id] = *iface; \
+		I##__registry[(usize)id] = iface; \
 	} \
-	Id I##__register(const I *iface) { \
+	Id I##__register(I iface) { \
 		Id id = (Id)I##__registry_index; \
 		if (id >= (I##_KNOWN + Slots)) { \
 			PANIC(#I"__register: id overflow") \
 		} \
 		I##__registry_index++; \
-		I##__registry[id] = *iface; \
+		I##__registry[id] = iface; \
 		return id; \
 	}
 
 #define INTERFACE_REGISTER(I, N) \
 	I##__registry_Id I##_##N##_ID; \
 	[[gnu::constructor(150)]] void I##_##N##__ctor() { \
-		I##_##N##_ID= I##__register(&I##_##N); \
+		I##_##N##_ID= I##__register(I##_##N); \
 	}
 
 #define INTERFACE_REGISTER_KNOWN(I, N) \
 	[[gnu::constructor(140)]] void I##_##N##__ctor() { \
-		I##__register_known(I##_##N##_ID, &I##_##N); \
+		I##__register_known(I##_##N##_ID, I##_##N); \
 	}
 
 // ON WINDOWS: pass interfaces as two pointers instead of 16byte struct

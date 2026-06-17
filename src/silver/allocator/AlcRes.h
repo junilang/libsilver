@@ -4,6 +4,7 @@
 	X(ErrInvalidAlign) \
 	X(ErrInvalidRelative) \
 	X(ErrInvalidFlags) \
+	X(ErrInvalidRange) \
 	X(ErrInternal) \
 	X(ErrNoMemory) \
 	X(ErrUnsupported) \
@@ -40,16 +41,7 @@ AlcRes AlcRes_get(ConstPtr result) {
 	return AlcRes_Ok;
 }
 
-typedef u64 AlcOffer; enum {
-	AlcOffer_Size_END = AlcSize_END,
-	AlcPromiseId_FIELD,
-	AlcPromiseId_END = 63,
-	AlcOffer_MAX
-};
-
-static_assert(AlcOffer_MAX <= 64);
-
 typedef struct {
-	AlcOffer offer;
+	usize size;
 	usize data[3];
 } AlcPromise;

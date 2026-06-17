@@ -34,76 +34,80 @@ usize ArenaAlc_Chunk_bmasize(/* size of usable memory in bytes */ usize size) {
 	return size;
 }
 
-ArenaAlc_Chunk *ArenaAlc_Chunk_allocate_bm(
-	const Alc provider, ConstPtr hint, usize least_usable_size, usize size
+ArenaAlc_Chunk *ArenaAlc_Chunk_bmallocate(
+	Alc provider, ConstPtr hint, usize least_usable_size, usize size
 ) {
-	AlcAlign req_align = AlcAlign_set(ArenaAlc_Unit_size);
 	AlcRelative req_relative = hint ? AlcRelative_Local : AlcRelative_None;
 
 	usize least_size = ArenaAlc_Chunk_bmasize(least_usable_size);
 	size = ArenaAlc_Chunk_bmasize(size);
 
-	if (size <= least_size) { // negotiate using least intent
+	if (size <= least_size) { // negotiate using least range
 		size = least_size;
 
-		AlcReq request =
-			FIELD_SETN(AlcSize, size) |
-			FIELD_SETN(AlcAlign, req_align) |
-			FIELD_SETN(AlcRelative, req_relative) |
-			FIELD_SET(AlcIntent, Least) |
-			FIELD_SETN(AlcOffersSize, 1) |
-			FLAG(AlcReq, Zero)
-		;
+		usize offer;
+		AlcReq request = {
+			.intent = AlcIntent_Query,
+			.size = size,
+			.align = ArenaAlc_Unit_size,
+			.range = AlcRange_Least,
+			.relative = req_relative,
+			.hint = hint,
+			.flags = FLAG(AlcFlag, Zero),
+			.offers_size = 1
+		};
 
-		AlcOffer offer = 0;
-		auto res = Alc_query(provider, request, hint, &offer);
-		switch (res) {
-			default: return AlcRes_set(res);
+		auto res = Alc_invoke(provider, &request, &offer, nullptr);
+		switch (AlcRes_get(res)) {
+			default: return res;
 			case AlcRes_Ok:
 		}
 
-		if (offer)
-			size = FIELD_GET(AlcSize, offer);
+		if (request.offers_size)
+			size = offer;
+
 
 	} else { // negotiate loosely around requested size
-		AlcReq request =
-			FIELD_SETN(AlcSize, size) |
-			FIELD_SETN(AlcAlign, req_align) |
-			FIELD_SETN(AlcRelative, req_relative) |
-			FIELD_SET(AlcIntent, Loose) |
-			FIELD_SETN(AlcOffersSize, 2) |
-			FLAG(AlcReq, Zero)
-		;
+		usize offers[2];
+		AlcReq request = {
+			.intent = AlcIntent_Query,
+			.size = size,
+			.align = ArenaAlc_Unit_size,
+			.range = AlcRange_Loose,
+			.relative = req_relative,
+			.hint = hint,
+			.flags = FLAG(AlcFlag, Zero),
+			.offers_size = 2
+		};
 
-		AlcOffer offers[2] = {};
-		auto res = Alc_query(provider, request, hint, offers);
-		switch (res) {
-			default: return AlcRes_set(res);
+		auto res = Alc_invoke(provider, &request, offers, nullptr);
+		switch (AlcRes_get(res)) {
+			default: return res;
 			case AlcRes_Ok:
 		}
 
-		for (uint i = 0; i < 2; i++) {
-			if (!offers[i]) break;
-			usize offer_size = FIELD_GET(AlcSize, offers[i]);
-			if (offer_size >= least_size) {
-				size = offer_size;
+		for (uint i = 0; i < request.offers_size; i++) {
+			if (offers[i] >= least_size) {
+				size = offers[i];
 				break;
 			}
 		}
 	}
 
-	AlcReq request =
-		FIELD_SETN(AlcSize, size) |
-		FIELD_SETN(AlcAlign, req_align) |
-		FIELD_SETN(AlcRelative, req_relative) |
-		FLAG(AlcReq, Zero)
-	;
+	AlcReq request = {
+		.intent = AlcIntent_New,
+		.size = size,
+		.align = ArenaAlc_Unit_size,
+		.relative = req_relative,
+		.hint = hint,
+		.flags = FLAG(AlcFlag, Zero)
+	};
 
-	ArenaAlc_Chunk *chunk = Alc_new(provider, request, hint);
+	ArenaAlc_Chunk *chunk = Alc_invoke(provider, &request, nullptr, nullptr);
 	if (AlcRes_get(chunk)) // propagate error
 		return chunk;
 
-	size -= sizeof(ArenaAlc_Chunk);
+	size = request.size - sizeof(ArenaAlc_Chunk);
 
 	auto units = (ArenaAlc_Units)(size / ArenaAlc_Unit_size);
 
@@ -113,7 +117,7 @@ ArenaAlc_Chunk *ArenaAlc_Chunk_allocate_bm(
 	ArenaAlc_Units bitmap_units = (units + ArenaAlc_Unit_width) / (ArenaAlc_Unit_width + 1);
 
 	chunk->bitmap_units = bitmap_units;
-	chunk->off_end = 0;
+	chunk->off_end = 0; // signifies this chunk is bitmapped
 
 	auto bitmap = (ArenaAlc_Unit*)chunk->data;
 
@@ -122,7 +126,10 @@ ArenaAlc_Chunk *ArenaAlc_Chunk_allocate_bm(
 	if (usable_units > rest_units) {
 		// set last bits of bitmap to 1 to signify unusable memory
 		bitmap[bitmap_units - 1] = (ArenaAlc_Unit)(~0ull) >> (usable_units - rest_units);
+		usable_units = rest_units;
 	}
+
+	chunk->maxfree = usable_units;
 
 	return chunk;
 }
