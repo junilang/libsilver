@@ -1,8 +1,8 @@
-constexpr int linux_stdin = 0;
-constexpr int linux_stdout = 1;
-constexpr int linux_stderr = 2;
-
 typedef int linux_fd;
+
+constexpr linux_fd linux_stdin = 0;
+constexpr linux_fd linux_stdout = 1;
+constexpr linux_fd linux_stderr = 2;
 
 LINUX_SYSCALL_GENERATE(linux_openat2, __NR_openat2,
 	(linux_fd dirfd, const char *path, struct open_how *how, uword size),

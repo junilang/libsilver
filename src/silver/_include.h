@@ -30,6 +30,7 @@
 	#include "printable/Printable.h"
 
 	#include "outstream/BufferOutStream.c"
+	#include "outstream/BufferedOutStream.c"
 	#include "outstream/RawFileOutStream.c"
 
 	#include "String.h"

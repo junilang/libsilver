@@ -14,14 +14,15 @@
 	IOutStream_GENERATE_KNOWN(RawFileOutStream, linux_fd)
 
 	#if OutStream_PTRTAG
-		constexpr OutStream Stdout = CONSTEXPR_OutStream_upcast(RawFileOutStream, linux_stdout);
-		constexpr OutStream Stderr = CONSTEXPR_OutStream_upcast(RawFileOutStream, linux_stderr);
-
+		#define XCONST constexpr
 	#else
-		const OutStream Stdout = CONSTEXPR_OutStream_upcast(RawFileOutStream, linux_stdout);
-		const OutStream Stderr = CONSTEXPR_OutStream_upcast(RawFileOutStream, linux_stderr);
-
+		#define XCONST const
 	#endif
+
+	XCONST OutStream Stdout = CONSTEXPR_OutStream_upcast(RawFileOutStream, linux_stdout);
+	XCONST OutStream Stderr = CONSTEXPR_OutStream_upcast(RawFileOutStream, linux_stderr);
+
+	#undef XCONSTPREFIX
 
 #else
 	#error "unsupported platform"

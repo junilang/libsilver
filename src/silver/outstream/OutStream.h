@@ -21,6 +21,7 @@ typedef struct {
 
 	enum {
 		IOutStream_BufferOutStream_ID,
+		IOutStream_BufferedOutStream_ID,
 		IOutStream_RawFileOutStream_ID,
 		IOutStream_KNOWN
 	};
@@ -50,10 +51,6 @@ typedef struct {
 #endif
 
 void OutStream_write(OutStream this, ConstPtr buffer, usize buffer_size) {
-	#if BUILD_SAFE
-		if (!buffer) return;
-	#endif
-
 	OutStream_iface(this)->write(OutStream_this(this), buffer, buffer_size);
 }
 

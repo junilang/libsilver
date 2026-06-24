@@ -27,7 +27,7 @@ typedef enum : u8 {
 	AlcIntent_Unlock,
 } AlcIntent;
 
-constexpr u8 Alc_ResolveNone = u8_max;
+constexpr auto Alc_ResolveNone = u8_max;
 
 typedef u8 AlcFlag; enum {
 	AlcFlag_BIT_Zero
@@ -44,7 +44,7 @@ typedef struct {
 	u8 offers_size;
 } AlcReq;
 
-typedef u16 AlcAttr; enum {
+typedef u32 AlcAttr; enum {
 	AlcAttr_BIT_IntentNew,
 	AlcAttr_BIT_IntentResize,
 	AlcAttr_BIT_IntentDelete,
