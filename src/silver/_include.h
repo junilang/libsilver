@@ -31,7 +31,6 @@
 
 	#include "outstream/BufferOutStream.c"
 	#include "outstream/BufferedOutStream.c"
-	#include "outstream/RawFileOutStream.c"
 
 	#include "String.h"
 	#include "IntFmt.c"
@@ -41,8 +40,10 @@
 
 	#if __linux__
 		#include "allocator/OsAlc_linux.c"
+		#include "outstream/FileOutStream_linux.c"
 	#endif
 
-	#include "arena/ArenaAlc.c"
+	#include "allocator/StaticAlc.c"
+	//#include "arena/ArenaAlc.c"
 
 #endif

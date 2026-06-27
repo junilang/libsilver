@@ -12,7 +12,8 @@
 	const OutStream PRINT_buffer_os__ = BufferOutStream_upcast(&PRINT_buffer__); \
 	PrintFmt PRINT_fmt__ = PrintFmt_Null; \
 	PRINT_0(PRINT_buffer_os__, (&PRINT_fmt__), __VA_ARGS__) \
-	OutStream_write(PRINT_stream__, PRINT_buffer_data__, PRINT_buffer__.size); \
+	if (OutStream_write(PRINT_stream__, PRINT_buffer_data__, PRINT_buffer__.size)) \
+		PANIC("PRINT_BUFFERED write failed"); \
 ) }
 
 #define PRINTB PRINT_BUFFERED
@@ -47,15 +48,26 @@ void PRINT_setfmt(OutStream os, PrintFmt *fmt, PrintFmt fmt_set) {
 }
 
 void PRINT_cstring(OutStream os, PrintFmt *fmt, const char *v) {
-	String_print(STRING(v), *fmt, os);
+	if (String_print(STRING(v), *fmt, os)) PANIC("String_print failed");
 	*fmt = PrintFmt_Null;
 }
 
 void PRINT_bool(OutStream os, PrintFmt *fmt, bool v) {
-	if (v)
-		OutStream_write(os, USTR("true"));
-	else
-		OutStream_write(os, USTR("false"));
+	const char *repr;
+	usize size;
+
+	if (v) {
+		repr = "true";
+		size = 4;
+	} else {
+		repr = "false";
+		size = 5;
+	}
+
+	if (OutStream_write(os, repr, size)) {
+		PANIC("failed");
+	}
+
 	*fmt = PrintFmt_Null;
 }
 
@@ -69,7 +81,7 @@ void PRINT_pointer(OutStream os, PrintFmt *fmtp, ConstPtr v) {
 
 #define PRINT_GENERATE(T) \
 	void PRINT_##T(OutStream os, PrintFmt *fmt, T v) { \
-		T##_print(v, *fmt, os); \
+		if (T##_print(v, *fmt, os)) PANIC(#T"_print failed"); \
 		*fmt = PrintFmt_Null; \
 	}
 

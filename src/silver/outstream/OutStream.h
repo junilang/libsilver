@@ -4,9 +4,16 @@
 
 typedef u32 OutStreamAttr;
 
+typedef enum : u8 {
+	OutStreamRes_Ok,
+	OutStreamRes_ErrInternal,
+	OutStreamRes_ErrUnknown,
+	OutStreamRes_ErrOverflow
+} OutStreamRes;
+
 typedef struct {
-	void (*write)(Ptr this, ConstPtr buffer, usize buffer_size);
-	void (*flush)(Ptr this);
+	OutStreamRes (*write)(Ptr this, ConstPtr buffer, usize buffer_size);
+	OutStreamRes (*flush)(Ptr this);
 	OutStreamAttr (*attr)(Ptr this);
 } IOutStream;
 
@@ -22,7 +29,7 @@ typedef struct {
 	enum {
 		IOutStream_BufferOutStream_ID,
 		IOutStream_BufferedOutStream_ID,
-		IOutStream_RawFileOutStream_ID,
+		IOutStream_FileOutStream_ID,
 		IOutStream_KNOWN
 	};
 
@@ -50,12 +57,14 @@ typedef struct {
 
 #endif
 
-void OutStream_write(OutStream this, ConstPtr buffer, usize buffer_size) {
-	OutStream_iface(this)->write(OutStream_this(this), buffer, buffer_size);
+[[nodiscard]]
+OutStreamRes OutStream_write(OutStream this, ConstPtr buffer, usize buffer_size) {
+	return OutStream_iface(this)->write(OutStream_this(this), buffer, buffer_size);
 }
 
-void OutStream_flush(OutStream this) {
-	OutStream_iface(this)->flush(OutStream_this(this));
+[[nodiscard]]
+OutStreamRes OutStream_flush(OutStream this) {
+	return OutStream_iface(this)->flush(OutStream_this(this));
 }
 
 OutStreamAttr OutStream_attr(OutStream this) {

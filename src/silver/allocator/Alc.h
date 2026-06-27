@@ -97,7 +97,8 @@ AlcRes Alc_delete(Alc this, Ptr mem) {
 Ptr Alc_resize(Alc this, Ptr mem, usize size) {
 	return Alc_invoke(this, &(AlcReq) {
 		.intent = AlcIntent_Resize,
-		.size = size
+		.size = size,
+		.align = Alc_default_align,
 	}, nullptr, mem);
 }
 

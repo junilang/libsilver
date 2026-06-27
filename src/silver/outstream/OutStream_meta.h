@@ -5,11 +5,11 @@
 	};
 
 #define IOutStream_GENERATE_METHODS(N, E) \
-	extern void IOutStream_##N##_write(Ptr this, ConstPtr buffer, usize buffer_size) { \
-		N##_write((E)(usize)this, buffer, buffer_size); \
+	extern OutStreamRes IOutStream_##N##_write(Ptr this, ConstPtr buffer, usize buffer_size) { \
+		return N##_write((E)(usize)this, buffer, buffer_size); \
 	} \
-	extern void IOutStream_##N##_flush(Ptr this) { \
-		N##_flush((E)(usize)this); \
+	extern OutStreamRes IOutStream_##N##_flush(Ptr this) { \
+		return N##_flush((E)(usize)this); \
 	} \
 	extern OutStreamAttr IOutStream_##N##_attr(Ptr this) { \
 		return N##_attr((E)(usize)this); \

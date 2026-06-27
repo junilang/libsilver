@@ -177,17 +177,17 @@ String IntFmt_Signed_tostr(IntFmt_Signed val, IntFmt fmt, ubyte buf[IntFmt_Bufsi
 }
 
 
-void IntFmt_Unsigned_print(IntFmt_Unsigned val, PrintFmt fmt, OutStream os) {
+OutStreamRes IntFmt_Unsigned_print(IntFmt_Unsigned val, PrintFmt fmt, OutStream os) {
 	ubyte buf[IntFmt_Bufsize];
-	String_print(
+	return String_print(
 		IntFmt_Unsigned_tostr(val, fmt.value, buf),
 		PrintFmt_Null, os
 	);
 }
 
-void IntFmt_Signed_print(IntFmt_Signed val, PrintFmt fmt, OutStream os) {
+OutStreamRes IntFmt_Signed_print(IntFmt_Signed val, PrintFmt fmt, OutStream os) {
 	ubyte buf[IntFmt_Bufsize];
-	String_print(
+	return String_print(
 		IntFmt_Signed_tostr(val, fmt.value, buf),
 		PrintFmt_Null, os
 	);

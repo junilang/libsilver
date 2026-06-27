@@ -5,6 +5,7 @@
 	X(ErrInvalidRelative) \
 	X(ErrInvalidFlags) \
 	X(ErrInvalidRange) \
+	X(ErrInvalidMem) \
 	X(ErrInternal) \
 	X(ErrNoMemory) \
 	X(ErrUnsupported) \

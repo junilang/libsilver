@@ -8,11 +8,7 @@ typedef struct {
 
 constexpr PrintFmt PrintFmt_Null = { .value = 0 };
 
-typedef void (*PrintFn)(Ptr this, PrintFmt fmt, IARG(OutStream, os));
-
-typedef struct {
-	PrintFn print;
-} IPrintable;
+typedef OutStreamRes (*IPrintable)(Ptr this, PrintFmt fmt, IARG(OutStream, os));
 
 #if Printable_PTRTAG
 	typedef struct {
@@ -26,23 +22,24 @@ typedef struct {
 	INTERFACE_REGISTRY(IPrintable, utag, 64)
 
 	Ptr Printable_this(Printable this) { return ptrstrip(this.value); }
-	const IPrintable *Printable_iface(Printable this) {
-		return &IPrintable__registry[ptrread(this.value)];
+	IPrintable Printable_iface(Printable this) {
+		return IPrintable__registry[ptrread(this.value)];
 	}
 
 #else
 	typedef struct {
 		Ptr this;
-		const IPrintable *iface;
+		IPrintable iface;
 	} Printable;
 
 	Ptr Printable_this(Printable this) { return this.this; }
-	const IPrintable *Printable_iface(Printable this) { return this.iface; }
+	IPrintable Printable_iface(Printable this) { return this.iface; }
 
 #endif
 
-void Printable_print(Printable this, PrintFmt fmt, OutStream os) {
-	Printable_iface(this)->print(Printable_this(this), fmt, IPASS(OutStream, os));
+[[nodiscard]]
+OutStreamRes Printable_print(Printable this, PrintFmt fmt, OutStream os) {
+	return Printable_iface(this)(Printable_this(this), fmt, IPASS(OutStream, os));
 }
 
 typedef struct {
@@ -50,27 +47,30 @@ typedef struct {
 	PrintFmt fmt;
 } FmtPrintable;
 
-void FmtPrintable_print(FmtPrintable this, PrintFmt fmt, OutStream os) {
-	Printable_print(this.this, this.fmt, os);
+[[nodiscard]]
+OutStreamRes FmtPrintable_print(FmtPrintable this, PrintFmt fmt, OutStream os) {
+	return Printable_print(this.this, this.fmt, os);
 }
 
 typedef struct {
 	Ptr this;
-	PrintFn print;
+	IPrintable print;
 } StaticPrintable;
 
-void StaticPrintable_print(StaticPrintable this, PrintFmt fmt, OutStream os) {
-	this.print(this.this, fmt, os);
+[[nodiscard]]
+OutStreamRes StaticPrintable_print(StaticPrintable this, PrintFmt fmt, OutStream os) {
+	return this.print(this.this, fmt, os);
 }
 
 typedef struct {
 	Ptr this;
-	PrintFn print;
+	IPrintable print;
 	PrintFmt fmt;
 } StaticFmtPrintable;
 
-void StaticFmtPrintable_print(StaticFmtPrintable this, PrintFmt fmt, OutStream os) {
-	this.print(this.this, this.fmt, os);
+[[nodiscard]]
+OutStreamRes StaticFmtPrintable_print(StaticFmtPrintable this, PrintFmt fmt, OutStream os) {
+	return this.print(this.this, this.fmt, os);
 }
 
 #include "Printable_meta.h"

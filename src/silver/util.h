@@ -5,3 +5,5 @@
 #define UNIONDECL(name) union name name
 
 #define LITERAL(T,...) ((T){__VA_ARGS__})
+
+#define USTR(str) (ConstPtr)(str), (sizeof(str) - 1)

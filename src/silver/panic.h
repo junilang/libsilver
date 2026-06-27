@@ -3,34 +3,22 @@
 
 #ifdef __linux__
 
-	/*
 	#define PANIC_HEADER \
-		ubyte PANIC_header__[128]; \
-		ubyte *PANIC_headerp__ = PANIC_header__; \
-		PANIC_headerp__ =
 		linux_write(linux_stderr, USTR("PANIC: "__FILE__":"PANIC__LINE(__LINE__)" in ")); \
 		linux_write(linux_stderr, USTR(__func__)); \
 		linux_write(linux_stderr, USTR(": "));
 
-	#define PANIC(str) { \
+	#define PANIC(message) { \
 		PANIC_HEADER \
-		fputs(str, stderr); \
-		fputc('\n', stderr); \
-		fflush(stderr); \
-		abort(); \
+		linux_write(linux_stderr, USTR(message"\n")); \
+		__builtin_trap(); \
 	}
 
-	#define PANICF(...) { \
+	#define PANIC_PRINT(...) { \
 		PANIC_HEADER \
-		Print(stderr, __VA_ARGS__); \
-		fputc('\n', stderr); \
-		fflush(stderr); \
-		abort(); \
+		PRINT(Stderr, __VA_ARGS__,"\n"); \
+		__builtin_trap(); \
 	}
-	*/
-
-	#define PANIC(...) { __builtin_trap(); }
-	#define PANICF PANIC
 
 #else
 	#error "unsupported system"

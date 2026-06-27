@@ -5,8 +5,8 @@ typedef struct {
 
 #define String_NULL LITERAL(String,.data=nullptr,.size=0)
 
-void String_print(String this, PrintFmt fmt, OutStream os) {
-	OutStream_write(os, this.data, this.size);
+OutStreamRes String_print(String this, PrintFmt fmt, OutStream os) {
+	return OutStream_write(os, this.data, this.size);
 }
 
 uhash String_hash(uhash base, String this) {
@@ -20,8 +20,8 @@ typedef struct {
 
 #define StringSpan_NULL LITERAL(StringSpan,.begin=nullptr,.end=nullptr)
 
-void StringSpan_print(StringSpan this, PrintFmt fmt, OutStream os) {
-	OutStream_write(os, this.begin, (usize)(this.end - this.begin));
+OutStreamRes StringSpan_print(StringSpan this, PrintFmt fmt, OutStream os) {
+	return OutStream_write(os, this.begin, (usize)(this.end - this.begin));
 }
 
 uhash StringSpan_hash(uhash base, StringSpan this) {
@@ -32,7 +32,6 @@ usize StringSpan_size(StringSpan this) {
 	return (usize)(this.end - this.begin);
 }
 
-#define USTR(str) (ConstPtr)(str), (sizeof(str) - 1)
 #define STRING(str) LITERAL(String,.data=(ConstPtr)(str), .size=__builtin_strlen(str))
 #define STRING_INIT(str) {.data=(ConstPtr)(str), .size=__builtin_strlen(str)}
 
@@ -95,8 +94,8 @@ usize StringSpan_size(StringSpan this) {
 
 #endif
 
-void SmallString_print(SmallString this, PrintFmt fmt, OutStream os) {
-	OutStream_write(os, SmallString_data(this), SmallString_size(this));
+OutStreamRes SmallString_print(SmallString this, PrintFmt fmt, OutStream os) {
+	return OutStream_write(os, SmallString_data(this), SmallString_size(this));
 }
 
 uhash SmallString_hash(uhash base, SmallString this) {
