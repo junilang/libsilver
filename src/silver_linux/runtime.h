@@ -1,4 +1,4 @@
-char **global_env__;
+Str *global_env__;
 struct { uword key; uword val; } *global_auxv__;
 
 #if !BUILD_NOLIBC

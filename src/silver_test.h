@@ -7,8 +7,7 @@
 #endif
 
 enum {
-	SilverTest_OK = 0,
-	SilverTest_ERROR = 1,
+	SilverTest_Ok = 0,
 };
 
 typedef struct {
@@ -23,7 +22,7 @@ typedef struct {
 } SilverTestState;
 
 void SilverTest_run(SilverTestState *state, String name, SilverTest entry) {
-	PRINTB(128, Stdout, "> ",name,"\n");
+	PRINTBP(128, Stdout, "> ",name,"\n");
 
 	state->total++;
 
@@ -31,9 +30,9 @@ void SilverTest_run(SilverTestState *state, String name, SilverTest entry) {
 
 	int code = entry(&ctx);
 
-	if (code != SilverTest_OK) {
+	if (code != SilverTest_Ok) {
 		state->failed++;
-		PRINTB(128, Stdout, "> ",name," failed: ",code,"\n");
+		PRINTBP(128, Stdout, "> ",name," failed: ",code,"\n");
 	}
 }
 
@@ -48,7 +47,7 @@ int SilverTest_entry(int argc, Str *argv, SilverTestSuite suite) {
 	suite(&state);
 
 	if (state.failed) {
-		PRINTB(128, Stdout, "\n> ",state.failed," tests failed\n");
+		PRINTBP(128, Stdout, "\n> ",state.failed," tests failed\n");
 		return 1;
 	}
 

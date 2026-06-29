@@ -8,7 +8,8 @@ typedef enum : u8 {
 	OutStreamRes_Ok,
 	OutStreamRes_ErrInternal,
 	OutStreamRes_ErrUnknown,
-	OutStreamRes_ErrOverflow
+	OutStreamRes_ErrOverflow,
+	OutStreamRes_ErrInvalid,
 } OutStreamRes;
 
 typedef struct {

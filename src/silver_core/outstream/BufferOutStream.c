@@ -11,9 +11,8 @@ typedef struct {
 OutStreamRes BufferOutStream_write(BufferOutStream *this, ConstPtr buffer, usize buffer_size) {
 	auto const index = this->size;
 
-	if (index + buffer_size > this->capacity) {
+	if (index + buffer_size > this->capacity)
 		return OutStreamRes_ErrOverflow;
-	}
 
 	memcpy(this->buffer + index, buffer, buffer_size);
 
