@@ -1,9 +1,9 @@
-#if !LIBSILVER_DEPENDS
+#if !LIBSILVER_CORE_DEPENDS
 	#include "_depends.h"
 #endif
 
-#if !LIBSILVER_INCLUDE
-	#define LIBSILVER_INCLUDE true
+#if !LIBSILVER_CORE_INCLUDE
+	#define LIBSILVER_CORE_INCLUDE true
 
 	// macro utilities
 	#include "types.h"

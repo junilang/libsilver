@@ -1,8 +1,8 @@
 #if !LIBSILVER_LINUX_DEPENDS
 	#define LIBSILVER_LINUX_DEPENDS true
 
-	#if !LIBSILVER_INCLUDE
-		#include "../silver.h"
+	#if !LIBSILVER_CORE_INCLUDE
+		#include "../silver_core.h"
 	#endif
 
 	#include <linux/unistd.h>
