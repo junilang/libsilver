@@ -25,4 +25,9 @@
 	#include "futex.h"
 	#include "memory.h"
 	#include "envinfo.h"
+	#include "panic.h"
+	#include "runtime.h"
+
+	#include "OsAlc.c"
+	#include "OsFileOutStream.c"
 #endif

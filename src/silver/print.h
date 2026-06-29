@@ -16,6 +16,12 @@
 		PANIC("PRINT_BUFFERED write failed"); \
 ) }
 
+#define PANIC_PRINT(...) { \
+	PANIC_HEADER \
+	PRINT(os_panic_outstream(), __VA_ARGS__,"\n"); \
+	os_panic(); \
+}
+
 #define PRINTB PRINT_BUFFERED
 
 #define PRINT_ITEM(S, F, V) _Generic((V), \

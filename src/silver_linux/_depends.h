@@ -1,6 +1,10 @@
 #if !LIBSILVER_LINUX_DEPENDS
 	#define LIBSILVER_LINUX_DEPENDS true
 
+	#if !LIBSILVER_INCLUDE
+		#include "../silver.h"
+	#endif
+
 	#include <linux/unistd.h>
 	#include <linux/errno.h>
 	#include <linux/fcntl.h>
@@ -13,5 +17,4 @@
 	#include <linux/sysinfo.h>
 	#include <linux/time_types.h>
 	#include <linux/auxvec.h>
-
 #endif

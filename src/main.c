@@ -1,5 +1,4 @@
 #include "silver_os.h"
-#include "silver.h"
 
 #if BUILD_TESTING
 	#include "silver_test.h"

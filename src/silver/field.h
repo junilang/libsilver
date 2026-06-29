@@ -15,8 +15,6 @@
 #define FIELD_SET(field, member) \
 	FIELD_SETN(field, field##_##member)
 
-//(((unsigned long long)(field##_##member) & ((1ull << FIELD_WIDTH(field)) - 1)) << field##_FIELD)
-
 #define FIELD_CLEAR(field) \
 	(~(((1ull << FIELD_WIDTH(field)) - 1) << field##_FIELD))
 

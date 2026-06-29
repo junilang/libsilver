@@ -17,7 +17,6 @@ typedef struct {
 	OutStreamAttr (*attr)(Ptr this);
 } IOutStream;
 
-
 #if OutStream_PTRTAG
 	typedef struct {
 		union {
@@ -29,7 +28,7 @@ typedef struct {
 	enum {
 		IOutStream_BufferOutStream_ID,
 		IOutStream_BufferedOutStream_ID,
-		IOutStream_FileOutStream_ID,
+		IOutStream_OsFileOutStream_ID,
 		IOutStream_KNOWN
 	};
 
@@ -72,3 +71,5 @@ OutStreamAttr OutStream_attr(OutStream this) {
 }
 
 #include "OutStream_meta.h"
+
+extern OutStream os_panic_stream();
