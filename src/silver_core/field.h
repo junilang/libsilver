@@ -1,22 +1,25 @@
-#define FIELD_DEFINE(name, width) name##_FIELD, name##_END = name##_FIELD + (width - 1)
+#define FIELD_DEF(name, width) name##_FIELD, name##_FIELD_END = name##_FIELD + (width - 1)
 
 #define FIELD_WIDTH(field) \
-	((field##_END - field##_FIELD) + 1)
+	((field##_FIELD_END - field##_FIELD) + 1)
+
+#define FIELD_MAX(field) ( \
+	(FIELD_WIDTH(field) >= LLONG_WIDTH) ? \
+		(~0ull) : \
+		((1ull << FIELD_WIDTH(field)) - 1) \
+)
+
+#define FIELD_MASK(field) (FIELD_MAX(field) << field##_FIELD)
+
+#define FIELD_CLEAR(field) (~FIELD_MASK(field))
 
 #define FIELD_GET(field, from) \
-	(((unsigned long long)(from) >> field##_FIELD) & ((1ull << FIELD_WIDTH(field)) - 1))
+	(((ullong)(from) & FIELD_MASK(field)) >> field##_FIELD)
 
 #define FIELD_GET_CAST(field, from) \
 	((field)FIELD_GET(field, from))
 
-#define FIELD_SETN(field, val) \
-	(((unsigned long long)(val) & ((1ull << FIELD_WIDTH(field)) - 1)) << field##_FIELD)
+#define FIELD_SET(field, val) \
+	(((ullong)(val) << field##_FIELD) & FIELD_MASK(field))
 
-#define FIELD_SET(field, member) \
-	FIELD_SETN(field, field##_##member)
-
-#define FIELD_CLEAR(field) \
-	(~(((1ull << FIELD_WIDTH(field)) - 1) << field##_FIELD))
-
-#define FIELD_MAX(field) \
-	((1ull << FIELD_WIDTH(field)) - 1)
+#define FIELD(field, member) FIELD_SET(field, field##_##member)

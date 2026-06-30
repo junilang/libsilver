@@ -5,13 +5,13 @@ extern void os_panic_write(const ubyte *message, usize size);
 #define PANIC__LINE(line) PANIC__LINE_(line)
 
 #define PANIC_HEADER \
-	os_panic_write(USTR("PANIC: "__FILE__":"PANIC__LINE(__LINE__)" in ")); \
-	os_panic_write(USTR(__func__)); \
-	os_panic_write(USTR(": "));
+	os_panic_write(STR("PANIC: "__FILE__":"PANIC__LINE(__LINE__)" in ")); \
+	os_panic_write(STR(__func__)); \
+	os_panic_write(STR(": "));
 
 #define PANIC(message) { \
 	PANIC_HEADER \
-	os_panic_write(USTR(message"\n")); \
+	os_panic_write(STR(message"\n")); \
 	os_panic(); \
 }
 

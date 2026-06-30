@@ -87,7 +87,7 @@ OutStreamRes PRINT_setfmt(OutStream os, PrintFmt *fmtp, PrintFmt fmt) {
 OutStreamRes PRINT_cstring(OutStream os, PrintFmt *fmtp, Str v) {
 	PrintFmt fmt = *fmtp;
 	*fmtp = PrintFmt_Null;
-	return String_print(STRING(v), fmt, os);
+	return String_print(String_from(v), fmt, os);
 }
 
 OutStreamRes PRINT_bool(OutStream os, PrintFmt *fmt, bool v) {
@@ -111,7 +111,7 @@ OutStreamRes PRINT_pointer(OutStream os, PrintFmt *fmtp, ConstPtr v) {
 	PrintFmt fmt = *fmtp;
 	*fmtp = PrintFmt_Null;
 	if (!fmt.value)
-		fmt.value = FIELD_SET(IntFmt_Base, Hex) | FLAG(IntFmt, Header);
+		fmt.value = FIELD(IntFmt_Base, Hex) | FLAG(IntFmt_Header);
 	return IntFmt_Unsigned_print((usize)v, fmt, os);
 }
 

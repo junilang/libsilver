@@ -30,7 +30,7 @@ typedef enum : u8 {
 constexpr auto Alc_ResolveNone = u8_max;
 
 typedef u8 AlcFlag; enum {
-	AlcFlag_BIT_Zero
+	FLAG_DEF(AlcFlag_Zero)
 };
 
 typedef struct {
@@ -45,20 +45,20 @@ typedef struct {
 } AlcReq;
 
 typedef u32 AlcAttr; enum {
-	AlcAttr_BIT_IntentNew,
-	AlcAttr_BIT_IntentResize,
-	AlcAttr_BIT_IntentDelete,
-	AlcAttr_BIT_IntentQuery,
-	AlcAttr_BIT_IntentResizeQuery,
-	AlcAttr_BIT_IntentPromise,
-	AlcAttr_BIT_IntentResizePromise,
-	AlcAttr_BIT_IntentLock,
-	AlcAttr_BIT_IntentUnlock,
-	AlcAttr_BIT_FeatureZero,
-	AlcAttr_BIT_FeatureRelativeLocal,
-	AlcAttr_BIT_FeatureRelativeS16,
-	AlcAttr_BIT_FeatureRelativeU16,
-	AlcAttr_BIT_FeatureRelativeS32,
-	AlcAttr_BIT_FeatureRelativeU32,
-	AlcAttr_BIT_ThreadSafe
+	FLAG_DEF(AlcAttr_IntentNew),
+	FLAG_DEF(AlcAttr_IntentResize),
+	FLAG_DEF(AlcAttr_IntentDelete),
+	FLAG_DEF(AlcAttr_IntentQuery),
+	FLAG_DEF(AlcAttr_IntentResizeQuery),
+	FLAG_DEF(AlcAttr_IntentPromise),
+	FLAG_DEF(AlcAttr_IntentResizePromise),
+	FLAG_DEF(AlcAttr_IntentLock),
+	FLAG_DEF(AlcAttr_IntentUnlock),
+	FLAG_DEF(AlcAttr_FeatureZero),
+	FLAG_DEF(AlcAttr_FeatureRelativeLocal),
+	FLAG_DEF(AlcAttr_FeatureRelativeS16),
+	FLAG_DEF(AlcAttr_FeatureRelativeU16),
+	FLAG_DEF(AlcAttr_FeatureRelativeS32),
+	FLAG_DEF(AlcAttr_FeatureRelativeU32),
+	FLAG_DEF(AlcAttr_ThreadSafe)
 };

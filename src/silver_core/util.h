@@ -6,4 +6,11 @@
 
 #define LITERAL(T,...) ((T){__VA_ARGS__})
 
-#define USTR(str) (ConstPtr)(str), (sizeof(str) - 1)
+#define STR(str) (ConstPtr)(str), (sizeof(str) - 1)
+
+typedef struct {
+	const ubyte *data;
+	usize size;
+} String;
+
+#define String_INIT(str) {.data=(ConstPtr)(str), .size=(sizeof(str) - 1)}

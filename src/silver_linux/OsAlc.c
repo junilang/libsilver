@@ -133,7 +133,7 @@ AlcRes OsAlc_query(AlcReq *req, usize *offers) {
 	}
 }
 
-constexpr AlcAttr OsAlc_attr = FLAG(AlcAttr,
+constexpr AlcAttr OsAlc_attr = FLAGS(AlcAttr,
 	IntentNew, IntentDelete, IntentQuery,
 	FeatureRelativeLocal, FeatureZero, ThreadSafe,
 );

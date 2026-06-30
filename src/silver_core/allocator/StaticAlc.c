@@ -44,7 +44,7 @@ Ptr StaticAlc_new(StaticAlc *this, AlcReq *req) {
 
 	this->head = new_head;
 
-	if (req->flags & FLAG(AlcFlag, Zero))
+	if (req->flags & FLAG(AlcFlag_Zero))
 		memset((Ptr)ptr, 0, size);
 
 	return (Ptr)ptr;
@@ -89,7 +89,7 @@ Ptr StaticAlc_resize(StaticAlc *this, AlcReq *req, Ptr mem) {
 	new_buffer->size = (u32)size;
 
 	memcpy((Ptr)ptr, mem, old_size);
-	if (req->flags & FLAG(AlcFlag, Zero))
+	if (req->flags & FLAG(AlcFlag_Zero))
 		memset((Ptr)(ptr + old_size), 0, size - old_size);
 
 	this->head = new_head;
@@ -101,7 +101,7 @@ AlcRes StaticAlc_query(StaticAlc *this, AlcReq *req) {
 	return AlcRes_ErrUnimplemented;
 }
 
-constexpr AlcAttr StaticAlc_attr = FLAG(AlcAttr,
+constexpr AlcAttr StaticAlc_attr = FLAGS(AlcAttr,
 	IntentNew, IntentResize, IntentDelete, IntentQuery, FeatureZero, FeatureRelativeLocal
 );
 

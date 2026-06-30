@@ -2,15 +2,9 @@
 	#define OutStream_PTRTAG PTRTAG
 #endif
 
-typedef u32 OutStreamAttr;
+#include "OutStreamRes.h"
 
-typedef enum : u8 {
-	OutStreamRes_Ok,
-	OutStreamRes_ErrInternal,
-	OutStreamRes_ErrUnknown,
-	OutStreamRes_ErrOverflow,
-	OutStreamRes_ErrInvalid,
-} OutStreamRes;
+typedef u32 OutStreamAttr;
 
 typedef struct {
 	OutStreamRes (*write)(Ptr this, ConstPtr buffer, usize buffer_size);
@@ -27,6 +21,7 @@ typedef struct {
 	} OutStream;
 
 	enum {
+		IOutStream_VoidOutStream_ID,
 		IOutStream_BufferOutStream_ID,
 		IOutStream_BufferedOutStream_ID,
 		IOutStream_OsFileOutStream_ID,

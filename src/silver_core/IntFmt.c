@@ -2,13 +2,13 @@ typedef unsigned long long IntFmt_Unsigned;
 typedef signed long long IntFmt_Signed;
 
 enum {
-	FIELD_DEFINE(IntFmt_Base, 2),
-	FIELD_DEFINE(IntFmt_Spacing, 5),
-	FIELD_DEFINE(IntFmt_Delimiter, 2),
-	FIELD_DEFINE(IntFmt_Digits, 8), // up to 255 digits
-	IntFmt_BIT_Negative,
-	IntFmt_BIT_Capitalize,
-	IntFmt_BIT_Header,
+	FIELD_DEF(IntFmt_Base, 2),
+	FIELD_DEF(IntFmt_Spacing, 5),
+	FIELD_DEF(IntFmt_Delimiter, 2),
+	FIELD_DEF(IntFmt_Digits, 8), // up to 255 digits
+	FLAG_DEF(IntFmt_Negative),
+	FLAG_DEF(IntFmt_Capitalize),
+	FLAG_DEF(IntFmt_Header),
 };
 
 typedef enum : u8 {
@@ -33,9 +33,9 @@ String IntFmt_Unsigned_tostr(IntFmt_Unsigned val, IntFmt fmt, ubyte buf[IntFmt_B
 	auto bp = buf + IntFmt_Bufsize;
 
 	auto const base = FIELD_GET_CAST(IntFmt_Base, fmt);
-	const bool capitalize = fmt & FLAG(IntFmt, Capitalize);
-	const bool header = fmt & FLAG(IntFmt, Header);
-	const bool negative = fmt & FLAG(IntFmt, Negative);
+	const bool capitalize = fmt & FLAG(IntFmt_Capitalize);
+	const bool header = fmt & FLAG(IntFmt_Header);
+	const bool negative = fmt & FLAG(IntFmt_Negative);
 
 	const u8 digits = FIELD_GET(IntFmt_Digits, fmt);
 
@@ -170,7 +170,7 @@ String IntFmt_Unsigned_tostr(IntFmt_Unsigned val, IntFmt fmt, ubyte buf[IntFmt_B
 
 String IntFmt_Signed_tostr(IntFmt_Signed val, IntFmt fmt, ubyte buf[IntFmt_Bufsize]) {
 	if (val < 0) {
-		fmt |= FLAG(IntFmt, Negative);
+		fmt |= FLAG(IntFmt_Negative);
 		val = -val;
 	}
 	return IntFmt_Unsigned_tostr((IntFmt_Unsigned)val, fmt, buf);

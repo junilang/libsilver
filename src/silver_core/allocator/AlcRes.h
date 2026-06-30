@@ -16,11 +16,10 @@ typedef enum : u8 {
 	#define X(N) AlcRes_##N,
 		XS
 	#undef X
-	AlcRes_MAX
 } AlcRes;
 
 const String AlcRes_repr[] = {
-	#define X(N) [AlcRes_##N] = STRING_INIT(#N),
+	#define X(N) [AlcRes_##N] = String_INIT(#N),
 		XS
 	#undef X
 };

@@ -1,16 +1,15 @@
-typedef struct {
-	const ubyte *data;
-	usize size;
-} String;
+constexpr String String_null = {.data=nullptr,.size=0};
 
-#define String_NULL LITERAL(String,.data=nullptr,.size=0)
-
-OutStreamRes String_print(String this, PrintFmt fmt, OutStream os) {
-	return OutStream_write(os, this.data, this.size);
+String String_from(Str s) {
+	return (String) {.data = (ConstPtr)s, .size = strlen(s)};
 }
 
 uhash String_hash(uhash base, String this) {
 	return memhash(base, this.data, this.size);
+}
+
+OutStreamRes String_print(String this, PrintFmt fmt, OutStream os) {
+	return OutStream_write(os, this.data, this.size);
 }
 
 typedef struct {
@@ -20,10 +19,6 @@ typedef struct {
 
 #define StringSpan_NULL LITERAL(StringSpan,.begin=nullptr,.end=nullptr)
 
-OutStreamRes StringSpan_print(StringSpan this, PrintFmt fmt, OutStream os) {
-	return OutStream_write(os, this.begin, (usize)(this.end - this.begin));
-}
-
 uhash StringSpan_hash(uhash base, StringSpan this) {
 	return memhash(base, this.begin, (usize)(this.end - this.begin));
 }
@@ -32,8 +27,9 @@ usize StringSpan_size(StringSpan this) {
 	return (usize)(this.end - this.begin);
 }
 
-#define STRING(str) LITERAL(String,.data=(ConstPtr)(str), .size=__builtin_strlen(str))
-#define STRING_INIT(str) {.data=(ConstPtr)(str), .size=__builtin_strlen(str)}
+OutStreamRes StringSpan_print(StringSpan this, PrintFmt fmt, OutStream os) {
+	return OutStream_write(os, this.begin, (usize)(this.end - this.begin));
+}
 
 #ifndef SmallString_PTRTAG
 	#define SmallString_PTRTAG PTRTAG
@@ -61,7 +57,7 @@ usize StringSpan_size(StringSpan this) {
 
 	SmallString SmallString_upcast(const ubyte *data, usize size) {
 		#if SmallString_SAFE
-			if (size > SmallString_MAX) PANIC("SmallString_upcast: size overflow");
+			if (size > SmallString_MAX) PANIC("size overflow");
 		#endif
 
 		return (SmallString){ptrtag((Ptr)data, (utag)size)};
@@ -86,6 +82,7 @@ usize StringSpan_size(StringSpan this) {
 		return this.data;
 	}
 
+	[[deprecated("pointer tagging disabled - SmallString = String")]]
 	SmallString SmallString_upcast(const ubyte *data, usize size) {
 		return (SmallString){.data=data,.size=size};
 	}
@@ -94,10 +91,10 @@ usize StringSpan_size(StringSpan this) {
 
 #endif
 
-OutStreamRes SmallString_print(SmallString this, PrintFmt fmt, OutStream os) {
-	return OutStream_write(os, SmallString_data(this), SmallString_size(this));
-}
-
 uhash SmallString_hash(uhash base, SmallString this) {
 	return memhash(base, SmallString_data(this), SmallString_size(this));
+}
+
+OutStreamRes SmallString_print(SmallString this, PrintFmt fmt, OutStream os) {
+	return OutStream_write(os, SmallString_data(this), SmallString_size(this));
 }

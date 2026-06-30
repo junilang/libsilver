@@ -1,7 +1,7 @@
 enum {
-	FIELD_DEFINE(HashMapItem_Hash, uword_width - 2),
-	HashMapItem_BIT_Occupied,
-	HashMapItem_BIT_Vacated
+	FIELD_DEF(HashMapItem_Hash, usize_width - 2),
+	FLAG_DEF(HashMapItem_Occupied),
+	FLAG_DEF(HashMapItem_Vacated),
 };
 
 typedef struct {
