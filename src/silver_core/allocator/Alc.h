@@ -1,7 +1,7 @@
 #include "AlcRes.h"
 #include "AlcReq.h"
 
-typedef Ptr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
+typedef AlcPtr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 
 #ifndef Alc_PTRTAG
 	#define Alc_PTRTAG PTRTAG
@@ -61,7 +61,7 @@ typedef Ptr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 #endif
 
 [[nodiscard, gnu::malloc]]
-Ptr Alc_invoke(Alc this, AlcReq *req, Ptr arg, Ptr mem) {
+AlcPtr Alc_invoke(Alc this, AlcReq *req, Ptr arg, Ptr mem) {
 	return Alc_iface(this)(Alc_this(this), req, arg, mem);
 }
 
@@ -70,13 +70,13 @@ AlcAttr Alc_attr(Alc this) {
 	// 	must be able to report their attributes
 	return (AlcAttr)(usize)Alc_invoke(this, &(AlcReq) {
 		.intent = AlcIntent_Attr
-	} ,nullptr, nullptr);
+	}, nullptr, nullptr);
 }
 
 constexpr ualign Alc_default_align = alignof(Ptr);
 
 [[nodiscard, gnu::malloc]]
-Ptr Alc_new(Alc this, usize size) {
+AlcPtr Alc_new(Alc this, usize size) {
 	return Alc_invoke(this, &(AlcReq) {
 		.intent = AlcIntent_New,
 		.size = size,
@@ -86,7 +86,7 @@ Ptr Alc_new(Alc this, usize size) {
 
 [[nodiscard]]
 AlcRes Alc_delete(Alc this, Ptr mem) {
-	return AlcRes_get(
+	return AlcPtr_get(
 		Alc_invoke(this, &(AlcReq) {
 			.intent = AlcIntent_Delete,
 		}, nullptr, mem)
@@ -94,7 +94,7 @@ AlcRes Alc_delete(Alc this, Ptr mem) {
 }
 
 [[nodiscard, gnu::malloc]]
-Ptr Alc_resize(Alc this, Ptr mem, usize size) {
+AlcPtr Alc_resize(Alc this, Ptr mem, usize size) {
 	return Alc_invoke(this, &(AlcReq) {
 		.intent = AlcIntent_Resize,
 		.size = size,

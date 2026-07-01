@@ -32,6 +32,8 @@
 	#include "outstream/BufferedOutStream.c"
 
 	#include "String.h"
+	#include "SmallString.h"
+
 	#include "IntFmt.c"
 	#include "print.h"
 

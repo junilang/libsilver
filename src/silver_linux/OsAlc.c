@@ -5,13 +5,13 @@ typedef struct {
 } OsAlc_Header;
 
 [[nodiscard, gnu::malloc]]
-Ptr OsAlc_new(AlcReq *req) {
+AlcPtr OsAlc_new(AlcReq *req) {
 	auto const page_size = env_pagesz();
 
 	ConstPtr hint;
 	switch (req->relative) {
 		default:
-			return AlcRes_set(AlcRes_ErrInvalidRelative);
+			return AlcPtr_set(AlcRes_ErrInvalidRelative);
 		case AlcRelative_None:
 			hint = nullptr;
 			break;
@@ -22,7 +22,7 @@ Ptr OsAlc_new(AlcReq *req) {
 
 	ualign align = req->align;
 	if (align > page_size)
-		return AlcRes_set(AlcRes_ErrInvalidAlign);
+		return AlcPtr_set(AlcRes_ErrInvalidAlign);
 
 	if (align < alignof(OsAlc_Header))
 		align = alignof(OsAlc_Header);
@@ -40,9 +40,9 @@ Ptr OsAlc_new(AlcReq *req) {
 	if (res <= -1 && res >= -4095) {
 		switch (-res) {
 			case ENOMEM:
-				return AlcRes_set(AlcRes_ErrNoMemory);
+				return AlcPtr_set(AlcRes_ErrNoMemory);
 			default:
-				return AlcRes_set(AlcRes_ErrInternal);
+				return AlcPtr_set(AlcRes_ErrInternal);
 		}
 	}
 
@@ -138,14 +138,14 @@ constexpr AlcAttr OsAlc_attr = FLAGS(AlcAttr,
 	FeatureRelativeLocal, FeatureZero, ThreadSafe,
 );
 
-Ptr OsAlc_invoke(Ptr this, AlcReq *req, Ptr arg, Ptr mem) {
+AlcPtr OsAlc_invoke(Ptr this, AlcReq *req, Ptr arg, Ptr mem) {
 	switch (req->intent) {
-		default: return AlcRes_set(AlcRes_ErrUnsupported);
+		default: return AlcPtr_set(AlcRes_ErrUnsupported);
 
-		case AlcIntent_Attr: return (Ptr)(usize)OsAlc_attr;
+		case AlcIntent_Attr: return (AlcPtr)(usize)OsAlc_attr;
 		case AlcIntent_New: return OsAlc_new(req);
-		case AlcIntent_Delete: return AlcRes_set(OsAlc_delete(mem));
-		case AlcIntent_Query: return AlcRes_set(OsAlc_query(req, arg));
+		case AlcIntent_Delete: return AlcPtr_set(OsAlc_delete(mem));
+		case AlcIntent_Query: return AlcPtr_set(OsAlc_query(req, arg));
 	}
 }
 

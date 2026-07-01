@@ -6,7 +6,7 @@ int ZZentry(SilverTestContext *ctx) {
 	};
 
 	Ptr mem = Alc_invoke(OsAlc, &req, nullptr, nullptr);
-	switch (AlcRes_get(mem)) {
+	switch (AlcPtr_get(mem)) {
 		default: PANIC();
 		case AlcRes_Ok:
 	}
@@ -18,14 +18,14 @@ int ZZentry(SilverTestContext *ctx) {
 
 	for (uint i = 1; i < 50; i++) {
 		Ptr mem = Alc_new(alc, 1024);
-		if (AlcRes_get(mem)) {
-			PRINTBP(128, Stdout, i, " -> ",AlcRes_repr[AlcRes_get(mem)],"\n");
+		if (AlcPtr_get(mem)) {
+			PRINTBP(128, Stdout, i, " -> ",AlcRes_repr[AlcPtr_get(mem)],"\n");
 			break;
 		}
 
 		mem = Alc_resize(alc, mem, 2048);
-		if (AlcRes_get(mem)) {
-			PRINTBP(128, Stdout, i, " -> ", AlcRes_repr[AlcRes_get(mem)],"\n");
+		if (AlcPtr_get(mem)) {
+			PRINTBP(128, Stdout, i, " -> ", AlcRes_repr[AlcPtr_get(mem)],"\n");
 			break;
 		}
 

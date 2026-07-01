@@ -6,6 +6,7 @@
 	X(ErrInvalidFlags) \
 	X(ErrInvalidRange) \
 	X(ErrInvalidMem) \
+	X(ErrOverflow) \
 	X(ErrInternal) \
 	X(ErrNoMemory) \
 	X(ErrUnsupported) \
@@ -26,11 +27,13 @@ const String AlcRes_repr[] = {
 
 #undef XS
 
-Ptr AlcRes_set(AlcRes err) {
-	return (Ptr)(-(isize)err);
+typedef UNIQUEPTR(AlcPtr);
+
+AlcPtr AlcPtr_set(AlcRes err) {
+	return (AlcPtr)(-(isize)err);
 }
 
-AlcRes AlcRes_get(ConstPtr result) {
+AlcRes AlcPtr_get(AlcPtr result) {
 	isize c = (isize)result;
 	if (c <= -1 && c >= -4095) {
 		u16 err = (u16)(-c);

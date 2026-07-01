@@ -13,9 +13,9 @@ typedef struct {
 } StaticAlc;
 
 [[nodiscard, gnu::malloc]]
-Ptr StaticAlc_new(StaticAlc *this, AlcReq *req) {
+AlcPtr StaticAlc_new(StaticAlc *this, AlcReq *req) {
 	switch (req->relative) {
-		default: return AlcRes_set(AlcRes_ErrInvalidRelative);
+		default: return AlcPtr_set(AlcRes_ErrInvalidRelative);
 
 		case AlcRelative_None:
 		case AlcRelative_Local:
@@ -28,7 +28,7 @@ Ptr StaticAlc_new(StaticAlc *this, AlcReq *req) {
 	usize size = usize_align(req->size, align);
 
 	if (size > u32_max)
-		return AlcRes_set(AlcRes_ErrInvalidSize);
+		return AlcPtr_set(AlcRes_ErrInvalidSize);
 
 	usize ptr = (usize)this->data + this->head;
 	ptr = usize_align(ptr + StaticAlc_Buffer_dataoffset, align);
@@ -36,7 +36,7 @@ Ptr StaticAlc_new(StaticAlc *this, AlcReq *req) {
 	u32 new_head = (u32)((ptr + size) - (usize)this->data);
 
 	if (new_head > this->end)
-		return AlcRes_set(AlcRes_ErrNoMemory);
+		return AlcPtr_set(AlcRes_ErrNoMemory);
 
 	auto buffer = (StaticAlc_Buffer*)(ptr - StaticAlc_Buffer_dataoffset);
 
@@ -51,11 +51,11 @@ Ptr StaticAlc_new(StaticAlc *this, AlcReq *req) {
 }
 
 [[nodiscard, gnu::malloc]]
-Ptr StaticAlc_resize(StaticAlc *this, AlcReq *req, Ptr mem) {
-	if (!mem) return AlcRes_set(AlcRes_ErrInvalidMem);
+AlcPtr StaticAlc_resize(StaticAlc *this, AlcReq *req, Ptr mem) {
+	if (!mem) return AlcPtr_set(AlcRes_ErrInvalidMem);
 
 	switch (req->relative) {
-		default: return AlcRes_set(AlcRes_ErrInvalidRelative);
+		default: return AlcPtr_set(AlcRes_ErrInvalidRelative);
 
 		case AlcRelative_None:
 		case AlcRelative_Local:
@@ -68,7 +68,7 @@ Ptr StaticAlc_resize(StaticAlc *this, AlcReq *req, Ptr mem) {
 	usize size = usize_align(req->size, align);
 
 	if (size > u32_max)
-		return AlcRes_set(AlcRes_ErrInvalidSize);
+		return AlcPtr_set(AlcRes_ErrInvalidSize);
 
 	auto buffer = (StaticAlc_Buffer*)((usize)mem - StaticAlc_Buffer_dataoffset);
 	auto const old_size = buffer->size;
@@ -83,7 +83,7 @@ Ptr StaticAlc_resize(StaticAlc *this, AlcReq *req, Ptr mem) {
 	u32 new_head = (u32)((ptr + size) - (usize)this->data);
 
 	if (new_head > this->end)
-		return AlcRes_set(AlcRes_ErrNoMemory);
+		return AlcPtr_set(AlcRes_ErrNoMemory);
 
 	auto new_buffer = (StaticAlc_Buffer*)(ptr - StaticAlc_Buffer_dataoffset);
 	new_buffer->size = (u32)size;
@@ -97,23 +97,40 @@ Ptr StaticAlc_resize(StaticAlc *this, AlcReq *req, Ptr mem) {
 	return (Ptr)ptr;
 }
 
-AlcRes StaticAlc_query(StaticAlc *this, AlcReq *req) {
-	return AlcRes_ErrUnimplemented;
+AlcRes StaticAlc_query(AlcReq *req, usize *offers) {
+	switch (req->relative) {
+		default: return AlcRes_ErrInvalidRelative;
+		case AlcRelative_None:
+		case AlcRelative_Local:
+	}
+
+	ualign align = req->align;
+	if (align < StaticAlc_minalign)
+		align = StaticAlc_minalign;
+
+	usize size = usize_align(req->size, align);
+
+	if (req->offers_size) {
+		offers[0] = size;
+		req->offers_size = 1;
+	}
+
+	return AlcRes_Ok;
 }
 
 constexpr AlcAttr StaticAlc_attr = FLAGS(AlcAttr,
 	IntentNew, IntentResize, IntentDelete, IntentQuery, FeatureZero, FeatureRelativeLocal
 );
 
-Ptr StaticAlc_invoke(StaticAlc *this, AlcReq *req, Ptr arg, Ptr mem) {
+AlcPtr StaticAlc_invoke(StaticAlc *this, AlcReq *req, Ptr arg, Ptr mem) {
 	switch (req->intent) {
-		default: return AlcRes_set(AlcRes_ErrUnsupported);
+		default: return AlcPtr_set(AlcRes_ErrUnsupported);
 
 		case AlcIntent_Attr: return (Ptr)(usize)StaticAlc_attr;
 		case AlcIntent_New: return StaticAlc_new(this, req);
 		case AlcIntent_Resize: return StaticAlc_resize(this, req, mem);
-		case AlcIntent_Query: return AlcRes_set(StaticAlc_query(this, req));
-		case AlcIntent_Delete: return AlcRes_set(AlcRes_Ok);
+		case AlcIntent_Query: return AlcPtr_set(StaticAlc_query(req, arg));
+		case AlcIntent_Delete: return AlcPtr_set(AlcRes_Ok);
 	}
 }
 
@@ -133,4 +150,8 @@ StaticAlc *StaticAlc_init(Ptr mem, usize size) {
 	this->end = (u32)end;
 
 	return this;
+}
+
+void StaticAlc_clear(StaticAlc *this) {
+	this->head = 0;
 }
