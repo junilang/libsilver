@@ -6,7 +6,4 @@
 	#define LIBSILVER_DATA_INCLUDE
 
 	#include "Vec.h"
-	#include "Vec32.h"
-	#include "HashMap.h"
-	#include "trie/Trie.h"
 #endif

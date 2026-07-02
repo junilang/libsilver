@@ -8,3 +8,7 @@ typedef struct {
 	usize metadata;
 	Ptr value;
 } HashMapItem;
+
+typedef struct {
+	usize metadata;
+} HashMap;

@@ -1,11 +1,11 @@
-Str *global_env__;
+Str const *global_env__;
 struct { uword key; uword val; } *global_auxv__;
 
 #if !BUILD_NOLIBC
 	extern Str *environ;
 	[[gnu::constructor(101)]] void setup_env_globals_ctor__() {
 		Str *envp = environ;
-		global_env__ = envp;
+		global_env__ = (Ptr)envp;
 		Str *it = envp;
 		while (*it) it++;
 		it++;
@@ -37,7 +37,7 @@ struct { uword key; uword val; } *global_auxv__;
 		char **envp = argv + (argc + 1);
 
 		{
-			global_env__ = envp;
+			global_env__ = (Ptr)envp;
 			char **it = envp;
 			while (*it) it++;
 			it++;

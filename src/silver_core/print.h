@@ -44,10 +44,10 @@
 #define PRINTBP PRINT_BUFFERED_PANIC
 
 #define PANIC_PRINT(...) { \
-	PRINT_HEADER \
+	PANIC_HEADER \
 	OutStreamRes PRINT_outer_res__; \
 	PRINT(&PRINT_outer_res__, os_panic_stream(), __VA_ARGS__, "\n"); \
-	if (PRINT_outer_res__) os_panic_write("\nPANIC_PRINT failed\n"); \
+	if (PRINT_outer_res__) os_panic_write(STR("\nPANIC_PRINT failed\n")); \
 	os_panic(); \
 }
 

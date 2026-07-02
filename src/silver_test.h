@@ -2,8 +2,8 @@
 
 #define LIBSILVER_TEST_INCLUDE true
 
-#if !LIBSILVER_INCLUDE
-	#include "silver.h"
+#if !LIBSILVER_CORE_INCLUDE
+	#include "silver_core.h"
 #endif
 
 enum {

@@ -33,6 +33,14 @@ AlcPtr AlcPtr_set(AlcRes err) {
 	return (AlcPtr)(-(isize)err);
 }
 
+bool AlcPtr_check(AlcPtr result) {
+	isize c = (isize)result;
+	if (c <= -1 && c >= -4095)
+		return true;
+
+	return false;
+}
+
 AlcRes AlcPtr_get(AlcPtr result) {
 	isize c = (isize)result;
 	if (c <= -1 && c >= -4095) {
@@ -42,6 +50,21 @@ AlcRes AlcPtr_get(AlcPtr result) {
 		return (AlcRes)err;
 	}
 	return AlcRes_Ok;
+}
+
+AlcRes AlcPtr_unwrap(AlcPtr result, Ptr ptr) {
+	auto res = AlcPtr_get(result);
+	if (res)
+		*(Ptr*)ptr = nullptr;
+	else
+		*(Ptr*)ptr = result;
+
+	return res;
+}
+
+Ptr AlcPtr_panic(AlcPtr result) {
+	if (AlcPtr_get(result)) PANIC();
+	return (Ptr)result;
 }
 
 typedef struct {

@@ -1,21 +1,21 @@
 typedef struct {
 	ubyte *data;
-	usize size;
-	usize capacity;
-} Vec;
+	u32 size;
+	u32 capacity;
+} Vec32;
 
-void Vec_zero(Vec *this) {
+void Vec32_zero(Vec32 *this) {
 	this->data = nullptr;
 	this->capacity = 0;
 	this->size = 0;
 }
 
-void Vec_clear(Vec *this) {
+void Vec32_clear(Vec32 *this) {
 	this->size = 0;
 }
 
 [[nodiscard]]
-AlcRes Vec_destroy(Vec *this, Alc alc) {
+AlcRes Vec32_destroy(Vec32 *this, Alc alc) {
 	AlcRes res;
 	if (this->data)
 		res = Alc_delete(alc, this->data);
@@ -29,26 +29,26 @@ AlcRes Vec_destroy(Vec *this, Alc alc) {
 	return res;
 }
 
-Ptr Vec_begin(Vec *this) {
+Ptr Vec32_begin(Vec32 *this) {
 	return this->data;
 }
 
-Ptr Vec_end(Vec *this) {
+Ptr Vec32_end(Vec32 *this) {
 	return this->data + this->size;
 }
 
-usize Vec_size(Vec *this) {
+u32 Vec32_size(Vec32 *this) {
 	return this->size;
 }
 
-usize Vec_count(Vec *this, usize elem_size) {
+u32 Vec32_count(Vec32 *this, usize elem_size) {
 	return this->size / elem_size;
 }
 
 [[nodiscard]]
-AlcPtr Vec_append_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
-	usize end = this->size;
-	usize new_size;
+AlcPtr Vec32_append_aligned(Vec32 *this, Alc alc, u32 size, ualign alc_align) {
+	u32 end = this->size;
+	u32 new_size;
 	if (chkdadd(end, size, &new_size))
 		return AlcPtr_set(AlcRes_ErrOverflow);
 
@@ -70,9 +70,12 @@ AlcPtr Vec_append_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 			return res;
 
 		data = (Ptr)res;
-
 		this->data = data;
-		this->capacity = req.size;
+
+		if (req.size > u32_max)
+			return AlcPtr_set(AlcRes_ErrOverflow);
+
+		this->capacity = (u32)req.size;
 	}
 
 	this->size = new_size;
@@ -80,15 +83,15 @@ AlcPtr Vec_append_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 }
 
 [[nodiscard]]
-AlcPtr Vec_push_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
-	usize end = this->size;
-	usize new_size;
+AlcPtr Vec32_push_aligned(Vec32 *this, Alc alc, u32 size, ualign alc_align) {
+	u32 end = this->size;
+	u32 new_size;
 	if (chkdadd(end, size, &new_size))
 		return AlcPtr_set(AlcRes_ErrOverflow);
 
 	auto data = this->data;
 
-	usize capacity = this->capacity;
+	u32 capacity = this->capacity;
 	if (new_size > capacity) {
 		if (capacity == 0)
 			capacity = sizeof(Ptr) * 4;
@@ -113,9 +116,12 @@ AlcPtr Vec_push_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 			return res;
 
 		data = (Ptr)res;
-
 		this->data = data;
-		this->capacity = req.size;
+
+		if (req.size > u32_max)
+			return AlcPtr_set(AlcRes_ErrOverflow);
+
+		this->capacity = (u32)req.size;
 	}
 
 	this->size = new_size;
@@ -123,11 +129,11 @@ AlcPtr Vec_push_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 }
 
 [[nodiscard]]
-AlcPtr Vec_append(Vec *this, Alc alc, usize size) {
-	return Vec_append_aligned(this, alc, size, Alc_default_align);
+AlcPtr Vec32_append(Vec32 *this, Alc alc, u32 size) {
+	return Vec32_append_aligned(this, alc, size, Alc_default_align);
 }
 
 [[nodiscard]]
-AlcPtr Vec_push(Vec *this, Alc alc, usize size) {
-	return Vec_push_aligned(this, alc, size, Alc_default_align);
+AlcPtr Vec32_push(Vec32 *this, Alc alc, u32 size) {
+	return Vec32_push_aligned(this, alc, size, Alc_default_align);
 }
