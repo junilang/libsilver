@@ -52,20 +52,21 @@ AlcRes AlcPtr_get(AlcPtr result) {
 	return AlcRes_Ok;
 }
 
-AlcRes AlcPtr_unwrap(AlcPtr result, Ptr ptr) {
+static Ptr AlcPtr_UNWRAP_internal(AlcPtr result, ConstPtr func_name, ConstPtr panic_header) {
 	auto res = AlcPtr_get(result);
-	if (res)
-		*(Ptr*)ptr = nullptr;
-	else
-		*(Ptr*)ptr = result;
-
-	return res;
-}
-
-Ptr AlcPtr_panic(AlcPtr result) {
-	if (AlcPtr_get(result)) PANIC();
+	if (res) PANIC_internal(func_name, panic_header, AlcRes_repr[res].data, nullptr);
 	return (Ptr)result;
 }
+
+#define AlcPtr_UNWRAP(result) \
+	AlcPtr_UNWRAP_internal(result, __func__, PANIC_IDENTIFIER" AlcPtr_UNWRAP:")
+
+static void AlcRes_UNWRAP_internal(AlcRes res, ConstPtr func_name, ConstPtr panic_header) {
+	if (res) PANIC_internal(func_name, panic_header, AlcRes_repr[res].data, nullptr);
+}
+
+#define AlcRes_UNWRAP(result) \
+	AlcRes_UNWRAP_internal(result, __func__, PANIC_IDENTIFIER" AlcRes_UNWRAP:")
 
 typedef struct {
 	usize size;

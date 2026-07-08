@@ -1,4 +1,5 @@
 #include "silver.h"
+#include "silver_async.h"
 
 #if BUILD_TESTING
 	#include "silver_test.h"

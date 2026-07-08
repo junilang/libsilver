@@ -2,9 +2,15 @@
 	#define Printable_PTRTAG PTRTAG
 #endif
 
+#ifndef IPrintable_SLOTS
+	#define IPrintable_SLOTS 64
+#endif
+
 typedef struct {
-	u32 value;
+	usize value;
 } PrintFmt;
+
+constexpr u8 PrintFmt_width = usize_width;
 
 constexpr PrintFmt PrintFmt_Null = { .value = 0 };
 
@@ -16,16 +22,16 @@ typedef OutStreamRes (*IPrintable)(Ptr this, PrintFmt fmt, IARG(OutStream, os));
 	} Printable;
 
 	enum {
+		IPrintable_StopWarning_ID,
 		IPrintable_KNOWN
 	};
 
-	INTERFACE_REGISTRY(IPrintable, utag, 64)
+	INTERFACE_REGISTRY(IPrintable, utag, IPrintable_SLOTS)
 
 	Ptr Printable_this(Printable this) { return ptrstrip(this.value); }
 	IPrintable Printable_iface(Printable this) {
 		return IPrintable__registry[ptrread(this.value)];
 	}
-
 #else
 	typedef struct {
 		Ptr this;

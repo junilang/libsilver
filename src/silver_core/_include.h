@@ -6,8 +6,8 @@
 	#define LIBSILVER_CORE_INCLUDE true
 
 	#include "types.h"
-	#include "panic.h"
 	#include "util.h"
+	#include "panic.h"
 	#include "flag.h"
 	#include "field.h"
 	#include "enum.h"

@@ -11,7 +11,10 @@
 #define PRINT_PANIC(stream, ...) { \
 	OutStreamRes PRINT_outer_res__; \
 	PRINT(&PRINT_outer_res__, stream, __VA_ARGS__) \
-	if (PRINT_outer_res__) PANIC("PRINT failed"); \
+	if (PRINT_outer_res__) PANIC_internal( \
+		__func__, PANIC_IDENTIFIER" PRINT_PANIC OutStreamRes:", \
+		OutStreamRes_repr[PRINT_outer_res__].data, nullptr \
+	); \
 }
 
 #define PRINTP PRINT_PANIC
@@ -38,16 +41,27 @@
 #define PRINT_BUFFERED_PANIC(buffer_size, stream, ...) { \
 	OutStreamRes PRINT_outer_res__; \
 	PRINT_BUFFERED(&PRINT_outer_res__, buffer_size, stream, __VA_ARGS__); \
-	if (PRINT_outer_res__) PANIC("PRINT failed"); \
+	if (PRINT_outer_res__) PANIC_internal( \
+		__func__, PANIC_IDENTIFIER" PRINT_BUFFERED_PANIC OutStreamRes:", \
+		OutStreamRes_repr[PRINT_outer_res__].data, nullptr \
+	); \
 }
 
 #define PRINTBP PRINT_BUFFERED_PANIC
 
 #define PANIC_PRINT(...) { \
-	PANIC_HEADER \
+	os_panic_write(STR(__func__)); \
+	os_panic_write(STR(PANIC_IDENTIFIER" PANIC: ")); \
 	OutStreamRes PRINT_outer_res__; \
-	PRINT(&PRINT_outer_res__, os_panic_stream(), __VA_ARGS__, "\n"); \
-	if (PRINT_outer_res__) os_panic_write(STR("\nPANIC_PRINT failed\n")); \
+	PRINT(&PRINT_outer_res__, os_panic_stream() __VA_OPT__(,) __VA_ARGS__, "\n"); \
+	if (PRINT_outer_res__) { \
+		os_panic_write(STR("\nPANIC_PRINT failed OutStreamRes: ")); \
+		os_panic_write( \
+			OutStreamRes_repr[PRINT_outer_res__].data, \
+			OutStreamRes_repr[PRINT_outer_res__].size \
+		); \
+		os_panic_write(STR("\n")); \
+	} \
 	os_panic(); \
 }
 

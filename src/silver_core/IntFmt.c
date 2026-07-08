@@ -6,6 +6,7 @@ enum {
 	FIELD_DEF(IntFmt_Spacing, 5),
 	FIELD_DEF(IntFmt_Delimiter, 2),
 	FIELD_DEF(IntFmt_Digits, 8), // up to 255 digits
+	FLAG_DEF(IntFmt_FillSpacing),
 	FLAG_DEF(IntFmt_Negative),
 	FLAG_DEF(IntFmt_Capitalize),
 	FLAG_DEF(IntFmt_Header),
@@ -36,10 +37,12 @@ String IntFmt_Unsigned_tostr(IntFmt_Unsigned val, IntFmt fmt, ubyte buf[IntFmt_B
 	const bool capitalize = fmt & FLAG(IntFmt_Capitalize);
 	const bool header = fmt & FLAG(IntFmt_Header);
 	const bool negative = fmt & FLAG(IntFmt_Negative);
+	const bool fill_spacing = fmt & FLAG(IntFmt_FillSpacing);
+
 
 	const u8 digits = FIELD_GET(IntFmt_Digits, fmt);
 
-	u8 delimiter;
+	u8 delimiter = '?';
 	u8 spacing = FIELD_GET(IntFmt_Spacing, fmt);
 	if (!spacing)
 		spacing = u8_max;
@@ -143,6 +146,13 @@ String IntFmt_Unsigned_tostr(IntFmt_Unsigned val, IntFmt fmt, ubyte buf[IntFmt_B
 		dig++;
 	}
 
+	if (fill_spacing && spc) {
+		do {
+			*(--bp) = '0';
+			spc--;
+		} while (spc);
+	}
+
 	if (header) {
 		bp -= 2;
 		switch (base) {
@@ -180,7 +190,7 @@ String IntFmt_Signed_tostr(IntFmt_Signed val, IntFmt fmt, ubyte buf[IntFmt_Bufsi
 OutStreamRes IntFmt_Unsigned_print(IntFmt_Unsigned val, PrintFmt fmt, OutStream os) {
 	ubyte buf[IntFmt_Bufsize];
 	return String_print(
-		IntFmt_Unsigned_tostr(val, fmt.value, buf),
+		IntFmt_Unsigned_tostr(val, (IntFmt)fmt.value, buf),
 		PrintFmt_Null, os
 	);
 }
@@ -188,7 +198,7 @@ OutStreamRes IntFmt_Unsigned_print(IntFmt_Unsigned val, PrintFmt fmt, OutStream 
 OutStreamRes IntFmt_Signed_print(IntFmt_Signed val, PrintFmt fmt, OutStream os) {
 	ubyte buf[IntFmt_Bufsize];
 	return String_print(
-		IntFmt_Signed_tostr(val, fmt.value, buf),
+		IntFmt_Signed_tostr(val, (IntFmt)fmt.value, buf),
 		PrintFmt_Null, os
 	);
 }

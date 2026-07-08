@@ -1,10 +1,10 @@
-#ifndef LIBSILVER_TEST_INCLUDE
-
-#define LIBSILVER_TEST_INCLUDE true
-
 #if !LIBSILVER_CORE_INCLUDE
 	#include "silver_core.h"
 #endif
+
+#if !LIBSILVER_TEST_INCLUDE
+
+#define LIBSILVER_TEST_INCLUDE true
 
 enum {
 	SilverTest_Ok = 0,

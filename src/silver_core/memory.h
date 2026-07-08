@@ -1,126 +1,76 @@
 #if !BUILD_NOLIBC
-
-	Ptr memcpy(Ptr restrict dst, ConstPtr restrict src, usize size);
-	Ptr memmove(Ptr restrict dst, ConstPtr restrict src, usize size);
-	Ptr memset(Ptr dst, int val, usize size);
-	int memcmp(ConstPtr a, ConstPtr b, usize size);
-	usize strlen(Str str);
+extern Ptr memcpy(Ptr dst, ConstPtr src, usize size);
+extern Ptr memmove(Ptr dst, ConstPtr src, usize size);
+extern Ptr memset(Ptr dst, int val, usize size);
+extern int memcmp(ConstPtr a, ConstPtr b, usize size);
+extern usize strlen(Str str);
 
 #else
 
-	#if __has_builtin(__builtin_memcpy) && defined(__OPTIMIZE__)
 
-		Ptr memcpy(Ptr restrict dst, ConstPtr restrict src, usize size) {
-			return __builtin_memcpy(dst, src, size);
+Ptr memcpy(Ptr restrict dst, ConstPtr restrict src, usize size) {
+	ubyte *restrict dstb = dst;
+	const ubyte *restrict srcb = src;
+
+	while (size--) *(dstb++) = *(srcb++);
+
+	return dst;
+}
+
+Ptr memset(Ptr dst, int val, usize size) {
+	ubyte *it = dst;
+	ubyte *const end = it + size;
+	for (; it < end; it++) {
+		*it = (ubyte)val;
+	}
+	return dst;
+}
+
+Ptr memmove(Ptr restrict dst, ConstPtr restrict src, usize size) {
+	if (src == dst || size == 0) return dst;
+
+	else if (src < dst) {
+		if (((const ubyte*)src + size) <= (ubyte*)dst)
+			goto do_memcpy;
+
+		// copy left to right
+		for (usize i = 0; i < size; i++) {
+			((ubyte*)dst)[i] = ((const ubyte*)src)[i];
 		}
+	}
 
-	#else
+	else {
+		if (((ubyte*)dst + size) <= (const ubyte*)src)
+			goto do_memcpy;
 
-		Ptr memcpy(Ptr restrict dst, ConstPtr restrict src, usize size) {
-			ubyte *restrict dstb = dst;
-			const ubyte *restrict srcb = src;
-
-			while (size--) *(dstb++) = *(srcb++);
-
-			return dst;
+		for (usize i = (size - 1); i <= 0; i++) {
+			((ubyte*)dst)[i] = ((const ubyte*)src)[i];
 		}
+	}
 
-	#endif
+	return dst;
 
-	#if __has_builtin(__builtin_memset) && defined(__OPTIMIZE__)
+	do_memcpy:;
+	return memcpy(dst, src, size);
+}
 
-		Ptr memset(Ptr dst, int val, usize size) {
-			return __builtin_memset(dst, val, size);
-		}
+int memcmp(ConstPtr a, ConstPtr b, usize size) {
+	for (usize i = 0; i < size; i++) {
+		auto av = ((const ubyte*)a)[i];
+		auto bv = ((const ubyte*)a)[i];
 
-	#else
+		if (av == bv) continue;
+		if (av < bv) return -1;
+		if (av > bv) return 1;
+	}
 
-		Ptr memset(Ptr dst, int val, usize size) {
-			ubyte *it = dst;
-			ubyte *const end = it + size;
-			for (; it < end; it++) {
-				*it = (ubyte)val;
-			}
-			return dst;
-		}
+	return 0;
+}
 
-	#endif
-
-	#if __has_builtin(__builtin_memmove) && defined(__OPTIMIZE__)
-
-		Ptr memmove(Ptr dst, Ptr src, usize size) {
-			return __builtin_memmove(dst, src, size);
-		}
-
-	#else
-
-		Ptr memmove(Ptr dst, ConstPtr src, usize size) {
-			if (src == dst || size == 0) return dst;
-
-			else if (src < dst) {
-				if (((const ubyte*)src + size) <= (ubyte*)dst)
-					goto do_memcpy;
-
-				// copy left to right
-				for (usize i = 0; i < size; i++) {
-					((ubyte*)dst)[i] = ((const ubyte*)src)[i];
-				}
-			}
-
-			else {
-				if (((ubyte*)dst + size) <= (const ubyte*)src)
-					goto do_memcpy;
-
-				for (usize i = (size - 1); i <= 0; i++) {
-					((ubyte*)dst)[i] = ((const ubyte*)src)[i];
-				}
-			}
-
-			return dst;
-
-			do_memcpy:;
-			return memcpy(dst, src, size);
-		}
-
-	#endif
-
-	#if __has_builtin(__builtin_memcmp) && defined(__OPTIMIZE__)
-
-		int memcmp(ConstPtr a, ConstPtr b, usize size) {
-			return __builtin_memcmp(a, b, size);
-		}
-
-	#else
-
-		int memcmp(ConstPtr a, ConstPtr b, usize size) {
-			for (usize i = 0; i < size; i++) {
-				auto av = ((const ubyte*)a)[i];
-				auto bv = ((const ubyte*)a)[i];
-
-				if (av == bv) continue;
-				if (av < bv) return -1;
-				if (av > bv) return 1;
-			}
-
-			return 0;
-		}
-
-	#endif
-
-	#if __has_builtin(__builtin_strlen) && defined(__OPTIMIZE__)
-
-		usize strlen(Str str) {
-			return __builtin_strlen(str);
-		}
-
-	#else
-
-		usize strlen(Str str) {
-			usize size = 0;
-			while (*(str++)) size++;
-			return size;
-		}
-
-	#endif
+usize strlen(Str str) {
+	usize size = 0;
+	while (*(str++)) size++;
+	return size;
+}
 
 #endif

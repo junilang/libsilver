@@ -88,7 +88,7 @@ constexpr u8 uchar_width = __CHAR_BIT__;
 #define CHAR_WIDTH __CHAR_BIT__
 
 typedef signed char ichar;
-constexpr ichar ichar_max = (char)(uchar_max >> 1);
+constexpr ichar ichar_max = (ichar)(uchar_max >> 1);
 constexpr ichar ichar_min = -ichar_max - 1;
 constexpr u8 ichar_width = uchar_width;
 
@@ -104,12 +104,12 @@ constexpr u8 ishort_width = ushort_width;
 
 typedef unsigned int uint;
 constexpr uint uint_max = (uint)(~0ull);
-constexpr u8 int_width = __INT_WIDTH__;
+constexpr u8 uint_width = __INT_WIDTH__;
 #define INT_WIDTH __INT_WIDTH__
 
 constexpr int int_max = (int)(uint_max >> 1);
 constexpr int int_min = -int_max - 1;
-constexpr u8 uint_width = int_width;
+constexpr u8 int_width = uint_width;
 
 typedef unsigned long ulong;
 constexpr ulong ulong_max = (ulong)(~0ull);

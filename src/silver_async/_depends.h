@@ -1,30 +1,12 @@
 #if !LIBSILVER_ASYNC_DEPENDS
 	#define LIBSILVER_ASYNC_DEPENDS true
 
-
-
-	#if 0
-	#include <sched.h>
-
-	#ifdef __linux__
-		#include <unistd.h>
-		#include <errno.h>
-		#include <pthread.h>
-		#include <sys/syscall.h>
-		#include <linux/futex.h>
-		#include <signal.h>
-		#include <liburing.h>
-
-	#else
-		#error "unsupported platform"
-
+	#if !LIBSILVER_CORE_INCLUDE
+		#include "../silver_core.h"
 	#endif
 
-	#ifdef __x86_64__
-		#include <x86gprintrin.h>
-
-	#endif
-
+	#if !LIBSILVER_OS_INCLUDE
+		#include "../silver_os.h"
 	#endif
 
 #endif

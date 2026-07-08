@@ -7,6 +7,10 @@ typedef AlcPtr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 	#define Alc_PTRTAG PTRTAG
 #endif
 
+#ifndef IAlc_SLOTS
+	#define IAlc_SLOTS 16
+#endif
+
 #if Alc_PTRTAG
 	typedef union {
 		Ptr value;
@@ -20,7 +24,7 @@ typedef AlcPtr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 		IAlc_KNOWN
 	};
 
-	INTERFACE_REGISTRY(IAlc, utag, 8)
+	INTERFACE_REGISTRY(IAlc, utag, IAlc_SLOTS)
 
 	IAlc Alc_iface(Alc this) {
 		return IAlc__registry[ptrread(this.value)];

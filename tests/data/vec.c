@@ -7,11 +7,7 @@ int ZZentry(SilverTestContext *ctx) {
 	Vec v = {};
 
 	for (uint i = 0; i < 128; i++) {
-		uint *elem;
-		auto res = AlcPtr_unwrap(Vec_push(&v, alc, sizeof(uint)), &elem);
-		if (res) {
-			PANIC_PRINT(i," -> ",AlcRes_repr[res]);
-		}
+		uint *elem = AlcPtr_UNWRAP(Vec_push(&v, alc, sizeof(uint)));
 
 		*elem = i;
 	}

@@ -42,7 +42,7 @@ u32 Vec32_size(Vec32 *this) {
 }
 
 u32 Vec32_count(Vec32 *this, usize elem_size) {
-	return this->size / elem_size;
+	return (u32)(this->size / elem_size);
 }
 
 [[nodiscard]]
