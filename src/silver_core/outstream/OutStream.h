@@ -12,6 +12,10 @@ typedef struct {
 	OutStreamAttr (*attr)(Ptr this);
 } IOutStream;
 
+#ifndef OutStream_SLOTS
+	#define OutStream_SLOTS 8
+#endif
+
 #if OutStream_PTRTAG
 	typedef struct {
 		union {
@@ -28,7 +32,7 @@ typedef struct {
 		IOutStream_KNOWN
 	};
 
-	INTERFACE_REGISTRY(IOutStream, utag, 4)
+	INTERFACE_REGISTRY(IOutStream, utag, 8)
 
 	Ptr OutStream_this(OutStream this) { return ptrstrip(this.value); }
 	const IOutStream *OutStream_iface(OutStream this) {
@@ -69,3 +73,5 @@ OutStreamAttr OutStream_attr(OutStream this) {
 #include "OutStream_meta.h"
 
 extern OutStream os_panic_stream();
+extern OutStream os_stderr_stream();
+extern OutStream os_stdout_stream();

@@ -22,7 +22,9 @@ typedef OutStreamRes (*IPrintable)(Ptr this, PrintFmt fmt, IARG(OutStream, os));
 	} Printable;
 
 	enum {
-		IPrintable_StopWarning_ID,
+		IPrintable_StringPtr_ID,
+		IPrintable_IntFmt_SignedPtr_ID,
+		IPrintable_IntFmt_UnsignedPtr_ID,
 		IPrintable_KNOWN
 	};
 

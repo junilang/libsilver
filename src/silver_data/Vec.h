@@ -122,12 +122,14 @@ AlcPtr Vec_push_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 	return (AlcPtr)(data + end);
 }
 
+constexpr ualign Vec_default_align = Alc_default_align;
+
 [[nodiscard]]
 AlcPtr Vec_append(Vec *this, Alc alc, usize size) {
-	return Vec_append_aligned(this, alc, size, Alc_default_align);
+	return Vec_append_aligned(this, alc, size, Vec_default_align);
 }
 
 [[nodiscard]]
 AlcPtr Vec_push(Vec *this, Alc alc, usize size) {
-	return Vec_push_aligned(this, alc, size, Alc_default_align);
+	return Vec_push_aligned(this, alc, size, Vec_default_align);
 }

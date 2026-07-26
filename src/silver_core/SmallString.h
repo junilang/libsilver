@@ -70,3 +70,10 @@ uhash SmallString_hash(uhash base, SmallString this) {
 OutStreamRes SmallString_print(SmallString this, PrintFmt fmt, OutStream os) {
 	return OutStream_write(os, SmallString_data(this), SmallString_size(this));
 }
+
+String SmallString_tostr(SmallString this) {
+	return (String) {
+		.data = SmallString_data(this),
+		.size = SmallString_size(this)
+	};
+}

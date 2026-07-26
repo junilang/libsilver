@@ -34,7 +34,7 @@
 // 	a pointer instead
 
 #ifndef IFACESPLIT
-	#ifndef __unix__ // windows
+	#if !__unix__ // windows
 		#define IFACESPLIT true
 	#else
 		#define IFACESPLIT false

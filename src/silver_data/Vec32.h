@@ -130,10 +130,10 @@ AlcPtr Vec32_push_aligned(Vec32 *this, Alc alc, u32 size, ualign alc_align) {
 
 [[nodiscard]]
 AlcPtr Vec32_append(Vec32 *this, Alc alc, u32 size) {
-	return Vec32_append_aligned(this, alc, size, Alc_default_align);
+	return Vec32_append_aligned(this, alc, size, Vec_default_align);
 }
 
 [[nodiscard]]
 AlcPtr Vec32_push(Vec32 *this, Alc alc, u32 size) {
-	return Vec32_push_aligned(this, alc, size, Alc_default_align);
+	return Vec32_push_aligned(this, alc, size, Vec_default_align);
 }

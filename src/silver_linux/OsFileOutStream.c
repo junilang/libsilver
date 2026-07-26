@@ -31,3 +31,11 @@ XCONST OutStream Stderr = CONSTEXPR_OutStream_upcast(OsFileOutStream, linux_stde
 OutStream os_panic_stream() {
 	return Stderr;
 }
+
+OutStream os_stdout_stream() {
+	return Stdout;
+}
+
+OutStream os_stderr_stream() {
+	return Stderr;
+}

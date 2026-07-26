@@ -202,3 +202,15 @@ OutStreamRes IntFmt_Signed_print(IntFmt_Signed val, PrintFmt fmt, OutStream os) 
 		PrintFmt_Null, os
 	);
 }
+
+OutStreamRes IntFmt_UnsignedPtr_print(IntFmt_Unsigned *this, PrintFmt fmt, OutStream os) {
+	return IntFmt_Unsigned_print(*this, fmt, os);
+}
+
+IPrintable_GENERATE_KNOWN(IntFmt_UnsignedPtr, IntFmt_Unsigned*)
+
+OutStreamRes IntFmt_SignedPtr_print(IntFmt_Signed *this, PrintFmt fmt, OutStream os) {
+	return IntFmt_Signed_print(*this, fmt, os);
+}
+
+IPrintable_GENERATE_KNOWN(IntFmt_SignedPtr, IntFmt_Signed*)

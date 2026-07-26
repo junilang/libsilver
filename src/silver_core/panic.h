@@ -28,8 +28,8 @@ static void PANIC_internal(ConstPtr msg1, ConstPtr msg2, ConstPtr msg3, ConstPtr
 
 #define PANIC_IDENTIFIER __FILE__":"PANIC_LINE(__LINE__)
 
-#define PANIC_2_HAS(msg) msg
-#define PANIC_1_HAS(msg, ...) msg, PANIC_2##__VA_OPT__(_HAS)(__VA_ARGS__)
+#define PANIC_2_ENABLE(msg) msg
+#define PANIC_1_ENABLE(msg, ...) msg, PANIC_2##__VA_OPT__(_ENABLE)(__VA_ARGS__)
 
 #define PANIC_2(...) nullptr
 #define PANIC_1(...) nullptr, nullptr
@@ -37,7 +37,7 @@ static void PANIC_internal(ConstPtr msg1, ConstPtr msg2, ConstPtr msg3, ConstPtr
 #define PANIC(...) {  \
 	PANIC_internal( \
 		__func__, PANIC_IDENTIFIER" PANIC:", \
-		PANIC_1##__VA_OPT__(_HAS)(__VA_ARGS__) \
+		PANIC_1##__VA_OPT__(_ENABLE)(__VA_ARGS__) \
 	); \
 }
 

@@ -1,4 +1,4 @@
-#ifdef __linux__
+#if __linux__
 	#include "silver_linux/_include.h"
 
 #else

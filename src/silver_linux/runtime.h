@@ -1,5 +1,5 @@
 Str const *global_env__;
-struct { uword key; uword val; } *global_auxv__;
+const struct { uword key; uword val; } *global_auxv__;
 
 #if !BUILD_NOLIBC
 	extern Str *environ;
@@ -10,7 +10,7 @@ struct { uword key; uword val; } *global_auxv__;
 		while (*it) it++;
 		it++;
 		global_auxv__ = (Ptr)it;
-		linux_envinfo_fromauxv(&global_linux_envinfo__, (void*)it);
+		linux_envinfo_fromauxv(&global_linux_envinfo__, (Ptr)it);
 	}
 
 #else
@@ -41,8 +41,8 @@ struct { uword key; uword val; } *global_auxv__;
 			char **it = envp;
 			while (*it) it++;
 			it++;
-			global_auxv__ = (void*)it;
-			linux_envinfo_fromauxv(&global_linux_envinfo__, (void*)it);
+			global_auxv__ = (Ptr)it;
+			linux_envinfo_fromauxv(&global_linux_envinfo__, (Ptr)it);
 		}
 
 

@@ -77,7 +77,11 @@ AlcAttr Alc_attr(Alc this) {
 	}, nullptr, nullptr);
 }
 
-constexpr ualign Alc_default_align = alignof(Ptr);
+#ifndef Alc_DEFAULT_ALIGN
+	#define Alc_DEFAULT_ALIGN alignof(Ptr)
+#endif
+
+constexpr ualign Alc_default_align = Alc_DEFAULT_ALIGN;
 
 [[nodiscard, gnu::malloc]]
 AlcPtr Alc_new(Alc this, usize size) {

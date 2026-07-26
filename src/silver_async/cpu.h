@@ -7,6 +7,8 @@
 		#define CPU_HDI_SIZE 128
 	#endif
 
+	constexpr ualign cpu_hdi_size = CPU_HDI_SIZE;
+
 #else
 	#error "unsupported architecture"
 
