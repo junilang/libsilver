@@ -11,12 +11,16 @@ usize values_delete[] = {
 };
 
 int ZZentry(SilverTestContext *ctx) {
-	alignas(Ptr) ubyte buffer[4096];
+	alignas(Ptr) ubyte buffer[8192];
 
 	auto alc_ = StaticAlc_init(buffer, _Countof(buffer));
 	auto alc = StaticAlc_upcast(alc_);
 
 	HashMap map = {};
+
+	AlcRes_UNWRAP(HashMap_init(&map, alc, 66));
+
+	PRINTBP(128, Stdout, "power = ",FIELD_GET(HashMap_Power, map.info),"\n");
 
 	// add items
 	for (int i = 0; i < _Countof(values); i++) {
@@ -26,7 +30,7 @@ int ZZentry(SilverTestContext *ctx) {
 
 		*vp = values[i];
 
-		PRINTBP(128, Stdout, vp, " = ", values[i], "\n");
+		//PRINTBP(128, Stdout, vp, " = ", values[i], "\n");
 	}
 
 	// delete some
@@ -37,7 +41,7 @@ int ZZentry(SilverTestContext *ctx) {
 
 		if (!vp) PANIC("missing item");
 
-		PRINTBP(128, Stdout, "deleting ", vp, " = ", *vp, "\n");
+		//PRINTBP(128, Stdout, "deleting ", vp, " = ", *vp, "\n");
 
 		HashMap_delete(&map, vp);
 	}
@@ -49,6 +53,7 @@ int ZZentry(SilverTestContext *ctx) {
 	ubyte *table = map.data;
 	HashMapItem *items = (Ptr)(table + map_size);
 	for (usize i = 0; i < map_size; i++) {
+		#if 0
 		constexpr PrintFmt hexfmt = {
 			FIELD(IntFmt_Base, Hex) |
 			FLAG(IntFmt_Header)
@@ -59,6 +64,7 @@ int ZZentry(SilverTestContext *ctx) {
 			hexfmt, items[i].hash, " ",
 			(usize)items[i].value, " \n"
 		);
+		#endif
 	}
 
 	for (int i = 0; i < _Countof(values); i++) {

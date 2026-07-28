@@ -4,6 +4,12 @@ typedef struct {
 	usize capacity;
 } Vec;
 
+constexpr usize Vec_base_capacity = sizeof(Ptr) * 4;
+
+static usize Vec_ZZcapacityscale(usize capacity) {
+	return capacity / 2;
+}
+
 void Vec_zero(Vec *this) {
 	this->data = nullptr;
 	this->capacity = 0;
@@ -46,18 +52,102 @@ usize Vec_count(Vec *this, usize elem_size) {
 }
 
 [[nodiscard]]
+AlcRes Vec_reserve_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
+	usize new_size;
+	if (chkdadd(this->size, size, &new_size))
+		return AlcRes_ErrOverflow;
+
+	if (new_size <= this->capacity)
+		return AlcRes_Ok;
+
+	Ptr data = this->data;
+
+	AlcReq req = {
+		.size = new_size,
+		.align = alc_align,
+		#if BUILD_DEBUG
+			.flags = FLAG(AlcFlag_Zero),
+		#endif
+	};
+
+	if (this->data)
+		req.intent = AlcIntent_Resize;
+	else
+		req.intent = AlcIntent_New;
+
+	data = Alc_invoke(alc, &req, nullptr, data);
+	auto res = AlcPtr_get(data);
+	if (res) return res;
+
+	this->data = data;
+	this->capacity = req.size;
+
+	return AlcRes_Ok;
+}
+
+[[nodiscard]]
+AlcRes Vec_scale_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
+	usize new_size;
+	if (chkdadd(this->size, size, &new_size))
+		return AlcRes_ErrOverflow;
+
+	usize capacity = this->capacity;
+	if (new_size <= capacity)
+		return AlcRes_Ok;
+
+	if (capacity == 0)
+		capacity = Vec_base_capacity;
+
+	do {
+		if (chkdadd(capacity, Vec_ZZcapacityscale(capacity), &capacity))
+			return AlcRes_ErrOverflow;
+	} while (new_size > capacity);
+
+	AlcReq req = {
+		.size = capacity,
+		.align = alc_align,
+		#if BUILD_DEBUG
+			.flags = FLAG(AlcFlag_Zero),
+		#endif
+	};
+
+	Ptr data = this->data;
+
+	if (data)
+		req.intent = AlcIntent_Resize;
+	else
+		req.intent = AlcIntent_New;
+
+	data = Alc_invoke(alc, &req, nullptr, data);
+	auto res = AlcPtr_get(data);
+	if (res) return res;
+
+	this->data = data;
+	this->capacity = req.size;
+}
+
+Ptr Vec_append_unsafe(Vec *this, usize size) {
+	usize end = this->size;
+	this->size = end + size;
+	return this->data + end;
+}
+
+[[nodiscard]]
 AlcPtr Vec_append_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 	usize end = this->size;
 	usize new_size;
 	if (chkdadd(end, size, &new_size))
 		return AlcPtr_set(AlcRes_ErrOverflow);
 
-	auto data = this->data;
+	Ptr data = this->data;
 
 	if (new_size > this->capacity) {
 		AlcReq req = {
 			.size = new_size,
 			.align = alc_align,
+			#if BUILD_DEBUG
+				.flags = FLAG(AlcFlag_Zero),
+			#endif
 		};
 
 		if (data)
@@ -65,18 +155,16 @@ AlcPtr Vec_append_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 		else
 			req.intent = AlcIntent_New;
 
-		AlcPtr res = Alc_invoke(alc, &req, nullptr, data);
-		if (AlcPtr_get(res))
-			return res;
-
-		data = (Ptr)res;
+		data = Alc_invoke(alc, &req, nullptr, data);
+		if (AlcPtr_check(data))
+			return data;
 
 		this->data = data;
 		this->capacity = req.size;
 	}
 
 	this->size = new_size;
-	return (AlcPtr)(data + end);
+	return (AlcPtr)((ubyte*)data + end);
 }
 
 [[nodiscard]]
@@ -86,21 +174,24 @@ AlcPtr Vec_push_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 	if (chkdadd(end, size, &new_size))
 		return AlcPtr_set(AlcRes_ErrOverflow);
 
-	auto data = this->data;
+	Ptr data = this->data;
 
 	usize capacity = this->capacity;
 	if (new_size > capacity) {
 		if (capacity == 0)
-			capacity = sizeof(Ptr) * 4;
+			capacity = Vec_base_capacity;
 
 		do {
-			if (chkdadd(capacity, capacity / 2, &capacity))
+			if (chkdadd(capacity, Vec_ZZcapacityscale(capacity), &capacity))
 				return AlcPtr_set(AlcRes_ErrOverflow);
 		} while (new_size > capacity);
 
 		AlcReq req = {
 			.size = capacity,
 			.align = alc_align,
+			#if BUILD_DEBUG
+				.flags = FLAG(AlcFlag_Zero),
+			#endif
 		};
 
 		if (data)
@@ -108,18 +199,16 @@ AlcPtr Vec_push_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 		else
 			req.intent = AlcIntent_New;
 
-		AlcPtr res = Alc_invoke(alc, &req, nullptr, data);
-		if (AlcPtr_check(res))
-			return res;
-
-		data = (Ptr)res;
+		data = Alc_invoke(alc, &req, nullptr, data);
+		if (AlcPtr_check(data))
+			return data;
 
 		this->data = data;
 		this->capacity = req.size;
 	}
 
 	this->size = new_size;
-	return (AlcPtr)(data + end);
+	return (AlcPtr)((ubyte*)data + end);
 }
 
 constexpr ualign Vec_default_align = Alc_default_align;
@@ -132,4 +221,14 @@ AlcPtr Vec_append(Vec *this, Alc alc, usize size) {
 [[nodiscard]]
 AlcPtr Vec_push(Vec *this, Alc alc, usize size) {
 	return Vec_push_aligned(this, alc, size, Vec_default_align);
+}
+
+[[nodiscard]]
+AlcRes Vec_reserve(Vec *this, Alc alc, usize size) {
+	return Vec_reserve_aligned(this, alc, size, Vec_default_align);
+}
+
+[[nodiscard]]
+AlcRes Vec_scale(Vec *this, Alc alc, usize size) {
+	return Vec_scale_aligned(this, alc, size, Vec_default_align);
 }

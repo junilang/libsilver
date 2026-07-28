@@ -36,6 +36,7 @@ typedef u8 AlcFlag; enum {
 typedef struct {
 	usize size;
 	ConstPtr hint;
+	// usize uid; // allocation request id
 	ualign align;
 	AlcIntent intent;
 	AlcRelative relative;
