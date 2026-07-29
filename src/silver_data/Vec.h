@@ -5,6 +5,11 @@ typedef struct {
 } Vec;
 
 constexpr usize Vec_base_capacity = sizeof(Ptr) * 4;
+constexpr ualign Vec_default_align = Alc_default_align;
+
+#ifndef Vec_SAFE
+	#define Vec_SAFE BUILD_SAFE
+#endif
 
 static usize Vec_ZZcapacityscale(usize capacity) {
 	return capacity / 2;
@@ -25,12 +30,15 @@ AlcRes Vec_destroy(Vec *this, Alc alc) {
 	AlcRes res;
 	if (this->data)
 		res = Alc_delete(alc, this->data);
-	else
+	else {
 		res = AlcRes_Ok;
+	}
 
-	this->capacity = 0;
-	this->size = 0;
-	this->data = nullptr;
+	#if Vec_SAFE
+		this->capacity = 0;
+		this->size = 0;
+		this->data = nullptr;
+	#endif
 
 	return res;
 }
@@ -124,6 +132,8 @@ AlcRes Vec_scale_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 
 	this->data = data;
 	this->capacity = req.size;
+
+	return AlcRes_Ok;
 }
 
 Ptr Vec_append_unsafe(Vec *this, usize size) {
@@ -210,8 +220,6 @@ AlcPtr Vec_push_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 	this->size = new_size;
 	return (AlcPtr)((ubyte*)data + end);
 }
-
-constexpr ualign Vec_default_align = Alc_default_align;
 
 [[nodiscard]]
 AlcPtr Vec_append(Vec *this, Alc alc, usize size) {

@@ -13,7 +13,7 @@ usize values_delete[] = {
 int ZZentry(SilverTestContext *ctx) {
 	alignas(Ptr) ubyte buffer[8192];
 
-	auto alc_ = StaticAlc_init(buffer, _Countof(buffer));
+	auto alc_ = StaticAlc_init(buffer, sizeof(buffer));
 	auto alc = StaticAlc_upcast(alc_);
 
 	HashMap map = {};
@@ -23,7 +23,7 @@ int ZZentry(SilverTestContext *ctx) {
 	PRINTBP(128, Stdout, "power = ",FIELD_GET(HashMap_Power, map.info),"\n");
 
 	// add items
-	for (int i = 0; i < _Countof(values); i++) {
+	for (usize i = 0; i < COUNTOF(values); i++) {
 		usize *vp = AlcPtr_UNWRAP(
 			HashMap_add(&map, u64_hash(hash_base, values[i]), alc)
 		);
@@ -34,7 +34,7 @@ int ZZentry(SilverTestContext *ctx) {
 	}
 
 	// delete some
-	for (int i = 0; i < _Countof(values_delete); i++) {
+	for (usize i = 0; i < COUNTOF(values_delete); i++) {
 		usize *vp = HashMap_get(
 			&map, u64_hash(hash_base, values_delete[i]), &ZZmatch, (Ptr)values_delete[i]
 		);
@@ -67,7 +67,7 @@ int ZZentry(SilverTestContext *ctx) {
 		#endif
 	}
 
-	for (int i = 0; i < _Countof(values); i++) {
+	for (usize i = 0; i < COUNTOF(values); i++) {
 		usize *vp = HashMap_get(&map, u64_hash(hash_base, values[i]), &ZZmatch, (Ptr)values[i]);
 		if (vp) {
 			PRINTBP(128, Stdout, vp, " = ", *vp, "\n");

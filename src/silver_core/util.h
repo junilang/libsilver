@@ -8,6 +8,8 @@
 
 #define STR(str) (ConstPtr)(str), (sizeof(str) - 1)
 
+#define COUNTOF(arr) (sizeof(arr) / sizeof(arr[0]))
+
 typedef struct {
 	const ubyte *data;
 	usize size;
