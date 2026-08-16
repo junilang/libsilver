@@ -11,8 +11,7 @@ const char *linux_error_map[] = {
 
 #undef XS
 
-constexpr uword linux_error_map_size =
-	sizeof(linux_error_map) / sizeof(linux_error_map[0]);
+constexpr uword linux_error_map_size = COUNTOF(linux_error_map);
 
 const char *linux_error_string(iword result) {
 	if (result < 0) result = -result;

@@ -41,7 +41,7 @@ static void PANIC_internal(ConstPtr msg1, ConstPtr msg2, ConstPtr msg3, ConstPtr
 	); \
 }
 
-#if BUILD_DEBUG
+#if BUILD_SAFE
 	#define UNREACHABLE { \
 		PANIC_internal(__func__, PANIC_IDENTIFIER" PANIC: UNREACHABLE", nullptr, nullptr); \
 	}
