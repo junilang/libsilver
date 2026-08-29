@@ -2,9 +2,11 @@
 
 #define FLAG(flag) (1ull << flag##_FLAG)
 #define FLAG_CLEAR(flag) (~FLAG(flag))
+#define FLAG_NOT(flag) FLAG_CLEAR(flag)
 
 #define FLAGS(pfx, ...) (0ull __VA_OPT__(|FLAGS_0(pfx, __VA_ARGS__)))
 #define FLAGS_CLEAR(pfx, ...) (~(FLAGS(pfx, __VA_ARGS__)))
+#define FLAGS_NOT(...) FLAGS_CLEAR(__VA_ARGS__)
 
 #define FLAGS_0(pfx, flag, ...) FLAG(pfx##_##flag)__VA_OPT__(|FLAGS_1(pfx, __VA_ARGS__))
 #define FLAGS_1(pfx, flag, ...) FLAG(pfx##_##flag)__VA_OPT__(|FLAGS_2(pfx, __VA_ARGS__))
