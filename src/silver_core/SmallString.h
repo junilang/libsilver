@@ -8,9 +8,9 @@
 
 #if SmallString_PTRTAG
 
-	#define SmallString_MAX PTRTAG_MAX
+	constexpr auto SmallString_maxsize = utag_max;
 
-	typedef struct {
+	typedef union {
 		Ptr value;
 	} SmallString;
 
@@ -24,7 +24,7 @@
 
 	SmallString SmallString_upcast(const ubyte *data, usize size) {
 		#if SmallString_SAFE
-			if (size > SmallString_MAX) PANIC("size overflow");
+			if (size > SmallString_maxsize) PANIC("size overflow");
 		#endif
 
 		return (SmallString){.value=ptrtag((Ptr)data, (utag)size)};
@@ -36,7 +36,7 @@
 
 #else
 
-	#define SmallString_MAX SIZE_MAX
+	constexpr auto SmallString_maxsize = usize_max;
 
 	[[deprecated("pointer tagging disabled - SmallString = String")]]
 	typedef struct {

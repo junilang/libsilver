@@ -35,6 +35,8 @@
 	#include "StringSpan.h"
 	#include "SmallString.h"
 
+	#include "VString.h"
+
 	#include "IntFmt.c"
 	#include "print.h"
 

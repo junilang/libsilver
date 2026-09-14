@@ -4,6 +4,14 @@ String String_from(Str s) {
 	return (String) {.data = (ConstPtr)s, .size = strlen(s)};
 }
 
+const ubyte *String_data(String this) {
+	return this.data;
+}
+
+usize String_size(String this) {
+	return this.size;
+}
+
 uhash String_hash(uhash base, String this) {
 	return memhash(base, this.data, this.size);
 }

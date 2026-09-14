@@ -77,6 +77,8 @@
 		StaticFmtPrintable : PRINT_StaticFmtPrintable, \
 		String : PRINT_String, \
 		SmallString : PRINT_SmallString, \
+		VString : PRINT_VString, \
+		VSmallString : PRINT_VSmallString, \
 		StringSpan : PRINT_StringSpan, \
 		signed char : PRINT_IntFmt_Signed, \
 		signed short : PRINT_IntFmt_Signed, \
@@ -141,6 +143,8 @@ PRINT_GENERATE(IntFmt_Signed)
 PRINT_GENERATE(String)
 PRINT_GENERATE(StringSpan)
 PRINT_GENERATE(SmallString)
+PRINT_GENERATE(VString)
+PRINT_GENERATE(VSmallString)
 PRINT_GENERATE(Printable)
 PRINT_GENERATE(StaticPrintable)
 PRINT_GENERATE(FmtPrintable)
