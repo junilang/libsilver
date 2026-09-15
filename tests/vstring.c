@@ -1,10 +1,10 @@
 int ZZentry(SilverTestContext *ctx) {
 	VString x = {
-		String_INIT("Hello")
+		String_INIT("Hello 🤪\n")
 	};
 
 	PRINTP(Stdout, (PrintFmt){
-		FLAGS(VStringFmt, Code)
+		FLAGS(VStringFmt, NoUTF)
 	}, x);
 
 	return 0;

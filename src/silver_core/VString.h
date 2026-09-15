@@ -1,7 +1,13 @@
 // Verbose string - used for analyzing utf8 strings
 
 typedef u8 VStringFmt; enum {
-	FLAG_DEF(VStringFmt_Code),
+	FLAG_DEF(VStringFmt_Code), // print all characters as codes
+	FLAG_DEF(VStringFmt_NoUTF), // disable utf processing
+	FLAG_DEF(VStringFmt_KeepUTF), // print utf characters as is
+	FLAG_DEF(VStringFmt_KeepCTL), // print control characters as is
+	FLAG_DEF(VStringFmt_KeepHT), // print horizontal tab
+	FLAG_DEF(VStringFmt_KeepLF), // print line feed
+	FLAG_DEF(VStringFmt_KeepCR), // print carriage return
 };
 
 typedef struct {
@@ -23,12 +29,52 @@ OutStreamRes VString_ZZprint(
 	const ubyte *const buffer_end = buffer + sizeof(buffer);
 	ubyte *bp = buffer;
 
-	ubyte c;
+	const ubyte *sp = nullptr;
+	u8 ss = 0;
 
 	for (; data < data_end; data++) {
-		c = *data;
+		const ubyte c = *data;
 
-		goto put_char;
+		#define XPUTS(str) { \
+			sp = (ConstPtr)(str); \
+			ss = sizeof(str); \
+			goto put_string; \
+		}
+
+		if (c < 32) {
+			switch (c) {
+				case 9:
+					if (fmt & FLAG(VStringFmt_KeepHT)) goto put_char;
+					break;
+				case 10:
+					if (fmt & FLAG(VStringFmt_KeepLF)) goto put_char;
+					break;
+				case 13:
+					if (fmt & FLAG(VStringFmt_KeepCR)) goto put_char;
+					break;
+
+				default:;
+			}
+
+			if (fmt & FLAG(VStringFmt_KeepCTL))
+				goto put_char;
+			goto put_code;
+		}
+
+		if (c <= 129) goto put_char;
+
+		const bool keeputf = fmt & FLAG(VStringFmt_KeepUTF);
+		if (fmt & FLAG(VStringFmt_NoUTF)) {
+			if (keeputf)
+				goto put_char;
+			else
+				goto put_code;
+		}
+
+		// TODO process utf
+		XPUTS("&??;")
+
+		#undef XPUTS
 
 		#define XWRITE { \
 			auto res = OutStream_write(os, buffer, (usize)(bp - buffer)); \
@@ -44,32 +90,25 @@ OutStreamRes VString_ZZprint(
 			*(bp++) = c;
 		}
 
-		/*
 		if (0) put_string: {
-			if (bp + s.size >= buffer_end) XWRITE;
-
-			memcpy(bp, s.data, s.size);
-			bp += s.size;
+			if (bp + ss >= buffer_end) XWRITE;
+			memcpy(bp, sp, ss);
+			bp += ss;
 		}
-		*/
 
 		if (0) put_code: {
+			if (bp + 5 >= buffer_end) XWRITE;
+			bp[0] = '&';
 			if (c < 10) {
-				if (bp + 3 >= buffer_end) XWRITE;
-				bp[0] = '&';
 				bp[1] = '0' + c;
 				bp[2] = ';';
 				bp += 3;
 			} else if (c < 100) {
-				if (bp + 4 >= buffer_end) XWRITE;
-				bp[0] = '&';
 				bp[1] = '0' + (c / 10);
 				bp[2] = '0' + (c % 10);
 				bp[3] = ';';
 				bp += 4;
 			} else {
-				if (bp + 5 >= buffer_end) XWRITE;
-				bp[0] = '&';
 				bp[1] = '0' + (c / 100);
 				bp[2] = '0' + ((c % 100) / 10);
 				bp[3] = '0' + c % 10;
