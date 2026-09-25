@@ -4,7 +4,7 @@ LINUX_SYSCALL_GENERATE(linux_mmap, __NR_mmap,
 )
 
 bool linux_mmap_iserror(iword result) {
-	if (result < 0 && result > -4095)
+	if ((result < 0) && (result > -4095))
 		return true;
 
 	return false;

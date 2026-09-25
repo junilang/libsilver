@@ -6,6 +6,41 @@
 	#endif
 #endif
 
+#if PLATFORM_LP64
+	#define HASH(base, value) _Generic((value), \
+		signed char : i8_hash, \
+		signed short : i16_hash, \
+		signed int : i32_hash, \
+		signed long : i64_hash, \
+		signed long long : i64_hash, \
+		unsigned char : u8_hash, \
+		unsigned short : u16_hash, \
+		unsigned int : u32_hash, \
+		unsigned long : u64_hash, \
+		unsigned long long : u64_hash, \
+		Ptr : Ptr_hash, \
+		ConstPtr : Ptr_hash \
+	)(base, (value))
+
+#elif PLATFORM_LLP64
+	#define HASH(base, value) _Generic((value), \
+		signed char : i8_hash, \
+		signed short : i16_hash, \
+		signed int : i32_hash, \
+		signed long : i32_hash, \
+		signed long long : i64_hash, \
+		unsigned char : u8_hash, \
+		unsigned short : u16_hash, \
+		unsigned int : u32_hash, \
+		unsigned long : u32_hash, \
+		unsigned long long : u64_hash, \
+		Ptr : Ptr_hash, \
+		ConstPtr : Ptr_hash \
+	)(base, (value))
+
+#else
+	#error "unsupported platform"
+#endif
 
 #if HASH_USE_CRC64
 	#if !LIBSILVER_HAS_CRC32
@@ -99,3 +134,23 @@
 	}
 
 #endif
+
+uhash i8_hash(uhash base, i8 value) {
+	return u8_hash(base, (u8)value);
+}
+
+uhash i16_hash(uhash base, i16 value) {
+	return u16_hash(base, (u16)value);
+}
+
+uhash i32_hash(uhash base, i32 value) {
+	return u32_hash(base, (u32)value);
+}
+
+uhash i64_hash(uhash base, i64 value) {
+	return u64_hash(base, (u64)value);
+}
+
+uhash Ptr_hash(uhash base, ConstPtr value) {
+	return u64_hash(base, (u64)value);
+}

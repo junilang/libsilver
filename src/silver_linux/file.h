@@ -1,4 +1,4 @@
-typedef int linux_fd;
+typedef i32 linux_fd;
 
 constexpr linux_fd linux_stdin = 0;
 constexpr linux_fd linux_stdout = 1;

@@ -3,7 +3,7 @@ const struct { uword key; uword val; } *global_auxv__;
 
 #if !BUILD_NOLIBC
 	extern Str *environ;
-	[[gnu::constructor(101)]] void setup_env_globals_ctor__() {
+	[[gnu::constructor(101)]] void linux_setup_env_globals__ctor() {
 		Str *envp = environ;
 		global_env__ = (Ptr)envp;
 		Str *it = envp;

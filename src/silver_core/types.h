@@ -45,6 +45,14 @@ typedef const char *Str;
 	typedef unsigned long uword;
 	typedef signed long iword;
 	#define WORD_WIDTH 64
+	#define PLATFORM_LP64 true
+
+#elif _WIN32 && __x86_64__
+	// LLP64
+	typedef unsigned long long uword;
+	typedef signed long long iword;
+	#define WORD_WIDTH 64
+	#define PLATFORM_LLP64 true
 
 #else
 	#error "unsupported platform"

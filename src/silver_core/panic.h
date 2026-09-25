@@ -41,6 +41,15 @@ static void PANIC_internal(ConstPtr msg1, ConstPtr msg2, ConstPtr msg3, ConstPtr
 	); \
 }
 
+#define ASSERT(cond, ...) { \
+	if (!(cond)) { \
+		PANIC_internal( \
+			__func__, PANIC_IDENTIFIER" ASSERT(" #cond ")", \
+			PANIC_1##__VA_OPT__(_ENABLE)(__VA_ARGS__) \
+		); \
+	} \
+}
+
 #if BUILD_SAFE
 	#define UNREACHABLE { \
 		PANIC_internal(__func__, PANIC_IDENTIFIER" PANIC: UNREACHABLE", nullptr, nullptr); \

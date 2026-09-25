@@ -26,7 +26,7 @@ IOutStream_GENERATE_KNOWN(OsFileOutStream, linux_fd)
 XCONST OutStream Stdout = CONSTEXPR_OutStream_upcast(OsFileOutStream, linux_stdout);
 XCONST OutStream Stderr = CONSTEXPR_OutStream_upcast(OsFileOutStream, linux_stderr);
 
-#undef XCONSTPREFIX
+#undef XCONST
 
 OutStream os_panic_stream() {
 	return Stderr;
