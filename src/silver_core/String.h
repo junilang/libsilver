@@ -16,6 +16,14 @@ uhash String_hash(uhash base, String this) {
 	return memhash(base, this.data, this.size);
 }
 
+bool String_isnull(String this) {
+	return this.size == 0
+	#if BUILD_SAFE
+		|| this.data == nullptr
+	#endif
+	;
+}
+
 OutStreamRes String_print(String this, PrintFmt fmt, OutStream os) {
 	return OutStream_write(os, this.data, this.size);
 }

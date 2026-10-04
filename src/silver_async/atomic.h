@@ -30,15 +30,13 @@
 
 #endif
 
-#define atom_get(object, memory_order) \
-	__c11_atomic_load(object, memory_order)
-#define atom_set(object, value, memory_order) \
-	__c11_atomic_store(object, value, memory_order)
+#define atom_init __c11_atomic_init
 
-#define atom_cmpx \
-	__c11_atomic_compare_exchange_strong
-#define atom_cmpx_weak \
-	__c11_atomic_compare_exchange_weak
+#define atom_get __c11_atomic_load
+#define atom_set __c11_atomic_store
+
+#define atom_cmpx __c11_atomic_compare_exchange_strong
+#define atom_cmpx_weak __c11_atomic_compare_exchange_weak
 
 #define atom_add __c11_atomic_fetch_add
 #define atom_sub __c11_atomic_fetch_sub

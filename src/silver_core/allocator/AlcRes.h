@@ -11,6 +11,16 @@
 	X(ErrNoMemory) \
 	X(ErrUnsupported) \
 	X(ErrUnimplemented) \
+	X(ErrAux_0) \
+	X(ErrAux_1) \
+	X(ErrAux_2) \
+	X(ErrAux_3) \
+	X(ErrAux_4) \
+	X(ErrAux_5) \
+	X(ErrAux_6) \
+	X(ErrAux_7) \
+	X(ErrAux_8) \
+	X(ErrAux_9) \
 	X(ErrUnknown)
 
 typedef enum : u8 {

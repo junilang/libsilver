@@ -18,4 +18,5 @@
 	#include <linux/time_types.h>
 	#include <linux/auxvec.h>
 	#include <linux/time.h>
+	#include <linux/limits.h>
 #endif

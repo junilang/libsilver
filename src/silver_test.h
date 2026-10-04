@@ -6,7 +6,7 @@
 
 #define LIBSILVER_TEST_INCLUDE true
 
-enum {
+enum : int {
 	SilverTest_Ok = 0,
 };
 
