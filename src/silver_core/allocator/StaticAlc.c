@@ -142,8 +142,7 @@ StaticAlc *StaticAlc_init(Ptr mem, usize size) {
 
 	end -= ptr;
 
-	if (end > u32_max)
-		PANIC("overflow");
+	if (end > u32_max) PANIC("overflow");
 
 	auto this = (StaticAlc*)ptr;
 	this->head = 0;
@@ -155,3 +154,8 @@ StaticAlc *StaticAlc_init(Ptr mem, usize size) {
 void StaticAlc_clear(StaticAlc *this) {
 	this->head = 0;
 }
+
+#define StaticAlc_LOCAL(name, size) \
+	_Alignas(StaticAlc) ubyte name##_data__[__builtin_offsetof(StaticAlc, data) + size]; \
+	StaticAlc *const name##__ = StaticAlc_init(name##_data__, sizeof(name##_data__)); \
+	Alc const name = StaticAlc_upcast(name##__);
