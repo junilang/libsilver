@@ -20,6 +20,7 @@
 	#endif
 
 	#include "syscall.h"
+	#include "clock.h"
 	#include "process.h"
 	#include "file.h"
 	#include "futex.h"

@@ -10,7 +10,14 @@ typedef enum : u8 {
 	AsyncFutureClass_TaskCount
 } AsyncFutureClass;
 
+enum {
+	AsyncFutureState_None,
+	AsyncFutureState_Ready,
+	AsyncFutureState_Resolved
+};
+
 constexpr usize AsyncFuture_tagmask = 0b11;
+constexpr ualign AsyncFuture_minalign = AsyncFuture_tagmask + 1;
 
 AsyncFutureClass AsyncFuture_class(AsyncFuture this) {
 	return (AsyncFutureClass)(this.raw_value & AsyncFuture_tagmask);

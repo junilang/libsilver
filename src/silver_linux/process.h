@@ -10,7 +10,3 @@ LINUX_SYSCALL_GENERATE(linux_waitid, __NR_waitid,
 LINUX_SYSCALL_GENERATE(linux_sched_yield, __NR_sched_yield, ())
 
 LINUX_SYSCALL_GENERATE(linux_sysinfo, __NR_sysinfo, (struct sysinfo *out_info), out_info)
-
-LINUX_SYSCALL_GENERATE(linux_clone3, __NR_clone3,
-	(struct clone_args *args, uword size), args, size
-)

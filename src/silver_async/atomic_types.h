@@ -1,3 +1,5 @@
+// TODO refactor everything
+
 #define CHAR_LOCKFREE (__GCC_ATOMIC_CHAR_LOCK_FREE == 2)
 #define SHORT_LOCKFREE (__GCC_ATOMIC_SHORT_LOCK_FREE == 2)
 #define INT_LOCKFREE (__GCC_ATOMIC_INT_LOCK_FREE == 2)

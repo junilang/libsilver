@@ -1,5 +1,7 @@
 #define FIELD_DEF(name, width) name##_FIELD, name##_FIELD_END = name##_FIELD + (width - 1)
 
+#define FIELD_DEF_UNTIL(name, end) name##_FIELD, name##_FIELD_END = ((end) - 1)
+
 #define FIELD_WIDTH(field) \
 	((field##_FIELD_END - field##_FIELD) + 1)
 

@@ -3,3 +3,4 @@
 #include "silver_data.h"
 #include "silver_fs.h"
 #include "silver_async.h"
+#include "silver_weaver.h"

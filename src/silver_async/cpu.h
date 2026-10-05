@@ -1,3 +1,11 @@
+#if __linux__
+	#define CPU_SCHED_YIELD linux_sched_yield()
+
+#else
+	#warning "CPU_SCHED_YIELD undefined"
+
+#endif
+
 #if __x86_64__
 	#define CPU_YIELD __builtin_ia32_pause()
 	#define CPU_LO_STRONG true

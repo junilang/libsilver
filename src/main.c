@@ -1,3 +1,5 @@
+#define WEAVER_USE_PTHREAD true
+
 #include "silver.h"
 
 #if BUILD_TESTING

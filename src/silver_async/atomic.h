@@ -35,6 +35,9 @@
 #define atom_get __c11_atomic_load
 #define atom_set __c11_atomic_store
 
+#define atom_exchange __c11_atomic_exchange
+#define atom_exchg __c11_atomic_exchange
+
 #define atom_cmpx __c11_atomic_compare_exchange_strong
 #define atom_cmpx_weak __c11_atomic_compare_exchange_weak
 
