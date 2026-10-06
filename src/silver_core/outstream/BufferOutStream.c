@@ -5,7 +5,7 @@ typedef struct {
 } BufferOutStream;
 
 #ifndef BufferOutStream_SAFE
-	#define BufferOutStream_SAFE BUILD_SAFE
+	#define BufferOutStream_SAFE LIBSILVER_SAFE
 #endif
 
 OutStreamRes BufferOutStream_write(BufferOutStream *this, ConstPtr buffer, usize buffer_size) {

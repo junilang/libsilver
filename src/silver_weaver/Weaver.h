@@ -1,5 +1,25 @@
-#ifndef WEAVER_USE_PTHREAD
-	#define WEAVER_USE_PTHREAD LIBSILVER_USE_PTHREAD
+#ifndef Weaver_SAFE
+	#define Weaver_SAFE LIBSILVER_SAFE
+#endif
+
+#ifndef Weaver_USE_PTHREAD
+	#define Weaver_USE_PTHREAD LIBSILVER_USE_PTHREAD
+#endif
+
+#ifndef Weaver_CACHE_ALIGN
+	#define Weaver_CACHE_ALIGN _Alignas(cpu_hdi_size)
+#endif
+
+#ifndef Weaver_CALL_IMMEDIATE
+	#define Weaver_CALL_IMMEDIATE true
+#endif
+
+#ifndef Weaver_RESUME_IMMEDIATE
+	#define Weaver_RESUME_IMMEDIATE true
+#endif
+
+#ifndef Weaver_DEBUG
+	#define Weaver_DEBUG LIBSILVER_DEBUG
 #endif
 
 enum {
@@ -8,20 +28,27 @@ enum {
 	WeaverState_Down
 };
 
+constexpr u32 Weaver_maxthreads = FIELD_MAX(WeaverQinfo_Rc);
+
 typedef struct {
-	_Alignas(cpu_hdi_size) struct {
+	Weaver_CACHE_ALIGN struct {
 		AsyncRT iface;
 		Alc alc;
 		u32 threads_size;
+
+		_Atomic u32_lf state;
+		_Atomic u32_lf threads_sync;
 	};
 
-	_Alignas(cpu_hdi_size) _Atomic u32_lf state;
-	_Alignas(cpu_hdi_size) _Atomic u32_lf threads_sync;
+	Weaver_CACHE_ALIGN struct {
+		WeaverQinfo_Atomic info;
+		WeaverQueue *queue;
+	} read;
 
-	_Alignas(cpu_hdi_size) WeaverQinfo_Atomic qinfo;
-	_Alignas(cpu_hdi_size) WeaverQinfo_Atomic mqinfo;
-
-	WeaverQueue queues[2];
+	Weaver_CACHE_ALIGN struct {
+		WeaverQinfo_Atomic info;
+		WeaverQueue *queue;
+	} write;
 
 	WeaverThread threads[];
 } Weaver;
@@ -39,5 +66,5 @@ AlcRes Weaver_submit(Ptr this, const AsyncTask *tasks, usize tasks_size);
 AlcRes Weaver_init(
 	Weaver *this, Alc alc, u32 threads_size, usize queue_capacity
 ) {
-	
+
 }

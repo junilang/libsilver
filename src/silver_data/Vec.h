@@ -8,7 +8,7 @@ constexpr usize Vec_base_capacity = sizeof(Ptr) * 4;
 constexpr ualign Vec_default_align = Alc_default_align;
 
 #ifndef Vec_SAFE
-	#define Vec_SAFE BUILD_SAFE
+	#define Vec_SAFE LIBSILVER_SAFE
 #endif
 
 static usize Vec_ZZcapacityscale(usize capacity) {
@@ -73,7 +73,7 @@ AlcRes Vec_reserve_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 	AlcReq req = {
 		.size = new_size,
 		.align = alc_align,
-		#if BUILD_DEBUG
+		#if LIBSILVER_DEBUG
 			.flags = FLAG(AlcFlag_Zero),
 		#endif
 	};
@@ -114,7 +114,7 @@ AlcRes Vec_scale_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 	AlcReq req = {
 		.size = capacity,
 		.align = alc_align,
-		#if BUILD_DEBUG
+		#if LIBSILVER_DEBUG
 			.flags = FLAG(AlcFlag_Zero),
 		#endif
 	};
@@ -155,7 +155,7 @@ AlcPtr Vec_append_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 		AlcReq req = {
 			.size = new_size,
 			.align = alc_align,
-			#if BUILD_DEBUG
+			#if LIBSILVER_DEBUG
 				.flags = FLAG(AlcFlag_Zero),
 			#endif
 		};
@@ -199,7 +199,7 @@ AlcPtr Vec_push_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 		AlcReq req = {
 			.size = capacity,
 			.align = alc_align,
-			#if BUILD_DEBUG
+			#if LIBSILVER_DEBUG
 				.flags = FLAG(AlcFlag_Zero),
 			#endif
 		};

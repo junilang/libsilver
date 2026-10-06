@@ -78,7 +78,7 @@ AlcPtr Vec32_append_aligned(Vec32 *this, Alc alc, u32 size, ualign alc_align) {
 		AlcReq req = {
 			.size = new_size,
 			.align = alc_align,
-			#if BUILD_DEBUG
+			#if LIBSILVER_DEBUG
 				.flags = FLAG(AlcFlag_Zero),
 			#endif
 		};
@@ -125,7 +125,7 @@ AlcPtr Vec32_push_aligned(Vec32 *this, Alc alc, u32 size, ualign alc_align) {
 		AlcReq req = {
 			.size = capacity,
 			.align = alc_align,
-			#if BUILD_DEBUG
+			#if LIBSILVER_DEBUG
 				.flags = FLAG(AlcFlag_Zero),
 			#endif
 		};

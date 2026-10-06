@@ -13,7 +13,7 @@
 #endif
 
 #ifndef PTRTAG_SAFE
-	#define PTRTAG_SAFE BUILD_SAFE
+	#define PTRTAG_SAFE LIBSILVER_SAFE
 #endif
 
 #if PTRTAG

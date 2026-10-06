@@ -5,6 +5,6 @@
 	#include "silver_nt/_include.h"
 
 #else
-	#error "unsupported system"
+	#error "unsupported platform"
 
 #endif

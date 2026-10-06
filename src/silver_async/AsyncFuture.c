@@ -1,4 +1,4 @@
-AsyncIntent AsyncFuture_resolve(AsyncFuture this, AsyncTask *out_task) {
+AsyncIntent AsyncFuture_resolve(AsyncFuture this, AsyncResult *result) {
 	auto data = AsyncFuture_data(this);
 	switch (AsyncFuture_class(this)) {
 		case AsyncFutureClass_Mutex:
@@ -6,9 +6,9 @@ AsyncIntent AsyncFuture_resolve(AsyncFuture this, AsyncTask *out_task) {
 		case AsyncFutureClass_MutexCount:
 			return AsyncFuture_MutexCount_resolve(data);
 		case AsyncFutureClass_Task:
-			return AsyncFuture_Task_resolve(data, out_task);
+			return AsyncFuture_Task_resolve(data, result);
 		case AsyncFutureClass_TaskCount:
-			return AsyncFuture_TaskCount_resolve(data, out_task);
+			return AsyncFuture_TaskCount_resolve(data, result);
 		default:;
 			UNREACHABLE;
 	}

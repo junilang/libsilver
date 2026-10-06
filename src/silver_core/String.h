@@ -18,7 +18,7 @@ uhash String_hash(uhash base, String this) {
 
 bool String_isnull(String this) {
 	return this.size == 0
-	#if BUILD_SAFE
+	#if LIBSILVER_SAFE
 		|| this.data == nullptr
 	#endif
 	;

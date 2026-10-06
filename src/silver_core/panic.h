@@ -50,7 +50,7 @@ static void PANIC_internal(ConstPtr msg1, ConstPtr msg2, ConstPtr msg3, ConstPtr
 	} \
 }
 
-#if BUILD_SAFE
+#if LIBSILVER_SAFE
 	#define UNREACHABLE { \
 		PANIC_internal(__func__, PANIC_IDENTIFIER" PANIC: UNREACHABLE", nullptr, nullptr); \
 	}

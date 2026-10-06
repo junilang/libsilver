@@ -85,17 +85,20 @@ AsyncTaskContext AsyncTaskArgs_context(AsyncTaskArgs args) {
 
 #endif
 
-typedef union {
-	AsyncTask out_task;
-} AsyncTaskIO;
+struct AsyncResult {
+	union {
+		AsyncTask task;
+		AsyncError error;
+	};
+};
 
 typedef AsyncIntent (*AsyncFn)(
-	Ptr data, AsyncRT *rt, AsyncTaskArgs args, AsyncTaskIO *io
+	Ptr data, AsyncRT *rt, AsyncTaskArgs args, AsyncResult *result
 );
 
-AsyncIntent AsyncTask_call(AsyncTask this, AsyncRT *rt, AsyncTaskContext ctx, AsyncTaskIO *io) {
+AsyncIntent AsyncTask_call(AsyncTask this, AsyncRT *rt, AsyncTaskContext ctx, AsyncResult *result) {
 	auto data = AsyncTask_data(this);
 	auto args = AsyncTaskArgs_create(ctx, AsyncTask_state(this));
 
-	return (*(AsyncFn*)data)(data, rt, args, io);
+	return (*(AsyncFn*)data)(data, rt, args, result);
 }

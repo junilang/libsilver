@@ -1,5 +1,5 @@
 #ifndef Fs_SAFE
-	#define Fs_SAFE BUILD_SAFE
+	#define Fs_SAFE LIBSILVER_SAFE
 #endif
 
 typedef enum : u8 {

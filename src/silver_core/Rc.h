@@ -1,5 +1,5 @@
 #ifndef Rc_SAFE
-	#define Rc_SAFE BUILD_SAFE
+	#define Rc_SAFE LIBSILVER_SAFE
 #endif
 
 constexpr usize Rc_tagmask = 0b11ull;

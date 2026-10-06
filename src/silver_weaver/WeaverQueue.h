@@ -1,9 +1,9 @@
 typedef union {
-	_Alignas(cpu_hdi_size) char align__;
+	Weaver_CACHE_ALIGN char align__;
 	struct {
 		usize capacity;
 		usize size;
-		AsyncTask *tasks;
+		AsyncTask tasks[];
 	};
 } WeaverQueue;
 

@@ -15,12 +15,12 @@ AsyncFuture AsyncFuture_Task_init(AsyncFuture_Task *this) {
 	return AsyncFuture_Task_upcast(this);
 }
 
-AsyncIntent AsyncFuture_Task_resolve(AsyncFuture_Task *this, AsyncTask *out_task) {
+AsyncIntent AsyncFuture_Task_resolve(AsyncFuture_Task *this, AsyncResult *result) {
 	if (
 		atom_exchg(&this->state, AsyncFutureState_Resolved, atom_sync)
 			== AsyncFutureState_Ready
 	) {
-		*out_task = this->task;
+		result->task = this->task;
 		return AsyncIntent_Resume;
 	}
 
@@ -34,7 +34,7 @@ bool AsyncFuture_Task_set(AsyncFuture_Task *this, AsyncTask task) {
 		return true;
 	}
 
-	#if BUILD_SAFE
+	#if LIBSILVER_SAFE
 		if (want == AsyncFutureState_Ready)
 			PANIC("already set");
 	#endif
@@ -61,7 +61,7 @@ AsyncFuture AsyncFuture_TaskCount_init(AsyncFuture_TaskCount *this, u32 count) {
 	return AsyncFuture_TaskCount_upcast(this);
 }
 
-AsyncIntent AsyncFuture_TaskCount_resolve(AsyncFuture_TaskCount *this, AsyncTask *out_task) {
+AsyncIntent AsyncFuture_TaskCount_resolve(AsyncFuture_TaskCount *this, AsyncResult *result) {
 	if (atom_sub(&this->count, 1, atom_sync) != 1)
 		return AsyncIntent_Yield;
 
@@ -70,7 +70,7 @@ AsyncIntent AsyncFuture_TaskCount_resolve(AsyncFuture_TaskCount *this, AsyncTask
 		atom_exchg(&this->state, AsyncFutureState_Resolved, atom_sync)
 			== AsyncFutureState_Ready
 	) {
-		*out_task = this->task;
+		result->task = this->task;
 		return AsyncIntent_Resume;
 	}
 
@@ -84,7 +84,7 @@ bool AsyncFuture_TaskCount_set(AsyncFuture_TaskCount *this, AsyncTask task) {
 		return true;
 	}
 
-	#if BUILD_SAFE
+	#if LIBSILVER_SAFE
 		if (want == AsyncFutureState_Ready)
 			PANIC("already set");
 	#endif

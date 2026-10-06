@@ -3,7 +3,7 @@
 #endif
 
 #ifndef SmallString_SAFE
-	#define SmallString_SAFE BUILD_SAFE
+	#define SmallString_SAFE LIBSILVER_SAFE
 #endif
 
 #if SmallString_PTRTAG

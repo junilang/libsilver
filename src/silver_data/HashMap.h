@@ -1,5 +1,5 @@
 #ifndef HashMap_SAFE
-	#define HashMap_SAFE BUILD_SAFE
+	#define HashMap_SAFE LIBSILVER_SAFE
 #endif
 
 enum {
@@ -76,7 +76,7 @@ void HashMap_ZZupgrade(Ptr src_data, usize src_size, Ptr dst_data, usize dst_siz
 		// leaves top bits of non empty slots
 		usize src_lookup = (~(*src_table)) & HashMap_empty_stencil;
 
-		#if 0 && BUILD_DEBUG
+		#if 0 && LIBSILVER_DEBUG
 			PRINTBP(512, Stderr, u64_bitsfmt, *src_table, "\n", u64_bitsfmt, src_lookup, "\n");
 		#endif
 
@@ -87,7 +87,7 @@ void HashMap_ZZupgrade(Ptr src_data, usize src_size, Ptr dst_data, usize dst_siz
 
 			src_lookup &= (src_lookup - 1);
 
-			#if 0 && BUILD_DEBUG
+			#if 0 && LIBSILVER_DEBUG
 				PRINTBP(128, Stderr, "i=", i, "\n");
 			#endif
 
@@ -137,7 +137,7 @@ AlcRes HashMap_ZZinit(HashMap *this, Alc alc, u8 power) {
 		.intent = AlcIntent_New,
 		.align = HashMap_align,
 		.size = size * (1 + sizeof(HashMapItem)),
-		#if BUILD_DEBUG
+		#if LIBSILVER_DEBUG
 			.flags = FLAG(AlcFlag_Zero),
 		#endif
 	};
@@ -186,7 +186,7 @@ AlcRes HashMap_ZZexpand(HashMap *this, Alc alc, u8 new_power) {
 		.intent = AlcIntent_New,
 		.align = HashMap_align,
 		.size = new_size * (1 + sizeof(HashMapItem)),
-		#if BUILD_DEBUG
+		#if LIBSILVER_DEBUG
 			.flags = FLAG(AlcFlag_Zero)
 		#endif
 	};

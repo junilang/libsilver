@@ -1,5 +1,5 @@
 #ifndef LPTRTAG_SAFE
-	#define LPTRTAG_SAFE BUILD_SAFE
+	#define LPTRTAG_SAFE LIBSILVER_SAFE
 #endif
 
 Ptr lptrtag(ConstPtr ptr, u8 width, usize value) {

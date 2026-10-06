@@ -1,5 +1,5 @@
 #ifndef Arc_SAFE
-	#define Arc_SAFE BUILD_SAFE
+	#define Arc_SAFE LIBSILVER_SAFE
 #endif
 
 constexpr usize Arc_tagmask = 0b11ull;

@@ -31,8 +31,6 @@ AsyncFuture AsyncFuture_upcast(Ptr data, AsyncFutureClass class) {
 	return (AsyncFuture){ .raw_value = (usize)data | class };
 }
 
-AsyncIntent AsyncFuture_resolve(AsyncFuture this, AsyncTask *out_task);
-
 constexpr AsyncFuture AsyncFuture_null = { .value = nullptr };
 
 bool AsyncFuture_isnull(AsyncFuture this) {
