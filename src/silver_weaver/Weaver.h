@@ -1,52 +1,52 @@
-#ifndef Weaver_SAFE
-	#define Weaver_SAFE LIBSILVER_SAFE
-#endif
-
-#ifndef Weaver_USE_PTHREAD
-	#define Weaver_USE_PTHREAD LIBSILVER_USE_PTHREAD
-#endif
-
-#ifndef Weaver_CACHE_ALIGN
-	#define Weaver_CACHE_ALIGN _Alignas(cpu_hdi_size)
-#endif
-
-#ifndef Weaver_CALL_IMMEDIATE
-	#define Weaver_CALL_IMMEDIATE true
-#endif
-
-#ifndef Weaver_RESUME_IMMEDIATE
-	#define Weaver_RESUME_IMMEDIATE true
-#endif
-
-#ifndef Weaver_DEBUG
-	#define Weaver_DEBUG LIBSILVER_DEBUG
-#endif
+constexpr auto Weaver_maxthreads = WeaverThreadId_max;
 
 enum {
-	WeaverState_None,
-	WeaverState_Join,
+	FIELD_DEF(WeaverPoolInfo_IdleCount, WeaverThreadId_width),
+	FIELD_DEF(WeaverPoolInfo_MapRc, WeaverThreadId_width),
+	FIELD_DEF(WeaverPoolInfo_NeededThreads, WeaverThreadId_width + 1),
+	FLAG_DEF(WeaverPoolInfo_MasterLock)
+};
+
+constexpr u32 WeaverPoolInfo_MapRc_one = FIELD_SET(WeaverPoolInfo_MapRc, 1);
+constexpr u32 WeaverPoolInfo_MapRc_mask = FIELD_MASK(WeaverPoolInfo_MapRc);
+
+constexpr u32 WeaverPoolInfo_IdleCount_one = FIELD_SET(WeaverPoolInfo_MapRc, 1);
+constexpr u32 WeaverPoolInfo_IdleCount_mask = FIELD_MASK(WeaverPoolInfo_MapRc);
+
+constexpr u32 WeaverPoolInfo_NeededThreads_one =
+	FIELD_SET(WeaverPoolInfo_NeededThreads, 1);
+
+constexpr u32 WeaverPoolInfo_NeededThreads_zero =
+	FIELD_WIDTH(WeaverPoolInfo_NeededThreads);
+
+enum {
+	WeaverState_Run,
+	WeaverState_Join, // main thread waiting for workers to go idle
 	WeaverState_Down
 };
 
-constexpr u32 Weaver_maxthreads = FIELD_MAX(WeaverQinfo_Rc);
-
 typedef struct {
-	Weaver_CACHE_ALIGN struct {
-		AsyncRT iface;
-		Alc alc;
-		u32 threads_size;
+	// const state
+	AsyncRT iface;
+	Alc alc;
+	u32 threads_size;
 
+	// shared state
+	Weaver_CACHE_ALIGN struct {
+		// bitmap of idle threads
+		static_assert(Weaver_maxthreads <= (256));
+		_Atomic u64_lf idle_map[4];
+		_Atomic u32_lf pool_info;
 		_Atomic u32_lf state;
-		_Atomic u32_lf threads_sync;
 	};
 
 	Weaver_CACHE_ALIGN struct {
-		WeaverQinfo_Atomic info;
+		WeaverQueueInfo_Atomic info;
 		WeaverQueue *queue;
 	} read;
 
 	Weaver_CACHE_ALIGN struct {
-		WeaverQinfo_Atomic info;
+		WeaverQueueInfo_Atomic info;
 		WeaverQueue *queue;
 	} write;
 
@@ -61,10 +61,16 @@ AsyncRT *Weaver_upcast(Weaver *this) {
 	return &this->iface;
 }
 
-AlcRes Weaver_submit(Ptr this, const AsyncTask *tasks, usize tasks_size);
+AlcRes Weaver_submit(Ptr this, const AsyncTask *tasks, usize tasks_size) {
+
+}
 
 AlcRes Weaver_init(
 	Weaver *this, Alc alc, u32 threads_size, usize queue_capacity
 ) {
+
+}
+
+bool Weaver_swap(Weaver *this, WeaverQueueInfo expected_index) {
 
 }

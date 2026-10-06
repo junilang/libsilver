@@ -15,9 +15,9 @@ AsyncWaitRes AsyncFuture_Mutex_ZZwait(_Atomic u32_lf *state) {
 				return res;
 
 			// if there was a mismatch, the future must already be Resolved
-			case AsyncWaitRes_Mismatch:;
+			case AsyncWaitRes_Mismatch:
 			// if thread was woken up it must be because the future has been Resolved
-			case AsyncWaitRes_Ok:;
+			case AsyncWaitRes_Ok:
 				return AsyncWaitRes_Ok;
 
 			case AsyncWaitRes_Interrupt:;
