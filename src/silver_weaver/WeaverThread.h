@@ -15,10 +15,8 @@ typedef struct {
 	Weaver_CACHE_ALIGN struct {
 		#if WEAVER_USE_PTHREAD
 			pthread_t thread;
-
 		#else
 			#error "unimplemented"
-
 		#endif
 		Ptr rt; // const
 		AsyncTask orphaned_task;

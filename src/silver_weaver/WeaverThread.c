@@ -25,10 +25,12 @@
 		case WeaverThreadState_Down: goto Bdown;
 		case WeaverThreadState_Idle: goto Bidle;
 		case WeaverThreadState_Run: goto Brun;
+		case WeaverThreadState_Error: goto Berror;
 	}
 
-	if (0) Bdown:;
-	if (0) Bidle:;
+	if (0) Bdown: UNREACHABLE;
+	if (0) Bidle: UNREACHABLE;
+	if (0) Berror: UNREACHABLE;
 
 	if (0) Brun: {
 		if (AsyncTask_isnull(pending_task))
@@ -67,14 +69,19 @@
 			auto res = Weaver_submit(rt, &result.task, 1);
 			if (res) PANIC("TODO handle error");
 		}
+
+		goto load_state;
 	}
 
 	if (0) fetch_task: {
 		// acquire read reference
-		WeaverQueueInfo info = atom_add(&rt->read.info, WeaverQueue_Rc_one, atom_sync);
+		WeaverQueueInfo info = atom_add(&rt->read.info,
+			WeaverQueue_Rc_one | WeaverQueue_Pos_one,
+			atom_sync
+		);
 
 		if (info & WeaverQueue_LockSwap) {
-			// if queue is locked for swapping we release our reference
+			wait_for_swap:;
 			info = atom_sub(&rt->read.info, WeaverQueue_Rc_one, atom_sync);
 
 			// wait for swap to finish
@@ -87,39 +94,66 @@
 		}
 
 		// we have a valid reference and can read a task from the queue
-		// increment queue position by one
-		info = atom_add(&rt->read.info, WeaverQueue_Pos_one, atom_acq);
-		const usize pos = FIELD_GET(WeaverQueue_Pos, info);
-		const WeaverQueue *queue = rt->read.queue;
+		u32 const pos = FIELD_GET(WeaverQueue_Pos, info);
+		auto const size = rt->read.size;
 
-		// check if queue has available tasks
-		if (pos < queue->size) {
-			pending_task = queue->tasks[pos];
-			// release our reference
-			atom_sub(&rt->read.info, WeaverQueue_Rc_one, atom_relaxed);
-			goto load_state;
+		// check if queue is not empty
+		if (pos < size) {
+			pending_task = rt->read.queue[pos];
+			// release reference
+			atom_sub(&rt->read.info, WeaverQueue_Rc_one, atom_sync);
+			// run task
+			goto Brun;
 		}
 
-		// release our reference
-		info = atom_sub(&rt->read.info, WeaverQueue_Rc_one, atom_sync);
+		// queue is empty, attempt swap
+		info = atom_or(&rt->read.info, WeaverQueue_LockSwap, atom_sync);
 
-		// try to swap if write queue is not empty
-		if (atom_get(&rt->write.info, atom_acq) & WeaverQueue_Pos_mask) {
-			if (Weaver_swap(rt, info))
-				goto load_state;
+		// other thread is already swapping
+		if (info & WeaverQueue_LockSwap)
+			goto wait_for_swap;
 
-			// wait for other thread to complete swap
-			auto const info_0 = info;
-			do {
-				CPU_YIELD;
-				info = atom_get(&rt->read.info, atom_acq);
-			} while (!((info ^ info_0) & WeaverQueue_Ticker_mask));
+		// set swap lock on write queue
+		WeaverQueueInfo winfo = atom_or(&rt->write.info, WeaverQueue_LockSwap, atom_sync);
+		u32 const queue_size = FIELD_GET(WeaverQueue_Pos, winfo);
 
-			goto load_state;
+		// check if write queue is empty
+		if (!queue_size) {
+			// release swap lock
+			atom_and(&rt->write.info, ~WeaverQueue_LockSwap, atom_sync);
+			atom_and(&rt->read.info, ~WeaverQueue_LockSwap, atom_sync);
+
+			PANIC("TODO go idle");
 		}
 
-		// go idle if no
+		// wait for all references to write queue to be released
+		while (winfo & WeaverQueue_Rc_mask) {
+			CPU_YIELD;
+			winfo = atom_get(&rt->write.info, atom_sync);
+		}
 
+		// wait for all references to read queue to be released
+		// except the one we hold
+		while (info & WeaverQueue_Rc_gtone) {
+			CPU_YIELD;
+			info = atom_get(&rt->read.info, atom_sync);
+		}
+
+		// perform swap
+		Ptr tmp_queue = rt->write.queue;
+		u32 tmp_capacity = rt->write.capacity;
+
+		rt->write.queue = rt->read.queue;
+		rt->write.capacity = rt->read.capacity;
+
+		rt->read.size = queue_size;
+		rt->read.queue = tmp_queue;
+		rt->read.capacity = tmp_capacity;
+
+		atom_and(&rt->write.info, WeaverQueue_swapmask, atom_sync);
+		atom_and(&rt->read.info, WeaverQueue_swapmask, atom_sync);
+
+		goto load_state;
 	}
 
 }

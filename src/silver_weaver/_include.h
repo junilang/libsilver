@@ -6,8 +6,8 @@
 	#define LIBSILVER_WEAVER_INCLUDE true
 
 	#include "config.h"
-	#include "WeaverQueue.h"
 	#include "WeaverThread.h"
+	#include "WeaverQueue.h"
 	#include "Weaver.h"
 	#include "WeaverThread.c"
 

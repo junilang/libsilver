@@ -21,3 +21,7 @@
 #ifndef Weaver_DEBUG
 	#define Weaver_DEBUG LIBSILVER_DEBUG
 #endif
+
+#ifndef Weaver_SWAP_FIRST
+	#define Weaver_SWAP_FIRST true
+#endif
