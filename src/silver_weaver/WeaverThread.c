@@ -28,9 +28,15 @@
 		case WeaverThreadState_Error: goto Berror;
 	}
 
-	if (0) Bdown: UNREACHABLE;
-	if (0) Bidle: UNREACHABLE;
 	if (0) Berror: UNREACHABLE;
+
+	if (0) Bdown: {
+		this->orphaned_task = pending_task;
+
+		UNREACHABLE;
+	}
+	if (0) Bidle: UNREACHABLE;
+
 
 	if (0) Brun: {
 		if (AsyncTask_isnull(pending_task))
@@ -41,21 +47,21 @@
 			case AsyncIntent_Call:
 				#if Weaver_CALL_IMMEDIATE
 					pending_task = result.task;
-					break;
+					goto load_state;
 				#else
-					goto submit_task;
+					break;
 				#endif
 
 			case AsyncIntent_Resume:
 				#if Weaver_RESUME_IMMEDIATE
 					pending_task = result.task;
-					break;
+					goto load_state;
 				#else
-					goto submit_task;
+					break;
 				#endif
 
 			case AsyncIntent_Suspend:
-				goto submit_task;
+				break;
 
 			case AsyncIntent_Error:
 				PANIC("TODO handle error");
@@ -64,12 +70,9 @@
 				UNREACHABLE;
 		}
 
-		if (0) submit_task: {
-			pending_task = AsyncTask_null;
-			auto res = Weaver_submit(rt, &result.task, 1);
-			if (res) PANIC("TODO handle error");
-		}
-
+		pending_task = AsyncTask_null;
+		auto res = Weaver_submit(rt, &result.task, 1);
+		if (res) PANIC("TODO handle error");
 		goto load_state;
 	}
 
@@ -90,7 +93,11 @@
 				info = atom_get(&rt->read.info, atom_sync);
 			}
 
-			goto fetch_task;
+			#if Weaver_FAST_FETCH
+				goto fetch_task;
+			#else
+				goto load_state;
+			#endif
 		}
 
 		// we have a valid reference and can read a task from the queue
@@ -102,8 +109,12 @@
 			pending_task = rt->read.queue[pos];
 			// release reference
 			atom_sub(&rt->read.info, WeaverQueue_Rc_one, atom_sync);
-			// run task
-			goto Brun;
+
+			#if Weaver_FAST_FETCH
+				goto Brun;
+			#else
+				goto load_state;
+			#endif
 		}
 
 		// queue is empty, attempt swap

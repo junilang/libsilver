@@ -25,7 +25,6 @@ constexpr WeaverQueueInfo WeaverQueue_Rc_gtone =
 	WeaverQueue_Rc_mask & (~WeaverQueue_Rc_one)
 ;
 
-
 constexpr WeaverQueueInfo WeaverQueue_Pos_one = FIELD_SET(WeaverQueue_Pos, 1);
 constexpr WeaverQueueInfo WeaverQueue_Pos_mask = FIELD_MASK(WeaverQueue_Pos);
 
@@ -39,3 +38,9 @@ constexpr WeaverQueueInfo WeaverQueue_lockmask = FLAGS(WeaverQueue, LockSwap, Lo
 constexpr WeaverQueueInfo WeaverQueue_swapmask =
 	FIELD_MASK(WeaverQueue_Rc)
 ;
+
+#if Weaver_CACHE_ALIGNMENT
+	constexpr ualign WeaverQueue_align = Weaver_CACHE_ALIGNMENT;
+#else
+	constexpr ualign WeaverQueue_align = _Alignof(AsyncTask);
+#endif

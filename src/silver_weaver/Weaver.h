@@ -128,8 +128,15 @@ void Weaver_wake(Weaver *this, usize n) {
 	auto it = this->threads;
 }
 
-AlcRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size) {
+AlcRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 	Weaver *const this = vthis;
+
+	#if Weaver_SAFE
+		if (tasks_size_ > WeaverQueueSize_max)
+			return AlcRes_ErrAux_0;
+	#endif
+
+	auto const tasks_size = (WeaverQueueSize)tasks_size_;
 
 	resubmit:;
 	// acquire a write queue reference and insert position
@@ -155,18 +162,72 @@ AlcRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size) {
 
 	// we have a valid reference
 	WeaverQueueSize const wpos = FIELD_GET(WeaverQueue_Pos, winfo);
-	auto const wcapacity = this->write.capacity;
+	auto wcapacity = this->write.capacity;
 
 	// if the position was already past the capacity
 	// we know that a thread before us overflowed the queue first
 	// and will handle the resize operation which will invalidate
 	// our insert position
-	if (wpos > wcapacity)
-		goto wait_for_locks;
+	if (wpos > wcapacity) goto wait_for_locks;
 
 	// perform resize
-	if (wpos + tasks_size > wcapacity) {
-		// TODO
+	#if Weaver_SAFE
+		usize const target_pos = (usize)wpos + (usize)tasks_size;
+		if (target_pos > WeaverQueueSize_max)
+			return AlcRes_ErrAux_1;
+
+	#else
+		auto const target_pos = wpos + tasks_size;
+	#endif
+
+	if (target_pos > wcapacity) {
+		// lock write queue for resizing
+		winfo = atom_or(&this->write.info, WeaverQueue_LockResize, atom_sync);
+		// resize queue up to the prelock position
+		usize const prelock_pos = FIELD_GET(WeaverQueue_Pos, winfo);
+
+		// wait until all other references are released
+		while (winfo & WeaverQueue_Rc_gtone) {
+			CPU_YIELD;
+			winfo = atom_get(&this->write.info, atom_sync);
+		}
+
+		usize capacity = wcapacity;
+		// TODO add overflow checking
+		do capacity *= 2;
+		while (prelock_pos > capacity);
+
+		#if Weaver_SAFE
+			if (capacity > WeaverQueueSize_max)
+				capacity = WeaverQueueSize_max;
+		#endif
+
+		usize alloc_size = usize_align(capacity * sizeof(AsyncTask), WeaverQueue_align);
+
+		AlcReq req = {
+			.intent = AlcIntent_Resize,
+			.size = alloc_size,
+			.align = WeaverQueue_align
+		};
+
+		AlcPtr ptr = Alc_invoke(this->alc, &req, nullptr, this->write.queue);
+		auto res = AlcPtr_get(ptr);
+		if (res) return res;
+
+		capacity = req.size / sizeof(AsyncTask);
+		if (capacity > WeaverQueueSize_max)
+			capacity = WeaverQueueSize_max;
+
+		this->write.queue = (Ptr)ptr;
+		this->write.capacity = (WeaverQueueSize)capacity;
+
+		// restore position to our state
+		while (
+			!atom_cmpx(&this->write.info, &want,
+				(want & FIELD_CLEAR(WeaverQueue_Pos)) | prelock_pos,
+				atom_sync, atom_sync
+			)
+		) {};
 	}
 
 	// insert tasks into queue
@@ -260,7 +321,6 @@ AlcPtr Weaver_alc(Ptr vthis, AlcReq *req, Ptr arg, Ptr mem) {
 	return Alc_invoke(this->alc, req, arg, mem);
 }
 
-
 AlcRes Weaver_init(
 	Weaver *this, Alc alc, u32 threads_size, WeaverQueueSize queue_capacity
 ) {
@@ -278,17 +338,12 @@ AlcRes Weaver_init(
 	this->pool_info = 0; // TODO setup
 
 
-	usize queue_size = queue_size * sizeof(AsyncTask);
-	ualign queue_align = _Alignof(AsyncTask);
-	#if Weaver_CACHE_ALIGNMENT
-		queue_size = usize_align(queue_size, Weaver_CACHE_ALIGNMENT);
-		queue_align = Weaver_CACHE_ALIGNMENT;
-	#endif
+	usize queue_allocsize = usize_align(queue_capacity * sizeof(AsyncTask), WeaverQueue_align);
 
 	AlcReq req = {
 		.intent = AlcIntent_New,
-		.size = queue_size,
-		.align = queue_align
+		.size = queue_allocsize,
+		.align = WeaverQueue_align
 	};
 
 	{ // read queue
@@ -296,20 +351,28 @@ AlcRes Weaver_init(
 		auto res = AlcPtr_get(ptr);
 		if (res) return res;
 
+		usize capacity = req.size / sizeof(AsyncTask);
+		if (capacity > WeaverQueueSize_max)
+			capacity = WeaverQueueSize_max;
+
 		this->read.queue = (Ptr)ptr;
-		this->read.capacity = (WeaverQueueSize)(req.size / sizeof(AsyncTask));
+		this->read.capacity = (WeaverQueueSize)(capacity);
 		this->read.info = 0;
 		this->read.size = 0;
 	}
 
 	{ // write queue
-		req.size = queue_size;
+		req.size = queue_allocsize;
 		AlcPtr ptr = Alc_invoke(alc, &req, nullptr, nullptr);
 		auto res = AlcPtr_get(ptr);
 		if (res) return res;
 
+		usize capacity = req.size / sizeof(AsyncTask);
+		if (capacity > WeaverQueueSize_max)
+			capacity = WeaverQueueSize_max;
+
 		this->write.queue = (Ptr)ptr;
-		this->write.capacity = (WeaverQueueSize)(req.size / sizeof(AsyncTask));
+		this->write.capacity = (WeaverQueueSize)(capacity);
 		this->write.info = 0;
 		this->write.size = 0;
 	}
@@ -324,5 +387,9 @@ AlcRes Weaver_init(
 	}
 
 	return AlcRes_Ok;
+
+}
+
+AlcPtr Weaver_create(Alc alc, u32 threads_size, WeaverQueueSize queue_capacity) {
 
 }
