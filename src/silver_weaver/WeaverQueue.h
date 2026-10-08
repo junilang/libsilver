@@ -1,10 +1,17 @@
+typedef u32 WeaverQueueSize;
+constexpr u8 WeaverQueueSize_width = 32;
+constexpr auto WeaverQueueSize_max = u32_max;
+
 typedef _Atomic u64_lf WeaverQueueInfo_Atomic;
 typedef u64 WeaverQueueInfo; enum {
 	FLAG_DEF(WeaverQueue_LockSwap),
 	FLAG_DEF(WeaverQueue_LockResize),
 	FIELD_DEF(WeaverQueue_Rc, WeaverThreadId_width),
-	FIELD_DEF(WeaverQueue_Pos, 32)
+	FIELD_DEF(WeaverQueue_Pos, WeaverQueueSize_width),
+	WeaverQueueInfo_width
 };
+
+static_assert(WeaverQueueInfo_width <= 64);
 
 enum {
 	WeaverQueue_Lock_None,
