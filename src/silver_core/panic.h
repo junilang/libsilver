@@ -41,6 +41,13 @@ static void PANIC_internal(ConstPtr msg1, ConstPtr msg2, ConstPtr msg3, ConstPtr
 	); \
 }
 
+#define TODO(...) { \
+	PANIC_internal( \
+		__func__, PANIC_IDENTIFIER" TODO:", \
+		PANIC_1##__VA_OPT__(_ENABLE)(__VA_ARGS__) \
+	); \
+}
+
 #define ASSERT(cond, ...) { \
 	if (!(cond)) { \
 		PANIC_internal( \

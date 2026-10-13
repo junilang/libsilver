@@ -35,8 +35,6 @@
 
 		UNREACHABLE;
 	}
-	if (0) Bidle: UNREACHABLE;
-
 
 	if (0) Brun: {
 		if (AsyncTask_isnull(pending_task))
@@ -134,7 +132,7 @@
 			atom_and(&rt->write.info, ~WeaverQueue_LockSwap, atom_sync);
 			atom_and(&rt->read.info, ~WeaverQueue_LockSwap, atom_sync);
 
-			PANIC("TODO go idle");
+			goto Bidle;
 		}
 
 		// wait for all references to write queue to be released
@@ -165,6 +163,37 @@
 		atom_and(&rt->read.info, WeaverQueue_swapmask, atom_sync);
 
 		goto load_state;
+	}
+
+	if (0) Bidle: {
+		if (!AsyncTask_isnull(pending_task)) {
+			auto res = Weaver_submit(rt, &pending_task, 1);
+			if (res) TODO("handle error");
+			pending_task = AsyncTask_null;
+		}
+
+		idle:;
+
+		if (
+			FIELD_GET(WeaverPoolInfo_Sync,
+				atom_sub(&rt->pool_info, WeaverPoolInfo_Sync_one, atom_sync)
+			) == WeaverPoolInfo_Sync_one
+		) {
+			u32 want = WeaverState_Join;
+			if (atom_cmpx(&rt->state, &want, WeaverState_Sync, atom_sync, atom_sync)) {
+				auto res = Async_wake32(&rt->state, Async_wakeall);
+				if (res) TODO("handle error");
+			}
+		}
+
+		do switch (Async_wait32(&this->state, WeaverThreadState_Idle, 0)) {
+			default: TODO("handle error");
+			case AsyncWaitRes_Mismatch:
+			case AsyncWaitRes_Ok:;
+		} while (atom_get(&this->state, atom_sync) == WeaverThreadState_Idle);
+
+		wake_up:;
+
 	}
 
 }

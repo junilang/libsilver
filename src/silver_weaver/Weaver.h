@@ -1,7 +1,7 @@
 constexpr auto Weaver_maxthreads = WeaverThreadId_max;
 
 enum {
-	FIELD_DEF(WeaverPoolInfo_IdleCount, WeaverThreadId_width),
+	FIELD_DEF(WeaverPoolInfo_Sync, WeaverThreadId_width),
 	FIELD_DEF(WeaverPoolInfo_MapRc, WeaverThreadId_width),
 	FIELD_DEF(WeaverPoolInfo_NeededThreads, WeaverThreadId_width + 1),
 	FLAG_DEF(WeaverPoolInfo_MasterLock)
@@ -10,8 +10,8 @@ enum {
 constexpr u32 WeaverPoolInfo_MapRc_one = FIELD_SET(WeaverPoolInfo_MapRc, 1);
 constexpr u32 WeaverPoolInfo_MapRc_mask = FIELD_MASK(WeaverPoolInfo_MapRc);
 
-constexpr u32 WeaverPoolInfo_IdleCount_one = FIELD_SET(WeaverPoolInfo_MapRc, 1);
-constexpr u32 WeaverPoolInfo_IdleCount_mask = FIELD_MASK(WeaverPoolInfo_MapRc);
+constexpr u32 WeaverPoolInfo_Sync_one = FIELD_SET(WeaverPoolInfo_MapRc, 1);
+constexpr u32 WeaverPoolInfo_Sync_mask = FIELD_MASK(WeaverPoolInfo_MapRc);
 
 constexpr u32 WeaverPoolInfo_NeededThreads_one =
 	FIELD_SET(WeaverPoolInfo_NeededThreads, 1);
@@ -116,8 +116,8 @@ void Weaver_boot(Weaver *this) {
 				PANIC("invalid state after boot");
 
 			auto pool = atom_get(&this->pool_info, atom_sync);
-			if (FIELD_GET(WeaverPoolInfo_IdleCount, pool) != size)
-				PANIC("idle count mismatch");
+			if (FIELD_GET(WeaverPoolInfo_Sync, pool) != 0)
+				PANIC("live count mismatch");
 		}
 	#else
 		atom_set(&this->state, WeaverState_Run, atom_sync);
@@ -223,8 +223,15 @@ AlcRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 
 		// restore position to our state
 		while (
-			!atom_cmpx(&this->write.info, &want,
-				(want & FIELD_CLEAR(WeaverQueue_Pos)) | prelock_pos,
+			!atom_cmpx(&this->write.info, &winfo,
+				(winfo &
+					// clear position and resize lock
+					(
+						FIELD_CLEAR(WeaverQueue_Pos) |
+						FLAG_CLEAR(WeaverQueue_LockResize)
+					)
+					// reset position back to the position we acquired
+				) | target_pos,
 				atom_sync, atom_sync
 			)
 		) {};
@@ -335,7 +342,7 @@ AlcRes Weaver_init(
 
 	memset(this->idle_map, 0, sizeof(this->idle_map));
 	this->state = WeaverState_Down;
-	this->pool_info = 0; // TODO setup
+	this->pool_info = 0; // setup in boot function
 
 
 	usize queue_allocsize = usize_align(queue_capacity * sizeof(AsyncTask), WeaverQueue_align);
