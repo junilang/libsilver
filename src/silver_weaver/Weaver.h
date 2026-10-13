@@ -39,6 +39,7 @@ typedef struct {
 		_Atomic u64_lf idle_map[4];
 		_Atomic u32_lf pool_info;
 		_Atomic u32_lf state;
+		_Atomic u32_lf down_sync;
 	};
 
 	Weaver_CACHE_ALIGN struct {
@@ -62,11 +63,19 @@ usize Weaver_ZZallocsize(u32 threads_size) {
 	return __builtin_offsetof(Weaver, threads) + (sizeof(WeaverThread) * threads_size);
 }
 
+#define Weaver_ALLOCSIZE(threads_size) \
+	(__builtin_offsetof(Weaver, threads) + (sizeof(WeaverThread) * threads_size))
+
+
 AsyncRT *Weaver_upcast(Weaver *this) {
 	return &this->iface;
 }
 
 void Weaver_boot(Weaver *this) {
+	#if Weaver_DEBUG
+		PRINTBP(128, Stdout, "Weaver_boot\n");
+	#endif
+
 	#if Weaver_SAFE
 		{
 			auto state = atom_exchg(&this->state, WeaverState_Join, atom_sync);
@@ -74,10 +83,20 @@ void Weaver_boot(Weaver *this) {
 				PANIC("state is not down");
 		}
 	#else
-		atom_set(&this->state, WeaverState_Join, atom_sync);
+		this->state = WeaverState_Join;
 	#endif
 
-	u32 const size = this->threads_size;
+	auto const size = this->threads_size;
+
+	// setup pool info
+	#if Weaver_SAFE
+		auto pool_info = atom_exchg(&this->pool_info, WeaverPoolInfo_Sync_one * size, atom_sync);
+		if (pool_info != 0)
+			PANIC("pool_info not zero")
+	#else
+		this->pool_info = WeaverPoolInfo_Sync_one * size;
+	#endif
+
 	for (u32 i = 0; i < size; i++) {
 		WeaverThread *thread = this->threads + i;
 		#if Weaver_SAFE
@@ -88,6 +107,10 @@ void Weaver_boot(Weaver *this) {
 			}
 		#else
 			thread->state = WeaverThreadState_Idle;
+		#endif
+
+		#if Weaver_DEBUG
+			PRINTBP(128, Stdout, "Weaver_boot: create [",i,"]\n");
 		#endif
 
 		#if Weaver_USE_PTHREAD
@@ -102,12 +125,10 @@ void Weaver_boot(Weaver *this) {
 	}
 
 	do switch (Async_wait32(&this->state, WeaverState_Join, 0)) {
+		default: TODO("handle error");
 		case AsyncWaitRes_Mismatch:
-			goto mismatch_break;
-		default:;
-	} while (atom_get(&this->state, atom_sync) == WeaverState_Join);
-
-	mismatch_break:;
+		case AsyncWaitRes_Ok:
+	} while (atom_get(&this->state, atom_acq) == WeaverState_Join);
 
 	#if Weaver_SAFE
 		{
@@ -115,17 +136,128 @@ void Weaver_boot(Weaver *this) {
 			if (state != WeaverState_Sync)
 				PANIC("invalid state after boot");
 
-			auto pool = atom_get(&this->pool_info, atom_sync);
+			auto pool = atom_get(&this->pool_info, atom_acq);
 			if (FIELD_GET(WeaverPoolInfo_Sync, pool) != 0)
 				PANIC("live count mismatch");
 		}
 	#else
 		atom_set(&this->state, WeaverState_Run, atom_sync);
 	#endif
+
+	#if Weaver_DEBUG
+		PRINTBP(128, Stdout, "Weaver_boot: sync\n")
+	#endif
+
+}
+
+void Weaver_join(Weaver *this) {
+	#if Weaver_DEBUG
+		PRINTBP(128, Stdout, "Weaver_join\n");
+	#endif
+
+	#if Weaver_SAFE
+		{
+			auto state = atom_exchg(&this->state, WeaverState_Join, atom_sync);
+			if (state != WeaverState_Run)
+				PANIC("invalid state");
+		}
+	#else
+		atom_set(&this->state, WeaverState_Join, atom_sync);
+	#endif
+
+	// check if all threads are already idle
+	if ((atom_get(&this->pool_info, atom_acq) & WeaverPoolInfo_Sync_mask) == 0) {
+		#if Weaver_SAFE
+			{
+				auto state = atom_exchg(&this->state, WeaverState_Down, atom_sync);
+				if (state != WeaverState_Join)
+					PANIC("invalid state")
+			}
+		#else
+			atom_set(&this->state, WeaverState_Down);
+		#endif
+
+		goto down;
+	}
+
+	do switch (Async_wait32(&this->state, WeaverState_Join, 0)) {
+		default: TODO("handle error");
+		case AsyncWaitRes_Mismatch:
+		case AsyncWaitRes_Ok:
+	} while (atom_get(&this->state, atom_acq) == WeaverState_Join);
+
+	#if Weaver_SAFE
+		{
+			auto state = atom_exchg(&this->state, WeaverState_Down, atom_sync);
+			if (state != WeaverState_Sync)
+				PANIC("invalid state");
+		}
+
+		{
+			auto sync = atom_exchg(&this->down_sync, this->threads_size, atom_sync);
+			if (sync != 0)
+				PANIC("down_sync non zero");
+		}
+	#else
+		atom_set(&this->state, WeaverState_Down, atom_sync);
+		atom_set(&this->down_sync, this->threads_size, atom_sync);
+	#endif
+
+	auto it = this->threads;
+	auto const end = it + this->threads_size;
+	for (; it < end; it++) {
+		#if Weaver_SAFE
+			{
+				auto state = atom_exchg(&it->state, WeaverThreadState_Down, atom_sync);
+				if (state != WeaverThreadState_Idle)
+					PANIC("invalid state");
+			}
+		#else
+			atom_set(&it->state, WeaverThreadState_Down, atom_sync);
+		#endif
+
+		auto res = Async_wake32(&it->state, Async_wakeall);
+		if (res) TODO("handle error");
+	}
+
+	down:;
+
+	u32 state;
+	do switch (Async_wait32(&this->state, WeaverState_Down, 0)) {
+		default: TODO("handle error");
+		case AsyncWaitRes_Mismatch:
+		case AsyncWaitRes_Ok:
+	} while((state = atom_get(&this->state, atom_acq)) == WeaverState_Down);
+
+	#if Weaver_SAFE
+		if (state != WeaverState_Sync)
+			PANIC("invalid state");
+	#endif
+
+	#if Weaver_USE_PTHREAD
+		it = this->threads;
+		for (; it < end; it++) {
+			pthread_join(it->thread, nullptr);
+		}
+	#endif
 }
 
 void Weaver_wake(Weaver *this, usize n) {
+	// TODO implement waking threads selectively
+	// based on available tasks and load heuristics
+
 	auto it = this->threads;
+	auto const end = it + this->threads_size;
+
+	for (; n && (it < end); it++) {
+		if (
+			atom_exchg(&it->state, WeaverThreadState_Run, atom_sync)
+				== WeaverThreadState_Idle
+		) {
+			Async_wake32(&it->state, Async_wakeall);
+			n--;
+		}
+	}
 }
 
 AlcRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
@@ -154,7 +286,7 @@ AlcRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 		// wait for queue to unlock
 		while (winfo & WeaverQueue_lockmask) {
 			CPU_YIELD;
-			winfo = atom_get(&this->write.info, atom_sync);
+			winfo = atom_get(&this->write.info, atom_acq);
 		}
 
 		goto resubmit;
@@ -183,14 +315,15 @@ AlcRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 	if (target_pos > wcapacity) {
 		// lock write queue for resizing
 		winfo = atom_or(&this->write.info, WeaverQueue_LockResize, atom_sync);
-		// resize queue up to the prelock position
-		usize const prelock_pos = FIELD_GET(WeaverQueue_Pos, winfo);
 
 		// wait until all other references are released
 		while (winfo & WeaverQueue_Rc_gtone) {
 			CPU_YIELD;
-			winfo = atom_get(&this->write.info, atom_sync);
+			winfo = atom_get(&this->write.info, atom_acq);
 		}
+
+		// resize queue up to the prelock position
+		usize const prelock_pos = FIELD_GET(WeaverQueue_Pos, winfo);
 
 		usize capacity = wcapacity;
 		// TODO add overflow checking
@@ -232,7 +365,7 @@ AlcRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 					)
 					// reset position back to the position we acquired
 				) | target_pos,
-				atom_sync, atom_sync
+				atom_sync, atom_acq
 			)
 		) {};
 	}
@@ -292,14 +425,14 @@ AlcRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 	// wait for all write queue references to be released
 	while (winfo & WeaverQueue_Rc_mask) {
 		CPU_YIELD;
-		winfo = atom_get(&this->write.info, atom_sync);
+		winfo = atom_get(&this->write.info, atom_acq);
 	}
 
 	// wait for all read queue references to be released
 	// except the one we hold
 	while (winfo & WeaverQueue_Rc_gtone) {
 		CPU_YIELD;
-		winfo = atom_get(&this->read.info, atom_sync);
+		winfo = atom_get(&this->read.info, atom_acq);
 	}
 
 	// perform swap
@@ -318,7 +451,8 @@ AlcRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 	atom_and(&this->read.info, WeaverQueue_swapmask, atom_sync);
 	atom_sub(&this->read.info, WeaverQueue_Rc_one, atom_sync);
 
-	// todo wake threads
+	// wake threads
+	Weaver_wake(this, wsize);
 
 	return AlcRes_Ok;
 }
@@ -343,6 +477,7 @@ AlcRes Weaver_init(
 	memset(this->idle_map, 0, sizeof(this->idle_map));
 	this->state = WeaverState_Down;
 	this->pool_info = 0; // setup in boot function
+	this->down_sync = 0;
 
 
 	usize queue_allocsize = usize_align(queue_capacity * sizeof(AsyncTask), WeaverQueue_align);
@@ -387,16 +522,51 @@ AlcRes Weaver_init(
 	// setup threads
 
 	for (u32 i = 0; i < threads_size; i++) {
-		this->threads[i].id = (WeaverThreadId)(i + 1);
+		this->threads[i].id = (WeaverThreadId)i;
 		this->threads[i].rt = this;
 		this->threads[i].orphaned_task = AsyncTask_null;
 		this->threads[i].state = WeaverThreadState_Down;
 	}
 
 	return AlcRes_Ok;
+}
 
+AlcRes Weaver_deinit(Weaver *this) {
+	auto const alc = this->alc;
+
+	auto res = Alc_delete(alc, this->read.queue);
+	if (res) return res;
+
+	res = Alc_delete(alc, this->write.queue);
+	if (res) return res;
+
+	return AlcRes_Ok;
 }
 
 AlcPtr Weaver_create(Alc alc, u32 threads_size, WeaverQueueSize queue_capacity) {
+	AlcReq req = {
+		.intent = AlcIntent_New,
+		.size = Weaver_ZZallocsize(threads_size),
+		.align = _Alignof(Weaver)
+	};
 
+	auto ptr = Alc_invoke(alc, &req, nullptr, nullptr);
+	if (AlcPtr_check(ptr)) return ptr;
+
+	auto this = (Weaver*)ptr;
+
+	auto res = Weaver_init(this, alc, threads_size, queue_capacity);
+	if (res) return AlcPtr_set(res);
+
+	return (AlcPtr)this;
+}
+
+AlcRes Weaver_destroy(Weaver *this) {
+	auto res = Weaver_deinit(this);
+	if (res) return res;
+
+	auto const alc = this->alc;
+	res = Alc_delete(alc, this);
+
+	return AlcRes_Ok;
 }

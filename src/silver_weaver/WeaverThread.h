@@ -25,7 +25,7 @@ typedef struct {
 	};
 } WeaverThread;
 
-#if Weaver_DEBUG && Weaver_USE_PTHREAD
+#if Weaver_DEBUG && Weaver_USE_TLS
 	_Thread_local u32 t_WeaverThread_id;
 #endif
 

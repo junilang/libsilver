@@ -10,6 +10,10 @@
 	#define Weaver_USE_PTHREAD LIBSILVER_USE_PTHREAD
 #endif
 
+#ifndef Weaver_USE_TLS
+	#define Weaver_USE_TLS LIBSILVER_USE_TLS
+#endif
+
 #ifndef Weaver_CACHE_ALIGNMENT
 	#define Weaver_CACHE_ALIGNMENT CPU_HDI_SIZE
 #endif
