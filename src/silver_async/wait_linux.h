@@ -35,6 +35,23 @@ AsyncWaitRes Async_ZZwait(Ptr addr, usize val, u64 timeout, uword flags) {
 	return AsyncWaitRes_Ok;
 }
 
+AsyncWaitRes Async_sleep(u64 timeout) {
+	if (timeout == 0) return AsyncWaitRes_Ok;
+
+	const linux_timespec ts = {
+		.tv_sec = (typeof(ts.tv_nsec))(timeout / Async_seconds),
+		.tv_nsec = (typeof(ts.tv_nsec))(timeout % Async_seconds)
+	};
+
+	auto res = linux_clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, nullptr);
+	if (res < 0) switch (-res) {
+		default:
+			return AsyncWaitRes_ErrUnknown;
+	}
+
+	return AsyncWaitRes_Ok;
+}
+
 AsyncWaitRes Async_wait8(_Atomic u8_lf *addr, u8 val, u64 timeout) {
 	return Async_ZZwait(addr, val, timeout, FUTEX2_SIZE_U8);
 }

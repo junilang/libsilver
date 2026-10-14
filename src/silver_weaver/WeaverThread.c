@@ -137,7 +137,11 @@
 			// release reference and swap lock
 			atom_sub(&rt->read.info, WeaverQueue_Rc_one | WeaverQueue_LockSwap, atom_sync);
 
-			goto idle;
+			// set state to idle if state didnt change
+			if (atom_cmpx(&this->state, &state, WeaverThreadState_Idle, atom_sync, atom_acq))
+				goto idle;
+			else
+				goto dispatch_state;
 		}
 
 		// wait for all references to write queue to be released
@@ -197,18 +201,12 @@
 		#endif
 
 		// check if this is was the last running thread
-		if (
-			(
-				atom_sub(&rt->pool_info, WeaverPoolInfo_Sync_one, atom_sync)
-					& WeaverPoolInfo_Sync_mask
-			)
-				== WeaverPoolInfo_Sync_one
-		) {
+		if (atom_sub(&rt->idle_sync, 1, atom_sync) == 1) {
 			#if Weaver_DEBUG
 				PRINTBP(128, Stdout, "[",id,"] sync threads\n");
 			#endif
 			// if the runtime is waiting for all threads to join, wake it up
-			u32 want = WeaverState_Join;
+			u32 want = WeaverState_JoinIdle;
 			if (atom_cmpx(&rt->state, &want, WeaverState_Sync, atom_sync, atom_acq)) {
 				auto res = Async_wake32(&rt->state, Async_wakeall);
 				if (res) TODO("handle error");
@@ -234,18 +232,30 @@
 			PRINTBP(128, Stdout, "[",id,"] wake\n");
 		#endif
 
-		atom_add(&rt->pool_info, WeaverPoolInfo_Sync_one, atom_sync);
+		atom_add(&rt->idle_sync, 1, atom_sync);
 
 		goto dispatch_state;
 	}
 
 	if (0) Bdown: {
+		#if Weaver_DEBUG
+			PRINTBP(128, Stdout, "[",id,"] down\n");
+		#endif
+
 		this->orphaned_task = pending_task;
 
 		// if this is the last thread to go down
 		if (atom_sub(&rt->down_sync, 1, atom_sync) == 1) {
-			u32 want = WeaverState_Down;
+			#if Weaver_DEBUG
+				PRINTBP(128, Stdout, "[",id,"] down last\n");
+			#endif
+
+			u32 want = WeaverState_JoinDown;
 			if (atom_cmpx(&rt->state, &want, WeaverState_Sync, atom_sync, atom_acq)) {
+				#if Weaver_DEBUG
+					PRINTBP(128, Stdout, "[",id,"] wake runtime\n");
+				#endif
+
 				auto res = Async_wake32(&rt->state, Async_wakeall);
 				if (res) TODO("handle error");
 			}

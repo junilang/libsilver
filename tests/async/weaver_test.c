@@ -33,6 +33,10 @@ int ZZentry(SilverTestContext *ctx) {
 		Weaver_submit(weaver, &task, 1)
 	);
 
+	Async_sleep(Async_millis * 500);
+
+	//PRINTBP(128, Stdout, "nanosleep_res: ",res,"\n");
+
 	Weaver_join(weaver);
 
 	return 0;

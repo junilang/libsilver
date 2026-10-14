@@ -10,12 +10,12 @@ LINUX_SYSCALL_GENERATE(linux_clock_getres, __NR_clock_getres,
 	clockid, out_res
 )
 
-LINUX_SYSCALL_GENERATE(linux_clock_settime, __NR_clock_gettime,
+LINUX_SYSCALL_GENERATE(linux_clock_settime, __NR_clock_settime,
 	(uword clockid, const linux_timespec *out_time),
 	clockid, out_time
 )
 
-LINUX_SYSCALL_GENERATE(linux_clock_nanosleep, __NR_clock_gettime,
+LINUX_SYSCALL_GENERATE(linux_clock_nanosleep, __NR_clock_nanosleep,
 	(
 		uword clockid, uword flags,
 		const linux_timespec *timeout,

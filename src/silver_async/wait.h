@@ -27,6 +27,8 @@ constexpr u64 Async_millis = 1'000'000ull;
 constexpr u64 Async_micros = 1'000ull;
 constexpr u64 Async_nanos = 1ull;
 
+AsyncWaitRes Async_sleep(u64 timeout);
+
 AsyncWaitRes Async_wait8(_Atomic u8_lf *addr, u8 expected_value, u64 timeout);
 AsyncWaitRes Async_wait16(_Atomic u16_lf *addr, u16 expected_value, u64 timeout);
 AsyncWaitRes Async_wait32(_Atomic u32_lf *addr, u32 expected_value, u64 timeout);

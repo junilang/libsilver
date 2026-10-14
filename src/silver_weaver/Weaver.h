@@ -1,5 +1,6 @@
 constexpr auto Weaver_maxthreads = WeaverThreadId_max;
 
+/*
 enum {
 	FIELD_DEF(WeaverPoolInfo_Sync, WeaverThreadId_width),
 	FIELD_DEF(WeaverPoolInfo_MapRc, WeaverThreadId_width),
@@ -19,11 +20,15 @@ constexpr u32 WeaverPoolInfo_NeededThreads_one =
 constexpr u32 WeaverPoolInfo_NeededThreads_zero =
 	FIELD_WIDTH(WeaverPoolInfo_NeededThreads);
 
+*/
+
 enum {
+	WeaverState_Down,
 	WeaverState_Run,
-	WeaverState_Join, // main thread waiting for workers to go idle
 	WeaverState_Sync,
-	WeaverState_Down
+	WeaverState_JoinIdle, // main thread waiting for workers to go idle
+	WeaverState_JoinDown,
+	WeaverState_Error,
 };
 
 typedef struct {
@@ -35,10 +40,11 @@ typedef struct {
 	// shared state
 	Weaver_CACHE_ALIGN struct {
 		// bitmap of idle threads
-		static_assert(Weaver_maxthreads <= (256));
-		_Atomic u64_lf idle_map[4];
-		_Atomic u32_lf pool_info;
+		//static_assert(Weaver_maxthreads <= (256));
+		//_Atomic u64_lf idle_map[4];
+		//_Atomic u32_lf pool_info;
 		_Atomic u32_lf state;
+		_Atomic u32_lf idle_sync;
 		_Atomic u32_lf down_sync;
 	};
 
@@ -78,7 +84,7 @@ void Weaver_boot(Weaver *this) {
 
 	#if Weaver_SAFE
 		{
-			auto state = atom_exchg(&this->state, WeaverState_Join, atom_sync);
+			auto state = atom_exchg(&this->state, WeaverState_JoinIdle, atom_sync);
 			if (state != WeaverState_Down)
 				PANIC("state is not down");
 		}
@@ -88,13 +94,15 @@ void Weaver_boot(Weaver *this) {
 
 	auto const size = this->threads_size;
 
-	// setup pool info
+	// set idle sync
 	#if Weaver_SAFE
-		auto pool_info = atom_exchg(&this->pool_info, WeaverPoolInfo_Sync_one * size, atom_sync);
-		if (pool_info != 0)
-			PANIC("pool_info not zero")
+		{
+			auto idle_sync = atom_exchg(&this->idle_sync, size, atom_sync);
+			if (idle_sync != 0)
+				PANIC("idle_sync not zero")
+		}
 	#else
-		this->pool_info = WeaverPoolInfo_Sync_one * size;
+		this->idle_sync = size;
 	#endif
 
 	for (u32 i = 0; i < size; i++) {
@@ -124,11 +132,11 @@ void Weaver_boot(Weaver *this) {
 		#endif
 	}
 
-	do switch (Async_wait32(&this->state, WeaverState_Join, 0)) {
+	do switch (Async_wait32(&this->state, WeaverState_JoinIdle, 0)) {
 		default: TODO("handle error");
 		case AsyncWaitRes_Mismatch:
 		case AsyncWaitRes_Ok:
-	} while (atom_get(&this->state, atom_acq) == WeaverState_Join);
+	} while (atom_get(&this->state, atom_acq) == WeaverState_JoinIdle);
 
 	#if Weaver_SAFE
 		{
@@ -136,9 +144,9 @@ void Weaver_boot(Weaver *this) {
 			if (state != WeaverState_Sync)
 				PANIC("invalid state after boot");
 
-			auto pool = atom_get(&this->pool_info, atom_acq);
-			if (FIELD_GET(WeaverPoolInfo_Sync, pool) != 0)
-				PANIC("live count mismatch");
+			auto sync = atom_get(&this->idle_sync, atom_acq);
+			if (sync != 0)
+				PANIC("idle_sync mismatch");
 		}
 	#else
 		atom_set(&this->state, WeaverState_Run, atom_sync);
@@ -147,7 +155,6 @@ void Weaver_boot(Weaver *this) {
 	#if Weaver_DEBUG
 		PRINTBP(128, Stdout, "Weaver_boot: sync\n")
 	#endif
-
 }
 
 void Weaver_join(Weaver *this) {
@@ -157,51 +164,73 @@ void Weaver_join(Weaver *this) {
 
 	#if Weaver_SAFE
 		{
-			auto state = atom_exchg(&this->state, WeaverState_Join, atom_sync);
+			auto state = atom_exchg(&this->state, WeaverState_JoinIdle, atom_sync);
 			if (state != WeaverState_Run)
 				PANIC("invalid state");
 		}
 	#else
-		atom_set(&this->state, WeaverState_Join, atom_sync);
+		atom_set(&this->state, WeaverState_JoinIdle, atom_sync);
 	#endif
 
 	// check if all threads are already idle
-	if ((atom_get(&this->pool_info, atom_acq) & WeaverPoolInfo_Sync_mask) == 0) {
+	if (atom_get(&this->idle_sync, atom_acq) == 0) {
+		#if Weaver_DEBUG
+			PRINTBP(128, Stdout, "Weaver_join: all threads already idle\n");
+		#endif
+
 		#if Weaver_SAFE
 			{
-				auto state = atom_exchg(&this->state, WeaverState_Down, atom_sync);
-				if (state != WeaverState_Join)
+				auto state = atom_exchg(&this->state, WeaverState_JoinDown, atom_sync);
+				if (state != WeaverState_JoinIdle)
 					PANIC("invalid state")
 			}
 		#else
-			atom_set(&this->state, WeaverState_Down);
+			atom_set(&this->state, WeaverState_JoinDown);
 		#endif
 
 		goto down;
 	}
 
-	do switch (Async_wait32(&this->state, WeaverState_Join, 0)) {
+	#if Weaver_DEBUG
+		PRINTBP(128, Stdout, "Weaver_join: wait for idle\n");
+	#endif
+
+	do switch (Async_wait32(&this->state, WeaverState_JoinIdle, 0)) {
 		default: TODO("handle error");
 		case AsyncWaitRes_Mismatch:
 		case AsyncWaitRes_Ok:
-	} while (atom_get(&this->state, atom_acq) == WeaverState_Join);
+	} while (atom_get(&this->state, atom_acq) == WeaverState_JoinIdle);
 
 	#if Weaver_SAFE
 		{
-			auto state = atom_exchg(&this->state, WeaverState_Down, atom_sync);
+			auto state = atom_exchg(&this->state, WeaverState_JoinDown, atom_sync);
 			if (state != WeaverState_Sync)
 				PANIC("invalid state");
-		}
 
+			auto sync = atom_get(&this->idle_sync, atom_acq);
+			if (sync != 0)
+				PANIC("idle_sync mismatch");
+		}
+	#else
+		atom_set(&this->state, WeaverState_JoinDown, atom_sync);
+	#endif
+
+	#if Weaver_DEBUG
+		PRINTBP(128, Stdout, "Weaver_join: wake\n");
+	#endif
+
+	down:;
+
+	#if Weaver_SAFE
 		{
 			auto sync = atom_exchg(&this->down_sync, this->threads_size, atom_sync);
 			if (sync != 0)
 				PANIC("down_sync non zero");
 		}
 	#else
-		atom_set(&this->state, WeaverState_Down, atom_sync);
 		atom_set(&this->down_sync, this->threads_size, atom_sync);
 	#endif
+
 
 	auto it = this->threads;
 	auto const end = it + this->threads_size;
@@ -220,24 +249,32 @@ void Weaver_join(Weaver *this) {
 		if (res) TODO("handle error");
 	}
 
-	down:;
-
-	u32 state;
-	do switch (Async_wait32(&this->state, WeaverState_Down, 0)) {
+	do switch (Async_wait32(&this->state, WeaverState_JoinDown, 0)) {
 		default: TODO("handle error");
 		case AsyncWaitRes_Mismatch:
 		case AsyncWaitRes_Ok:
-	} while((state = atom_get(&this->state, atom_acq)) == WeaverState_Down);
+	} while(atom_get(&this->state, atom_acq) == WeaverState_JoinDown);
 
 	#if Weaver_SAFE
-		if (state != WeaverState_Sync)
-			PANIC("invalid state");
+		{
+			auto state = atom_exchg(&this->state, WeaverState_Down, atom_sync);
+			if (state != WeaverState_Sync)
+				PANIC("invalid state");
+
+			auto sync = atom_get(&this->down_sync, atom_acq);
+			if (sync != 0)
+				PANIC("down_sync mismatch");
+		}
+	#else
+		atom_set(&this->state, WeaverState_Down, atom_sync);
 	#endif
 
 	#if Weaver_USE_PTHREAD
 		it = this->threads;
 		for (; it < end; it++) {
-			pthread_join(it->thread, nullptr);
+			[[maybe_unused]]
+			auto res = pthread_join(it->thread, nullptr);
+			if (res) TODO("handle pthread_join error");
 		}
 	#endif
 }
@@ -474,9 +511,9 @@ AlcRes Weaver_init(
 	this->alc = alc;
 	this->threads_size = threads_size;
 
-	memset(this->idle_map, 0, sizeof(this->idle_map));
+	//memset(this->idle_map, 0, sizeof(this->idle_map));
 	this->state = WeaverState_Down;
-	this->pool_info = 0; // setup in boot function
+	this->idle_sync = 0; // setup in boot function
 	this->down_sync = 0;
 
 
