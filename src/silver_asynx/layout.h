@@ -31,7 +31,7 @@ constexpr AsyncTaskState Asynx_nullstate = 0;
 
 constexpr u8 AsynxForkId_width = AsynxForkId_WIDTH;
 constexpr AsynxForkId AsynxForkId_mask = (AsynxForkId)(u64_max >> (64 - AsynxForkId_width));
-constexpr AsynxForkId AsynxForkId_max = AsynxForkId_mask - 1;
+constexpr AsynxForkId AsynxForkId_max = AsynxForkId_mask;
 
 #ifndef AsynxLabel_WIDTH
 	#define AsynxLabel_WIDTH 8
@@ -53,6 +53,8 @@ constexpr u8 AsynxLabel_width = AsynxLabel_WIDTH;
 constexpr AsynxLabel AsynxLabel_max = (AsynxLabel)(~0ull);
 
 #define Asynx_TASKALIGN 0
+
+constexpr AsyncTaskState AsynxForkId_one = 1ull << AsynxLabel_width;
 
 AsyncTaskState Asynx_makestate(AsynxForkId fork_id, AsynxLabel label) {
 	return (AsyncTaskState)(

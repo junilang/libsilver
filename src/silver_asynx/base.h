@@ -11,9 +11,9 @@ typedef struct Asynx_TASKBODY() AsynxGenericTask;
 	typedef STRUCTDECL(Asynx_TOK(_Task)); \
 	struct Asynx_TOK(_Task) Asynx_TASKBODY(__VA_ARGS__);
 
-#define Asynx_LABEL(label) \
-	[[fallthrough]]; case Asynx_TOK(_label_##label): \
-	[[maybe_unused]] asynx_label_##label##__:
+#define Asynx_LABEL(lbl) \
+	[[fallthrough]]; case Asynx_TOK(_label_##lbl): \
+	[[maybe_unused]] asynx_label_##lbl##__:
 
 #define Asynx_SELF(lbl) \
 	AsyncTask_upcast(asynx_data__, Asynx_makestate(asynx_fork_id__, Asynx_TOK(_label_##lbl)))
@@ -29,6 +29,11 @@ typedef struct Asynx_TASKBODY() AsynxGenericTask;
 		Ptr const asynx_vdata__, AsyncRT *const asynx_rt__, \
 		AsyncTaskArgs const asynx_args__, AsyncResult *asynx_result__ \
 	) { \
+		[[maybe_unused]] \
+		union { \
+			AlcRes alc; \
+			AsynxForkErr fork; \
+		} asynx_error__; \
 		auto const asynx_state__ = AsyncTaskArgs_state(asynx_args__); \
 		[[maybe_unused]] \
 		auto const asynx_context__ = AsyncTaskArgs_context(asynx_args__); \
@@ -70,4 +75,6 @@ typedef struct Asynx_TASKBODY() AsynxGenericTask;
 				return AsyncFuture_resolve(asynx_data__->return_future__, asynx_result__); \
 		} \
 		UNREACHABLE; \
+		asynx_catch_fork:; \
+		asynx_catch_alc:; \
 	}

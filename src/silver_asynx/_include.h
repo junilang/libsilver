@@ -12,9 +12,11 @@
 	#endif
 
 	#include "layout.h"
-	#include "base.h"
 	#include "spawn.h"
 	#include "create.h"
 	#include "flow.h"
 	#include "call.h"
+	#include "fork.h"
+	#include "error.h"
+	#include "base.h"
 #endif

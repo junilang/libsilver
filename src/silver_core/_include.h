@@ -12,6 +12,7 @@
 	#include "field.h"
 	#include "enum.h"
 	#include "interface.h"
+	#include "cpu.h"
 
 	#include "memory.h"
 	#include "chkdop.h"

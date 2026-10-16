@@ -29,17 +29,17 @@ constexpr u64 Async_nanos = 1ull;
 
 AsyncWaitRes Async_sleep(u64 timeout);
 
-AsyncWaitRes Async_wait8(_Atomic u8_lf *addr, u8 expected_value, u64 timeout);
-AsyncWaitRes Async_wait16(_Atomic u16_lf *addr, u16 expected_value, u64 timeout);
-AsyncWaitRes Async_wait32(_Atomic u32_lf *addr, u32 expected_value, u64 timeout);
-AsyncWaitRes Async_wait64(_Atomic u64_lf *addr, u64 expected_value, u64 timeout);
+AsyncWaitRes Async_wait8(Ptr addr, u8 expected_value, u64 timeout);
+AsyncWaitRes Async_wait16(Ptr addr, u16 expected_value, u64 timeout);
+AsyncWaitRes Async_wait32(Ptr addr, u32 expected_value, u64 timeout);
+AsyncWaitRes Async_wait64(Ptr addr, u64 expected_value, u64 timeout);
 
-AsyncWaitRes Async_wake8_get(_Atomic u8_lf *addr, int *io_n);
-AsyncWaitRes Async_wake16_get(_Atomic u16_lf *addr, int *io_n);
-AsyncWaitRes Async_wake32_get(_Atomic u32_lf *addr, int *io_n);
-AsyncWaitRes Async_wake64_get(_Atomic u64_lf *addr, int *io_n);
+AsyncWaitRes Async_wake8_get(Ptr addr, int *io_n);
+AsyncWaitRes Async_wake16_get(Ptr addr, int *io_n);
+AsyncWaitRes Async_wake32_get(Ptr addr, int *io_n);
+AsyncWaitRes Async_wake64_get(Ptr addr, int *io_n);
 
-AsyncWaitRes Async_wake8(_Atomic u8_lf *addr, int n);
-AsyncWaitRes Async_wake16(_Atomic u16_lf *addr, int n);
-AsyncWaitRes Async_wake32(_Atomic u32_lf *addr, int n);
-AsyncWaitRes Async_wake64(_Atomic u64_lf *addr, int n);
+AsyncWaitRes Async_wake8(Ptr addr, int n);
+AsyncWaitRes Async_wake16(Ptr addr, int n);
+AsyncWaitRes Async_wake32(Ptr addr, int n);
+AsyncWaitRes Async_wake64(Ptr addr, int n);

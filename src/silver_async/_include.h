@@ -5,7 +5,6 @@
 #if !LIBSILVER_ASYNC_INCLUDE
 	#define LIBSILVER_ASYNC_INCLUDE true
 
-	#include "cpu.h"
 	#include "atomic.h"
 	#include "atomic_types.h"
 	#include "Arc.h"
@@ -20,9 +19,10 @@
 	#include "Async.h"
 	#include "AsyncRT.h"
 	#include "AsyncTask.h"
+
 	#include "AsyncFuture.h"
-	#include "AsyncFuture_Mutex.h"
-	#include "AsyncFuture_Task.h"
-	#include "AsyncFuture.c"
+	//#include "AsyncFuture_Mutex.h"
+	//#include "AsyncFuture_Task.h"
+	//#include "AsyncFuture.c"
 
 #endif

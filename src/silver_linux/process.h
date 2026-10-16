@@ -8,5 +8,6 @@ LINUX_SYSCALL_GENERATE(linux_waitid, __NR_waitid,
 )
 
 LINUX_SYSCALL_GENERATE(linux_sched_yield, __NR_sched_yield, ())
+#define OS_SCHED_YIELD linux_sched_yield()
 
 LINUX_SYSCALL_GENERATE(linux_sysinfo, __NR_sysinfo, (struct sysinfo *out_info), out_info)
