@@ -14,6 +14,7 @@ enum {
 	AsyncError_Origin_Unknown,
 	AsyncError_Origin_Submit,
 	AsyncError_Origin_FutureResolve,
+	AsyncError_Origin_FutureResolveError,
 	AsyncError_Origin_FutureWait,
 	AsyncError_Origin_Aux, // user errors
 };
@@ -23,7 +24,7 @@ enum {
 	AsyncError_Class_Unknown,
 	AsyncError_Class_AlcRes,
 	AsyncError_Class_AsyncWaitRes,
-	AsyncError_Class_AsyncFutureError,
+	AsyncError_Class_AsyncFutureRes,
 	AsyncError_Class_Aux,
 };
 
@@ -33,8 +34,8 @@ typedef u32 AsyncError; enum {
 	FIELD_DEF(AsyncError_Origin, 8)
 };
 
-
-constexpr u8 AsyncError_width = 32;
+#define AsyncError_WIDTH 32
+constexpr u8 AsyncError_width = AsyncError_WIDTH;
 
 constexpr u8 AsyncError_Code_width = FIELD_WIDTH(AsyncError_Code);
 constexpr auto AsyncError_Code_max = FIELD_MAX(AsyncError_Code);
