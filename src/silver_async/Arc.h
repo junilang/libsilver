@@ -5,15 +5,28 @@
 constexpr usize Arc_tagmask = 0b11ull;
 constexpr usize Arc_ptrmask = ~Arc_tagmask;
 
-typedef enum : u8 {
-	ArcClass_Owner,
-	ArcClass_Weak,
-	ArcClass_Const
-} ArcClass;
+#define XS \
+	X(Owner) \
+	X(Weak) \
+	X(Const)
+
+	typedef enum : u8 {
+		#define X(N) ArcClass_##N,
+			XS
+		#undef X
+	} ArcClass;
+
+	const String ArcClass_repr[] = {
+		#define X(N) [ArcClass_##N] = String_INIT("ArcClass_"#N),
+			XS
+		#undef X
+	};
+
+#undef XS
 
 typedef union {
 	_Alignas(Arc_tagmask + 1) char align__;
-	_Atomic(u32_lf) count;
+	_Atomic u32_lf count;
 } ArcState;
 
 typedef union {

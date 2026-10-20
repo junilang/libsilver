@@ -78,7 +78,7 @@ AsynxForkId Asynx_getlabel(AsyncTaskState state) {
 				AsyncFn entry__; \
 				union { \
 					AsyncTask return_task__; \
-					AsyncFuture return_future__; \
+					AsyncFuture *return_future__; \
 				}; \
 				AsynxForkSync fork_sync__; \
 				AsynxForkId fork_count__; \

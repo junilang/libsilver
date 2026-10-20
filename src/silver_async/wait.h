@@ -7,18 +7,17 @@
 	X(ErrClock) \
 	X(ErrUnknown)
 
+	typedef enum : u8 {
+		#define X(N) AsyncWaitRes_##N,
+			XS
+		#undef X
+	} AsyncWaitRes;
 
-typedef enum : u8 {
-	#define X(N) AsyncWaitRes_##N,
-		XS
-	#undef X
-} AsyncWaitRes;
-
-const String AsyncWaitRes_repr[] = {
-	#define X(N) [AsyncWaitRes_##N] = String_INIT("AsyncWaitRes_"#N),
-		XS
-	#undef X
-};
+	const String AsyncWaitRes_repr[] = {
+		#define X(N) [AsyncWaitRes_##N] = String_INIT("AsyncWaitRes_"#N),
+			XS
+		#undef X
+	};
 
 #undef XS
 

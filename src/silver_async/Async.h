@@ -1,32 +1,76 @@
 typedef STRUCTDECL(AsyncTask);
 typedef STRUCTDECL(AsyncResult);
 
-typedef enum : u8 {
-	AsyncIntent_Yield, // async task finished without result
-	AsyncIntent_Resume, // async task resumes parent task
-	AsyncIntent_Call, // async task calls child task
-	AsyncIntent_Suspend, // async task requests to be requeued
-	AsyncIntent_Error // async task error
-} AsyncIntent;
+#define XS \
+	X(Yield) /* async task finished without result */ \
+	X(Resume) /* async task resumes parent task */ \
+	X(Call) /* async task calls child task */ \
+	X(Suspend) /* async task requests to be requeued */ \
+	X(Error) /* async task error */
 
-enum {
-	AsyncError_Origin_None,
-	AsyncError_Origin_Unknown,
-	AsyncError_Origin_Submit,
-	AsyncError_Origin_FutureResolve,
-	AsyncError_Origin_FutureResolveError,
-	AsyncError_Origin_FutureWait,
-	AsyncError_Origin_Aux, // user errors
-};
+	typedef enum : u8 {
+		#define X(N) AsyncIntent_##N,
+			XS
+		#undef X
+	} AsyncIntent;
 
-enum {
-	AsyncError_Class_None,
-	AsyncError_Class_Unknown,
-	AsyncError_Class_AlcRes,
-	AsyncError_Class_AsyncWaitRes,
-	AsyncError_Class_AsyncFutureRes,
-	AsyncError_Class_Aux,
-};
+	const String AsyncIntent_repr[] = {
+		#define X(N) [AsyncIntent_##N] = String_INIT("AsyncIntent_"#N),
+			XS
+		#undef X
+	};
+
+#undef XS
+
+#define XS \
+	X(None) \
+	X(Unknown) \
+	X(FutureInvalidate) \
+	X(FutureGetError) \
+	X(FutureSetError) \
+	X(FutureSetTask) \
+	X(FutureWait) \
+	X(FutureResolve) \
+	X(Aux)
+
+	typedef enum : u8 {
+		#define X(N) AsyncError_Origin_##N,
+			XS
+		#undef X
+	} AsyncError_Origin;
+
+	const String AsyncError_Origin_repr[] = {
+		#define X(N) [AsyncError_Origin_##N] = String_INIT("AsyncError_Origin_"#N),
+			XS
+		#undef X
+	};
+
+#undef XS
+
+
+#define XS \
+	X(None) \
+	X(Unknown) \
+	X(AlcRes) \
+	X(AsyncWaitRes) \
+	X(AsyncFutureRes) \
+	X(Aux)
+
+	typedef enum : u8 {
+		#define X(N) AsyncError_Class_##N,
+			XS
+		#undef X
+	} AsyncError_Class;
+
+	const String AsyncError_Class_repr[] = {
+		#define X(N) [AsyncError_Class_##N] = String_INIT("AsyncError_Class_"#N),
+			XS
+		#undef X
+	};
+
+#undef XS
+
+typedef u16 AsyncError_Code;
 
 typedef u32 AsyncError; enum {
 	FIELD_DEF(AsyncError_Code, 16),
@@ -47,3 +91,15 @@ constexpr u8 AsyncError_Origin_width = FIELD_WIDTH(AsyncError_Origin);
 constexpr auto AsyncError_Origin_max = FIELD_MAX(AsyncError_Origin);
 
 constexpr AsyncError AsyncError_none = 0;
+
+AsyncError_Origin AsyncError_origin(AsyncError error) {
+	return FIELD_GET(AsyncError_Origin, error);
+}
+
+AsyncError_Class AsyncError_class(AsyncError error) {
+	return FIELD_GET(AsyncError_Origin, error);
+}
+
+AsyncError_Code AsyncError_code(AsyncError error) {
+	return FIELD_GET(AsyncError_Code, error);
+}

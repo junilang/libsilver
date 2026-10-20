@@ -1,29 +1,30 @@
 typedef enum : u8 {
-	AsynxForkErr_None,
-	AsynxForkErr_Recursive,
-	AsynxForkErr_Overflow,
-	AsynxForkErr_Zero,
-	AsynxForkErr_One
-} AsynxForkErr;
+	AsynxForkRes_Ok,
+	AsynxForkRes_ErrRecursive,
+	AsynxForkRes_ErrOverflow,
+	AsynxForkRes_ErrZero,
+	AsynxForkRes_ErrOne
+} AsynxForkRes;
 
-AsynxForkErr Asynx_forkvalidate(AsynxForkId id, usize n) {
+AsynxForkRes Asynx_forkvalidate(AsynxForkId id, usize n) {
 	#if Asynx_SAFE
 		if (id != 0)
-			return AsynxForkErr_Recursive;
+			return AsynxForkRes_ErrRecursive;
 
 		if (n > AsynxForkId_max)
-			return AsynxForkErr_Overflow;
+			return AsynxForkRes_ErrOverflow;
 
 		if (n == 0)
-			return AsynxForkErr_Zero;
+			return AsynxForkRes_ErrZero;
 
 		if (n == 1)
-			return AsynxForkErr_One;
+			return AsynxForkRes_ErrOne;
 	#endif
 
-	return AsynxForkErr_None;
+	return AsynxForkRes_Ok;
 }
 
+// size of stack array in Asynx_fork function
 constexpr usize Asynx_fsasize = Asynx_FSASIZE;
 
 AlcRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state) {
@@ -57,17 +58,37 @@ AlcRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state
 #define Asynx_FORK_IMMEDIATE_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
 	auto const state = Asynx_makestate(2, Asynx_TOK(_label_##lbl)); \
-	asynx_error__ = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state); \
-	if (res)
+	asynx_error__.alc = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state); \
+	if (asynx_error__.alc) goto asynx_catch_alc__; \
 	asynx_fork_id__ = 1; \
 	goto asynx_label_##lbl##__; \
 }
 
+#define Asynx_FORK_IMMEDIATE(lbl, n_) \
+	Asynx_FORK_IMMEDIATE_TO(lbl, n_) \
+	Asynx_LABEL(lbl) \
+
 #define Asynx_FORK_RESUME_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
-	auto state = Asynx_makestate(1, Asynx_TOK(_label##lbl)); \
-	auto res = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state + AsynxForkId_one); \
-	if (res)
+	auto const state = Asynx_makestate(1, Asynx_TOK(_label##lbl)); \
+	asynx_error__.alc = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state + AsynxForkId_one); \
+	if (asynx_error__.alc) goto asynx_catch_alc__; \
 	asynx_result__->task = AsyncTask_upcast(asynx_data__, state); \
-	return AsyncIntent_Resume;
+	return AsyncIntent_Resume; \
 }
+
+#define Asynx_FORK_RESUME(lbl, n_) \
+	Asynx_FORK_RESUME_TO(lbl, n_) \
+	Asynx_LABEL(lbl) \
+
+#define Asynx_FORK_SUSPEND_TO(lbl, n_) { \
+	Asynx_FORK_COMMON(n_) \
+	auto const state = Asynx_makestate(1, Asynx_TOK(_label_##lbl)); \
+	asynx_error__.alc = Asynx_fork(asynx_rt__, asynx_data__, n, state); \
+	if (asynx_error__.alc) goto asynx_catch_alc__; \
+	return AsyncIntent_Yield; \
+}
+
+#define Asynx_FORK_SUSPEND(lbl, n_) \
+	Asynx_FORK_SUSPEND_TO(lbl, n_) \
+	Asynx_LABEL(lbl) \

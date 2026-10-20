@@ -89,7 +89,6 @@ struct AsyncResult {
 	union {
 		AsyncTask task;
 		AsyncError error;
-		usize value;
 	};
 };
 
