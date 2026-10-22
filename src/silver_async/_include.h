@@ -16,13 +16,10 @@
 		#error "unsupported platform"
 	#endif
 
-	#include "Async.h"
+	#include "Async_decl.h"
+	#include "AsyncRes.h"
 	#include "AsyncRT.h"
 	#include "AsyncTask.h"
-
 	#include "AsyncFuture.h"
-	//#include "AsyncFuture_Mutex.h"
-	//#include "AsyncFuture_Task.h"
-	//#include "AsyncFuture.c"
 
 #endif
