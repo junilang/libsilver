@@ -52,8 +52,6 @@ constexpr AsynxForkId AsynxForkId_max = AsynxForkId_mask;
 constexpr u8 AsynxLabel_width = AsynxLabel_WIDTH;
 constexpr AsynxLabel AsynxLabel_max = (AsynxLabel)(~0ull);
 
-#define Asynx_TASKALIGN 0
-
 constexpr AsyncTaskState AsynxForkId_one = 1ull << AsynxLabel_width;
 
 AsyncTaskState Asynx_makestate(AsynxForkId fork_id, AsynxLabel label) {
@@ -70,10 +68,10 @@ AsynxForkId Asynx_getlabel(AsyncTaskState state) {
 	return (AsynxForkId)(state & AsynxLabel_max);
 }
 
-#define Asynx_TASKBODY(...) \
+#define Asynx_TASKBODY(align, ...) \
 	{ \
 		union { \
-			_Alignas((Asynx_TASKALIGN ? Asynx_TASKALIGN : cpu_hdi_size)) char align__; \
+			_Alignas((align ? align : cpu_hdi_size)) char align__; \
 			struct { \
 				AsyncFn entry__; \
 				union { \

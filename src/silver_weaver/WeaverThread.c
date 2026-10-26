@@ -39,42 +39,39 @@
 		if (AsyncTask_isnull(pending_task))
 			goto fetch_task;
 
-		AsyncResult result;
-		switch (AsyncTask_call(pending_task, (AsyncRT*)rt, id, &result)) {
+		AsyncTask task;
+		auto const task_res = AsyncTask_call(pending_task, (AsyncRT*)rt, id, &task);
+		switch (task_res) {
 			case AsyncIntent_Call:
 				#if Weaver_CALL_IMMEDIATE
-					pending_task = result.task;
+					pending_task = task;
 					goto load_state;
 				#else
-					break;
+					goto suspend_task;
 				#endif
 
 			case AsyncIntent_Resume:
 				#if Weaver_RESUME_IMMEDIATE
-					pending_task = result.task;
+					pending_task = task;
 					goto load_state;
 				#else
-					break;
+					goto suspend_task;
 				#endif
 
-
 			case AsyncIntent_Suspend:
-				break;
+				goto suspend_task;
 
 			case AsyncIntent_Yield:
 				pending_task = AsyncTask_null;
 				goto load_state;
 
-			case AsyncIntent_Error:
-				TODO("handle error");
-
-			default:
-				UNREACHABLE;
+			default:;
 		}
 
+		suspend_task:;
+		auto submit_res = Weaver_submit(rt, &task, 1);
 		pending_task = AsyncTask_null;
-		auto res = Weaver_submit(rt, &result.task, 1);
-		if (res) TODO("handle error");
+		if (submit_res) TODO("handle error");
 		goto load_state;
 	}
 
@@ -190,7 +187,7 @@
 
 		idle:;
 		#if Weaver_DEBUG
-			PRINTBP(128, Stdout, "[",id,"] going idle\n");
+			PRINTBP(128, Stdout, "[",id,"] going idle ",atom_get(&this->state, atom_acq),"\n");
 		#endif
 
 		#if 0

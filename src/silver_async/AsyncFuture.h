@@ -362,8 +362,6 @@ AsyncRes AsyncFuture_seterror(
 	return error;
 }
 
-
-
 AsyncRes AsyncFuture_settask(
 	AsyncFuture *this, AsyncTask task, AsyncIntent intent
 ) {
@@ -465,14 +463,14 @@ AsyncRes AsyncFuture_settask(
 	if (
 		atom_cmpx(&this->info, &info,
 			(info & (~AsyncFuture_TaskLock)) | intent_info,
-			atom_sync, atom_sync
+			atom_sync, atom_acq
 		)
 	) return AsyncRes_Ok;
 
 	while (
 		!atom_cmpx(&this->info, &info,
 			(info & (~AsyncFuture_TaskLock)) | intent_info,
-			atom_sync, atom_sync
+			atom_sync, atom_acq
 		)
 	) {}
 
@@ -607,7 +605,7 @@ AsyncRes AsyncFuture_wait(AsyncFuture *this, u64 timeout) {
 
 AsyncRes AsyncFuture_resolve(AsyncFuture *this, AsyncTask *out_task) {
 	constexpr auto error_origin = FIELD(AsyncRes_Origin, FutureResolve);
-	AsyncRes error;
+	//AsyncRes error;
 
 	AsyncFutureInfo info = atom_sub(&this->info, AsyncFuture_Triggers_one, atom_sync);
 
@@ -693,6 +691,21 @@ AsyncRes AsyncFuture_resolve(AsyncFuture *this, AsyncTask *out_task) {
 				return XRES(IsInvalid);
 
 			if (info & FLAG(AsyncFuture_Error)) {
+				#if AsyncFuture_SYNCERROR
+					if (info & AsyncFuture_ErrorLock) {
+						do {
+							CPU_YIELD;
+							info = atom_get(&this->info, atom_acq);
+						} while (info & AsyncFuture_ErrorLock);
+
+						#if AsyncFuture_SAFE
+							if (info & FLAG(AsyncFuture_Invalid))
+								return XRES(IsInvalid);
+						#endif
+					}
+				#endif
+
+				return XRES(IsError);
 			}
 		#endif
 	}
@@ -701,122 +714,23 @@ AsyncRes AsyncFuture_resolve(AsyncFuture *this, AsyncTask *out_task) {
 	if (intent)
 		*out_task = this->task;
 
-
-
-	#if 0
-
-	// if count is not 1 return
-	if (count > AsyncFuture_Triggers_single)
-		return AsyncIntent_Yield;
-
-	// check if count underflowed
-	if (count < AsyncFuture_Triggers_single) {
-		error = XRES(ErrUnderflow);
-		goto invalidate_wake;
-	}
-
-	// resolve future
-	info = atom_or(&this->info, FLAG(AsyncFuture_Resolved), atom_sync);
-
-	#if AsyncFuture_SAFE
-		// check for error/invalidation again
-		if (info & FLAG(AsyncFuture_Resolved))
-			goto already_resolved;
-	#endif
-
-	// future is resolved,
-	AsyncIntent const intent = FIELD_GET(AsyncFuture_Intent, info);
-	// if intent for task is set, return the task
-	if (intent) {
-		// wait for write lock
-		if (info & FLAG(AsyncFuture_Lock)) {
-			do {
-				CPU_YIELD;
-				info = atom_get(&this->info, atom_acq);
-			} while (info & FLAG(AsyncFuture_Lock));
-
-			#if AsyncFuture_SAFE
-				// if future got invalidated while waiting
-				if (info & FLAG(AsyncFuture_Invalid)) {
-					error = XRES(IsInvalid);
-
-					// since this thread resolved the future first
-					// we need to wake up waiting threads even though
-					// another thread invalidated the future
-					if (info & FLAG(AsyncFuture_Waiting)) {
-						#if AsyncFuture_WAIT8
-							auto const res = Async_wake8(&this->info, Async_wakeall);
-						#else
-							auto const res = Async_wake32(&this->info, Async_wakeall);
-						#endif
-						if (res) error = XRES_UNKNOWN;
-					}
-
-					goto return_error;
-				}
-
-			#endif
-		}
-
-		result->task = this->task;
-	}
-
-	// wake up threads waiting on the state
-	if (info & FLAG(AsyncFuture_Waiting)) {
+	// wake up threads
+	if (info & FIELD_MASK(AsyncFuture_Waiting)) {
 		#if AsyncFuture_WAIT8
 			auto const res = Async_wake8(&this->info, Async_wakeall);
 		#else
 			auto const res = Async_wake32(&this->info, Async_wakeall);
 		#endif
 
-		// invalidate future if waking failed
+		// invalide future
 		if (res) {
-			error = XRES_WAIT(res);
-			goto invalidate;
+			info = atom_or(&this->info, FLAGS(AsyncFuture, Resolved, Invalid), atom_sync);
+			return XRES_WAIT(res);
 		}
+
 	}
 
 	return intent;
-
-	if (0) already_resolved: {
-		if (info & FLAG(AsyncFuture_Invalid)) {
-			error = XRES(IsInvalid);
-			goto return_error;
-		}
-
-		if (info & FLAG(AsyncFuture_Error))
-			error = XRES(IsError);
-		else
-			error = XRES(IsResolved);
-
-		goto invalidate;
-	}
-
-	if (0) invalidate: {
-		info = atom_or(&this->info, FLAGS(AsyncFuture, Resolved, Invalid), atom_sync);
-	}
-
-	if (0) invalidate_wake: {
-		info = atom_or(&this->info, FLAGS(AsyncFuture, Resolved, Invalid), atom_sync);
-
-		// if only the waiting flag is set and not resolved flag
-		if ((info & FLAGS(AsyncFuture, Resolved, Waiting)) == FLAG(AsyncFuture_Waiting)) {
-			#if AsyncFuture_WAIT8
-				auto const res = Async_wake8(&this->info, Async_wakeall);
-			#else
-				auto const res = Async_wake32(&this->info, Async_wakeall);
-			#endif
-			// if wake failed, set error to unknown because
-			// we cant return multiple errors
-			if (res) error = XRES_UNKNOWN;
-		}
-	}
-
-	return_error:;
-	result->error = error;
-	return AsyncIntent_Error;
-
-	#endif
 }
 
 

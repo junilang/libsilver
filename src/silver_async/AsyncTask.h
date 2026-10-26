@@ -33,7 +33,7 @@ AsyncTaskState AsyncTaskArgs_state(AsyncTaskArgs args) {
 }
 
 AsyncTaskContext AsyncTaskArgs_context(AsyncTaskArgs args) {
-	return (AsyncTaskContext)(args & AsyncTaskContext_max);
+	return (AsyncTaskContext)((args >> AsyncTaskState_width) & AsyncTaskContext_max);
 }
 
 #if AsyncTask_PTRTAG

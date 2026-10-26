@@ -17,5 +17,7 @@
 	#include "flow.h"
 	#include "call.h"
 	#include "fork.h"
+	#include "join.h"
+	#include "wait.h"
 	#include "base.h"
 #endif

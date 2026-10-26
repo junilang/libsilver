@@ -8,7 +8,7 @@
 	goto asynx_label_##lbl##__
 
 #define Asynx_RESUME_TO(lbl) { \
-	asynx_result__->task = Asynx_SELF(lbl); \
+	*asynx_out_task__ = Asynx_SELF(lbl); \
 	return AsyncIntent_Resume; \
 }
 
@@ -17,7 +17,7 @@
 	Asynx_LABEL(lbl)
 
 #define Asynx_SUSPEND_TO(lbl) { \
-	asynx_result__->task = Asynx_SELF(lbl); \
+	*asynx_out_task__ = Asynx_SELF(lbl); \
 	return AsyncIntent_Suspend; \
 }
 

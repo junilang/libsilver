@@ -9,4 +9,4 @@
 	if (res) TODO("handle error"); \
 }
 
-#define Asynx_SPAWN(...) Asynx_SPAWN_WITH(async_rt__, __VA_ARGS__)
+#define Asynx_SPAWN(...) Asynx_SPAWN_WITH(asynx_rt__, __VA_ARGS__)

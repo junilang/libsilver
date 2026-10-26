@@ -1,3 +1,6 @@
+#define Asynx_SIZEOF(name) sizeof(name##_Task)
+#define Asynx_ALIGNOF(name) _Alignof(name##_Task)
+
 #define Asynx_CREATE(name, ...) \
 	LITERAL(name##_Task, \
 		.entry__ = &name##_entry, \
@@ -9,11 +12,11 @@
 	LITERAL(name##_Task, \
 		.entry__ = &name##_entry, \
 		.return__ = AsynxReturn_Resolve, \
-		.return_future__ = Asynx_UPCASTFUTURE(future), \
+		.return_future__ = (future), \
 		__VA_ARGS__ \
 	)
 
 #define Asynx_SET_RESOLVE(task, future) { \
 	(task)->return__ = AsynxReturn_Resolve; \
-	(task)->return_future__ = Asynx_UPCASTFUTURE(future); \
+	(task)->return_future__ = (future); \
 }

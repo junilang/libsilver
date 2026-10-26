@@ -50,7 +50,7 @@ AlcRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state
 }
 
 #define Asynx_FORK_COMMON(n_) \
-	asynx_error__.fork = Asynx_validatefork(asynx_fork_id__, (n_)); \
+	asynx_error__.fork = Asynx_forkvalidate(asynx_fork_id__, (n_)); \
 	if (asynx_error__.fork) goto asynx_catch_fork__;\
 	auto const n = (AsynxForkId)(n_); \
 	Asynx_SETFORK(asynx_data__, n); \
@@ -73,7 +73,7 @@ AlcRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state
 	auto const state = Asynx_makestate(1, Asynx_TOK(_label##lbl)); \
 	asynx_error__.alc = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state + AsynxForkId_one); \
 	if (asynx_error__.alc) goto asynx_catch_alc__; \
-	asynx_result__->task = AsyncTask_upcast(asynx_data__, state); \
+	*asynx_out_task__ = AsyncTask_upcast(asynx_data__, state); \
 	return AsyncIntent_Resume; \
 }
 
@@ -91,4 +91,4 @@ AlcRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state
 
 #define Asynx_FORK_SUSPEND(lbl, n_) \
 	Asynx_FORK_SUSPEND_TO(lbl, n_) \
-	Asynx_LABEL(lbl) \
+	Asynx_LABEL(lbl)
