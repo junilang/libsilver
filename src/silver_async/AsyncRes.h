@@ -47,6 +47,7 @@
 	X(AsyncWaitRes) \
 	X(AsyncFutureRes) \
 	X(AlcRes) \
+	X(Pthreads) \
 	X(Unknown) \
 	X(Aux)
 

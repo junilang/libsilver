@@ -6,6 +6,9 @@
 	#define LIBSILVER_CORE_INCLUDE true
 
 	#include "types.h"
+	#include "atomic_types.h"
+	#include "atomic.h"
+
 	#include "util.h"
 	#include "panic.h"
 	#include "flag.h"

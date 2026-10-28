@@ -9,4 +9,8 @@
 		#include "../silver_os.h"
 	#endif
 
+	#if !LIBSILVER_DATA_INCLUDE
+		#include "../silver_data.h"
+	#endif
+
 #endif

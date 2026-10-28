@@ -3,7 +3,10 @@
 #endif
 
 #if !LIBSILVER_DATA_INCLUDE
-	#define LIBSILVER_DATA_INCLUDE
+	#define LIBSILVER_DATA_INCLUDE true
+
+	#include "Rc.h"
+	#include "Arc.h"
 
 	#include "Vec.h"
 	#include "Vec32.h"

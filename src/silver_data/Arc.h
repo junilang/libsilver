@@ -78,15 +78,17 @@ Arc Arc_copy(Arc this) {
 		case ArcClass_Const:
 			return this;
 
+		case ArcClass_Weak:
 		#if Arc_SAFE
-			case ArcClass_Weak: {
+			{
+				// will segfault anyway if the state has been deallocated
 				ArcState *state = Arc_state(this);
-				if (atom_add(&state->count, 1, atom_seq) == 0)
-					PANIC("attempt to copy invalid weak reference");
+				ASSERT(
+					atom_add(&state->count, 1, atom_seq) != 0,
+					"attempt to copy invalid weak reference"
+				);
 				return Arc_upcast(state, ArcClass_Owner);
 			}
-		#else
-			case ArcClass_Weak:
 		#endif
 
 		case ArcClass_Owner: {

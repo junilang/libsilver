@@ -11,17 +11,8 @@
 	X(ErrNoMemory) \
 	X(ErrUnsupported) \
 	X(ErrUnimplemented) \
-	X(ErrAux_0) \
-	X(ErrAux_1) \
-	X(ErrAux_2) \
-	X(ErrAux_3) \
-	X(ErrAux_4) \
-	X(ErrAux_5) \
-	X(ErrAux_6) \
-	X(ErrAux_7) \
-	X(ErrAux_8) \
-	X(ErrAux_9) \
-	X(ErrUnknown)
+	X(Unknown) \
+	X(Aux)
 
 typedef enum : u8 {
 	#define X(N) AlcRes_##N,
@@ -55,8 +46,8 @@ AlcRes AlcPtr_get(AlcPtr result) {
 	isize c = (isize)result;
 	if (c <= -1 && c >= -4095) {
 		u16 err = (u16)(-c);
-		if (err > AlcRes_ErrUnknown)
-			return AlcRes_ErrUnknown;
+		//if (err > AlcRes_ErrUnknown)
+			//return AlcRes_ErrUnknown;
 		return (AlcRes)err;
 	}
 	return AlcRes_Ok;

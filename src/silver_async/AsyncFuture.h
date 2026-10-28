@@ -108,11 +108,8 @@ typedef struct {
 
 void AsyncFuture_init(AsyncFuture *this, u32 triggers) {
 	#if AsyncFuture_SAFE
-		if (triggers > AsyncFuture_maxtriggers)
-			PANIC("too many triggers");
-
-		if (triggers == 0)
-			PANIC("need at least one intent");
+		ASSERT(triggers <= AsyncFuture_maxtriggers);
+		ASSERT(triggers != 0);
 	#endif
 
 	AsyncFutureInfo info =
@@ -120,9 +117,10 @@ void AsyncFuture_init(AsyncFuture *this, u32 triggers) {
 	;
 
 	#if AsyncFuture_SAFE
-		info = atom_exchg(&this->info, info, atom_sync);
-		if (info)
-			PANIC("future not zeroed");
+		ASSERT(
+			atom_exchg(&this->info, info, atom_sync) == 0,
+			"future not zeroed"
+		);
 	#else
 		this->info = info;
 	#endif
@@ -134,14 +132,9 @@ void AsyncFuture_inittask(
 	AsyncFuture *this, u32 triggers, AsyncTask task, AsyncIntent intent
 ) {
 	#if AsyncFuture_SAFE
-		if (triggers > AsyncFuture_maxtriggers)
-			PANIC("too many triggers");
-
-		if (triggers == 0)
-			PANIC("need at least one trigger");
-
-		if (intent > FIELD_MAX(AsyncFuture_Intent))
-			PANIC("intent out of range");
+		ASSERT(triggers <= AsyncFuture_maxtriggers);
+		ASSERT(triggers != 0);
+		ASSERT(intent <= FIELD_MAX(AsyncFuture_Intent));
 	#endif
 
 	AsyncFutureInfo info =
@@ -150,9 +143,10 @@ void AsyncFuture_inittask(
 	;
 
 	#if AsyncFuture_SAFE
-		info = atom_exchg(&this->info, info, atom_sync);
-		if (info)
-			PANIC("future not zeroed");
+		ASSERT(
+			atom_exchg(&this->info, info, atom_sync) == 0,
+			"future not zeroed"
+		);
 	#else
 		this->info = info;
 	#endif
@@ -164,26 +158,26 @@ void AsyncFuture_inittask(
 
 // macros to help construct AsyncRes values
 #define XRES(N) ( \
-	error_origin | FIELD(AsyncRes_Class, AsyncFutureRes) | \
+	res_origin | FIELD(AsyncRes_Class, AsyncFutureRes) | \
 	FIELD_SET(AsyncRes_Code, AsyncFutureRes_##N) \
 )
 
 #define XRES_ALC(val) ( \
-	error_origin | FIELD(AsyncRes_Class, AlcRes) | \
+	res_origin | FIELD(AsyncRes_Class, AlcRes) | \
 	FIELD_SET(AsyncRes_Code, (val)) \
 )
 
 #define XRES_WAIT(val) ( \
-	error_origin | FIELD(AsyncRes_Class, AsyncWaitRes) | \
+	res_origin | FIELD(AsyncRes_Class, AsyncWaitRes) | \
 	FIELD_SET(AsyncRes_Code, (val)) \
 )
 
-#define XRES_UNKNOWN (error_origin | FIELD(AsyncRes_Class, Unknown))
+#define XRES_UNKNOWN (res_origin | FIELD(AsyncRes_Class, Unknown))
 
 
 
 AsyncRes AsyncFuture_invalidate(AsyncFuture *this) {
-	constexpr auto error_origin = FIELD(AsyncRes_Origin, FutureInvalidate);
+	constexpr auto res_origin = FIELD(AsyncRes_Origin, FutureInvalidate);
 
 	AsyncFutureInfo info = atom_or(&this->info,
 		FLAGS(AsyncFuture, Resolved, Invalid),
@@ -225,7 +219,7 @@ AsyncRes AsyncFuture_invalidate(AsyncFuture *this) {
 
 
 AsyncRes AsyncFuture_geterror(AsyncFuture *this) {
-	constexpr auto error_origin = FIELD(AsyncRes_Origin, FutureGetError);
+	constexpr auto res_origin = FIELD(AsyncRes_Origin, FutureGetError);
 
 	AsyncFutureInfo info = atom_get(&this->info, atom_acq);
 
@@ -262,7 +256,7 @@ AsyncRes AsyncFuture_geterror(AsyncFuture *this) {
 AsyncRes AsyncFuture_seterror(
 	AsyncFuture *this, AsyncRes future_error
 ) {
-	constexpr AsyncRes error_origin = FIELD(AsyncRes_Origin, FutureSetError);
+	constexpr AsyncRes res_origin = FIELD(AsyncRes_Origin, FutureSetError);
 	AsyncRes error;
 
 	// set error flag and lock future for writing error value
@@ -365,13 +359,12 @@ AsyncRes AsyncFuture_seterror(
 AsyncRes AsyncFuture_settask(
 	AsyncFuture *this, AsyncTask task, AsyncIntent intent
 ) {
-	constexpr AsyncRes error_origin = FIELD(AsyncRes_Origin, FutureSetTask);
+	constexpr AsyncRes res_origin = FIELD(AsyncRes_Origin, FutureSetTask);
 	[[maybe_unused]]
 	AsyncRes error;
 
 	#if AsyncFuture_SAFE
-		if (intent > FIELD_MAX(AsyncFuture_Intent))
-			PANIC("intent out of range");
+		ASSERT(intent <= FIELD_MAX(AsyncFuture_Intent));
 	#endif
 
 	// set write lock and intent
@@ -504,7 +497,7 @@ AsyncRes AsyncFuture_settask(
 
 
 AsyncRes AsyncFuture_wait(AsyncFuture *this, u64 timeout) {
-	constexpr AsyncRes error_origin = FIELD(AsyncRes_Origin, FutureWait);
+	constexpr AsyncRes res_origin = FIELD(AsyncRes_Origin, FutureWait);
 	AsyncRes error;
 
 	// set waiting flag
@@ -604,7 +597,7 @@ AsyncRes AsyncFuture_wait(AsyncFuture *this, u64 timeout) {
 
 
 AsyncRes AsyncFuture_resolve(AsyncFuture *this, AsyncTask *out_task) {
-	constexpr auto error_origin = FIELD(AsyncRes_Origin, FutureResolve);
+	constexpr auto res_origin = FIELD(AsyncRes_Origin, FutureResolve);
 	//AsyncRes error;
 
 	AsyncFutureInfo info = atom_sub(&this->info, AsyncFuture_Triggers_one, atom_sync);
