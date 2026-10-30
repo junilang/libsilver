@@ -51,7 +51,7 @@
 
 #define PANIC_PRINT(...) { \
 	os_panic_write(STR(__func__)); \
-	os_panic_write(STR(PANIC_IDENTIFIER" PANIC: ")); \
+	os_panic_write(STR(" " PANIC_IDENTIFIER " PANIC: ")); \
 	OutStreamRes PRINT_outer_res__; \
 	PRINT(&PRINT_outer_res__, os_panic_stream() __VA_OPT__(,) __VA_ARGS__, "\n"); \
 	if (PRINT_outer_res__) { \
@@ -63,6 +63,24 @@
 		os_panic_write(STR("\n")); \
 	} \
 	os_panic(); \
+}
+
+#define ASSERT_PRINT(cond, ...) { \
+	if (!(cond)) { \
+		os_panic_write(STR(__func__)); \
+		os_panic_write(STR(" " PANIC_IDENTIFIER " ASSERT(" #cond "): ")); \
+		OutStreamRes PRINT_outer_res__; \
+		PRINT(&PRINT_outer_res__, os_panic_stream() __VA_OPT__(,) __VA_ARGS__, "\n"); \
+		if (PRINT_outer_res__) { \
+			os_panic_write(STR("\nASSERT_PRINT failed OutStreamRes: ")); \
+			os_panic_write( \
+				OutStreamRes_repr[PRINT_outer_res__].data, \
+				OutStreamRes_repr[PRINT_outer_res__].size \
+			); \
+			os_panic_write(STR("\n")); \
+		} \
+		os_panic(); \
+	} \
 }
 
 #define PRINT_ITEM(V) { \

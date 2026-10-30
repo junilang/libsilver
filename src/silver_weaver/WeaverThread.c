@@ -5,28 +5,30 @@
 #endif
 
 {
+	#if Weaver_DEBUG
+		#define XDEBUG(...) PRINTBP(128, Weaver_DEBUG_STREAM, "[",id,"] ", __func__, ": " __VA_OPT__(,) __VA_ARGS__, "\n")
+	#else
+		#define XDEBUG(...)
+	#endif
+
 	WeaverThread *const this = vthis;
-	auto const id = this->id;
+	auto const id = (u32)this->id + 1;
 	Weaver *const rt = this->rt;
 	AsyncTask pending_task = AsyncTask_null;
 	u32 state;
 
-	#if Weaver_DEBUG
-		PRINTBP(128, Stdout, "[",id,"] boot\n");
-	#endif
-
-	#if Weaver_DEBUG && Weaver_USE_TLS
+	#if Weaver_USE_TLS
 		t_WeaverThread_id = id;
 	#endif
+
+	XDEBUG("boot");
 
 	load_state:;
 	state = atom_get(&this->state, atom_acq);
 
 	dispatch_state:;
 
-	#if Weaver_DEBUG
-		PRINTBP(128, Stdout, "[",id,"] dispatch state ",state,"\n");
-	#endif
+	XDEBUG("dispatch state ", state);
 
 	switch (state) {
 		case WeaverThreadState_Down: goto Bdown;
@@ -176,9 +178,7 @@
 	if (0) Bidle: {
 		// resubmit pending task if thread was requested to go idle
 		if (!AsyncTask_isnull(pending_task)) {
-			#if Weaver_DEBUG
-				PRINTBP(128, Stdout, "[",id,"] resubmit\n");
-			#endif
+			XDEBUG("resubmit");
 
 			auto res = Weaver_submit(rt, &pending_task, 1);
 			if (res) TODO("handle error");
@@ -187,7 +187,7 @@
 
 		idle:;
 		#if Weaver_DEBUG
-			PRINTBP(128, Stdout, "[",id,"] going idle ",atom_get(&this->state, atom_acq),"\n");
+			XDEBUG("going idle ", atom_get(&this->state, atom_acq));
 		#endif
 
 		#if 0
@@ -199,9 +199,8 @@
 
 		// check if this is was the last running thread
 		if (atom_sub(&rt->idle_sync, 1, atom_sync) == 1) {
-			#if Weaver_DEBUG
-				PRINTBP(128, Stdout, "[",id,"] sync threads\n");
-			#endif
+			XDEBUG("sync threads");
+
 			// if the runtime is waiting for all threads to join, wake it up
 			u32 want = WeaverState_JoinIdle;
 			if (atom_cmpx(&rt->state, &want, WeaverState_Sync, atom_sync, atom_acq)) {
@@ -210,9 +209,7 @@
 			}
 		}
 
-		#if Weaver_DEBUG
-			PRINTBP(128, Stdout, "[",id,"] wait\n");
-		#endif
+		XDEBUG("wait")
 
 		do switch (Async_wait32(&this->state, WeaverThreadState_Idle, 0)) {
 			default: TODO("handle error");
@@ -225,9 +222,7 @@
 			atom_and(&rt->idle_map[map_idx], ~map_bit, atom_sync);
 		#endif
 
-		#if Weaver_DEBUG
-			PRINTBP(128, Stdout, "[",id,"] wake\n");
-		#endif
+		XDEBUG("wake")
 
 		atom_add(&rt->idle_sync, 1, atom_sync);
 
@@ -235,23 +230,17 @@
 	}
 
 	if (0) Bdown: {
-		#if Weaver_DEBUG
-			PRINTBP(128, Stdout, "[",id,"] down\n");
-		#endif
+		XDEBUG("down");
 
 		this->orphaned_task = pending_task;
 
 		// if this is the last thread to go down
 		if (atom_sub(&rt->down_sync, 1, atom_sync) == 1) {
-			#if Weaver_DEBUG
-				PRINTBP(128, Stdout, "[",id,"] down last\n");
-			#endif
+			XDEBUG("down last");
 
 			u32 want = WeaverState_JoinDown;
 			if (atom_cmpx(&rt->state, &want, WeaverState_Sync, atom_sync, atom_acq)) {
-				#if Weaver_DEBUG
-					PRINTBP(128, Stdout, "[",id,"] wake runtime\n");
-				#endif
+				XDEBUG("wake runtime");
 
 				auto res = Async_wake32(&rt->state, Async_wakeall);
 				if (res) TODO("handle error");
@@ -268,4 +257,6 @@
 	if (0) Berror: TODO("handle error");
 
 	UNREACHABLE;
+
+	#undef XDEBUG
 }

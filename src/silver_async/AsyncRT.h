@@ -1,9 +1,9 @@
 typedef struct {
-	AlcRes (*submit)(Ptr this, const AsyncTask *tasks, usize tasks_size);
+	AsyncRes (*submit)(Ptr this, const AsyncTask *tasks, usize tasks_size);
 	AlcPtr (*alc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 } AsyncRT;
 
-AlcRes AsyncRT_submit(AsyncRT *this, const AsyncTask *tasks, usize tasks_size) {
+AsyncRes AsyncRT_submit(AsyncRT *this, const AsyncTask *tasks, usize tasks_size) {
 	return this->submit(this, tasks, tasks_size);
 }
 

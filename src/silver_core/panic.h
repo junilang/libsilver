@@ -5,19 +5,18 @@ extern void os_panic_write(const ubyte *message, usize size);
 static void PANIC_internal(ConstPtr msg1, ConstPtr msg2, ConstPtr msg3, ConstPtr msg4) {
 	if (msg1) {
 		os_panic_write(msg1, __builtin_strlen(msg1));
-		os_panic_write(STR(" "));
 	}
 	if (msg2) {
-		os_panic_write(msg2, __builtin_strlen(msg2));
 		os_panic_write(STR(" "));
+		os_panic_write(msg2, __builtin_strlen(msg2));
 	}
 	if (msg3) {
-		os_panic_write(msg3, __builtin_strlen(msg3));
 		os_panic_write(STR(" "));
+		os_panic_write(msg3, __builtin_strlen(msg3));
 	}
 	if (msg4) {
-		os_panic_write(msg4, __builtin_strlen(msg4));
 		os_panic_write(STR(" "));
+		os_panic_write(msg4, __builtin_strlen(msg4));
 	}
 	os_panic_write(STR("\n"));
 	os_panic();
@@ -36,14 +35,7 @@ static void PANIC_internal(ConstPtr msg1, ConstPtr msg2, ConstPtr msg3, ConstPtr
 
 #define PANIC(...) {  \
 	PANIC_internal( \
-		__func__, PANIC_IDENTIFIER" PANIC:", \
-		PANIC_1##__VA_OPT__(_ENABLE)(__VA_ARGS__) \
-	); \
-}
-
-#define TODO(...) { \
-	PANIC_internal( \
-		__func__, PANIC_IDENTIFIER" TODO:", \
+		__func__, PANIC_IDENTIFIER" PANIC"__VA_OPT__(":"), \
 		PANIC_1##__VA_OPT__(_ENABLE)(__VA_ARGS__) \
 	); \
 }
@@ -51,7 +43,7 @@ static void PANIC_internal(ConstPtr msg1, ConstPtr msg2, ConstPtr msg3, ConstPtr
 #define ASSERT(cond, ...) { \
 	if (!(cond)) { \
 		PANIC_internal( \
-			__func__, PANIC_IDENTIFIER" ASSERT(" #cond ")", \
+			__func__, PANIC_IDENTIFIER" ASSERT(" #cond ")"__VA_OPT__(":"), \
 			PANIC_1##__VA_OPT__(_ENABLE)(__VA_ARGS__) \
 		); \
 	} \

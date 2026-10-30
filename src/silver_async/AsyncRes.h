@@ -27,11 +27,12 @@
 	X(FutureResolve) \
 	X(Aux)
 
-	typedef enum : u8 {
+	typedef u8 AsyncRes_Origin;
+	enum : AsyncRes_Origin {
 		#define X(N) AsyncRes_Origin_##N,
 			XS
 		#undef X
-	} AsyncRes_Origin;
+	};
 
 	const String AsyncRes_Origin_repr[] = {
 		#define X(N) [AsyncRes_Origin_##N] = String_INIT("AsyncRes_Origin_"#N),
@@ -41,21 +42,23 @@
 
 #undef XS
 
+#define AsyncRes_Origin_AUX AsyncRes_Origin_Aux
 
 #define XS \
 	X(AsyncIntent) /* AsyncIntent is class=0 */ \
 	X(AsyncWaitRes) \
 	X(AsyncFutureRes) \
 	X(AlcRes) \
-	X(Pthreads) \
+	X(Pthread) \
 	X(Unknown) \
 	X(Aux)
 
-	typedef enum : u8 {
+	typedef u8 AsyncRes_Class;
+	enum : AsyncRes_Class {
 		#define X(N) AsyncRes_Class_##N,
 			XS
 		#undef X
-	} AsyncRes_Class;
+	};
 
 	const String AsyncRes_Class_repr[] = {
 		#define X(N) [AsyncRes_Class_##N] = String_INIT("AsyncRes_Class_"#N),
@@ -64,6 +67,8 @@
 	};
 
 #undef XS
+
+#define AsyncRes_Class_AUX AsyncRes_Class_Aux
 
 typedef u16 AsyncRes_Code;
 

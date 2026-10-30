@@ -6,6 +6,10 @@
 	#define Weaver_DEBUG LIBSILVER_DEBUG
 #endif
 
+#ifndef Weaver_DEBUG_STREAM
+	#define Weaver_DEBUG_STREAM Stdout
+#endif
+
 #ifndef Weaver_USE_PTHREAD
 	#define Weaver_USE_PTHREAD LIBSILVER_USE_PTHREAD
 #endif

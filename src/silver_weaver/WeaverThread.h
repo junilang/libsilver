@@ -5,7 +5,6 @@ constexpr auto WeaverThreadId_width = 8;
 
 enum {
 	WeaverThreadState_Down,
-	// WeaverThreadState_Boot,
 	WeaverThreadState_Idle,
 	WeaverThreadState_Run,
 	WeaverThreadState_Error,
@@ -13,7 +12,7 @@ enum {
 
 typedef struct {
 	Weaver_CACHE_ALIGN struct {
-		#if WEAVER_USE_PTHREAD
+		#if Weaver_USE_PTHREAD
 			pthread_t thread;
 		#else
 			#error "unimplemented"
@@ -25,8 +24,8 @@ typedef struct {
 	};
 } WeaverThread;
 
-#if Weaver_DEBUG && Weaver_USE_TLS
-	_Thread_local u32 t_WeaverThread_id;
+#if Weaver_USE_TLS
+	_Thread_local u32 t_WeaverThread_id = 0;
 #endif
 
 #if Weaver_USE_PTHREAD

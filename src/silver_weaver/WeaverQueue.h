@@ -7,17 +7,12 @@ typedef u64 WeaverQueueInfo; enum {
 	FLAG_DEF(WeaverQueue_LockSwap),
 	FLAG_DEF(WeaverQueue_LockResize),
 	FIELD_DEF(WeaverQueue_Rc, WeaverThreadId_width),
+	// TODO add overflow protection
 	FIELD_DEF(WeaverQueue_Pos, WeaverQueueSize_width),
 	WeaverQueueInfo_width
 };
 
 static_assert(WeaverQueueInfo_width <= 64);
-
-enum {
-	WeaverQueue_Lock_None,
-	WeaverQueue_Lock_Swap,
-	WeaverQueue_Lock_Resize,
-};
 
 constexpr WeaverQueueInfo WeaverQueue_Rc_one = FIELD_SET(WeaverQueue_Rc, 1);
 constexpr WeaverQueueInfo WeaverQueue_Rc_mask = FIELD_MASK(WeaverQueue_Rc);

@@ -56,18 +56,29 @@ AsyncRT *Weaver_upcast(Weaver *this) {
 	return &this->iface;
 }
 
+#if Weaver_USE_TLS
+	#define XTID t_WeaverThread_id
+#else
+	#define XTID "?"
+#endif
+
+#if Weaver_DEBUG
+	#define XDEBUG(...) PRINTBP(128, Weaver_DEBUG_STREAM, "[",XTID,"] ", __func__, ": " __VA_OPT__(,) __VA_ARGS__, "\n")
+#else
+	#define XDEBUG(...)
+#endif
+
 [[nodiscard]]
 AsyncRes Weaver_boot(Weaver *this) {
 	constexpr AsyncRes res_origin = FIELD(AsyncRes_Origin, WeaverBoot);
 
-	#if Weaver_DEBUG
-		PRINTBP(128, Stdout, "Weaver_boot\n");
-	#endif
+	XDEBUG();
 
 	#if Weaver_SAFE
 		ASSERT(
 			atom_exchg(&this->state, WeaverState_JoinIdle, atom_sync)
 				== WeaverState_Down
+			, "invalid state before boot"
 		);
 	#else
 		this->state = WeaverState_Join;
@@ -76,7 +87,10 @@ AsyncRes Weaver_boot(Weaver *this) {
 	auto const threads_size = this->threads_size;
 
 	#if Weaver_SAFE
-		ASSERT(atom_exchg(&this->idle_sync, threads_size, atom_sync) == 0);
+		ASSERT(
+			atom_exchg(&this->idle_sync, threads_size, atom_sync) == 0
+			, "idle count not zeroed"
+		);
 	#else
 		this->idle_sync = threads_size;
 	#endif
@@ -87,25 +101,27 @@ AsyncRes Weaver_boot(Weaver *this) {
 			ASSERT(
 				atom_exchg(&thread->state, WeaverThreadState_Idle, atom_sync)
 					== WeaverThreadState_Down
+				, "thread state is not down"
 			);
 		#else
 			thread->state = WeaverThreadState_Idle;
 		#endif
 
-		#if Weaver_DEBUG
-			PRINTBP(128, Stdout, "Weaver_boot: create [",i,"]\n");
-		#endif
+		XDEBUG("create thread ",i + 1);
 
 		#if Weaver_USE_PTHREAD
 		{
-			auto const res = (usize)pthread_create(
+			// pthread should never return a negative
+			// or an abnormally large error code value
+			// that wouldn't fit inside AsyncRes_Code
+			auto const res = pthread_create(
 				&thread->thread, nullptr,
 				&WeaverThread_main, thread
 			);
 
-			return (
+			if (res) return (
 				res_origin |
-				FIELD(AsyncRes_Class, Pthreads) |
+				FIELD(AsyncRes_Class, Pthread) |
 				FIELD_SET(AsyncRes_Code, res)
 			);
 		}
@@ -115,10 +131,11 @@ AsyncRes Weaver_boot(Weaver *this) {
 		#endif
 	}
 
+	XDEBUG("wait");
+
 	do {
 		auto const res = Async_wait32(&this->state, WeaverState_JoinIdle, 0);
 		switch (res) {
-			// TODO return error
 			default:
 				return (
 					res_origin |
@@ -137,14 +154,15 @@ AsyncRes Weaver_boot(Weaver *this) {
 			, "invalid state after boot"
 		);
 
-		ASSERT(atom_get(&this->idle_sync, atom_acq) == 0);
+		ASSERT(
+			atom_get(&this->idle_sync, atom_acq) == 0
+			, "invalid idle count after boot"
+		);
 	#else
 		atom_set(&this->state, WeaverState_Run, atom_sync);
 	#endif
 
-	#if Weaver_DEBUG
-		PRINTBP(128, Stdout, "Weaver_boot: sync\n")
-	#endif
+	XDEBUG("done");
 
 	return AsyncRes_Ok;
 }
@@ -154,22 +172,26 @@ AsyncRes Weaver_boot(Weaver *this) {
 [[nodiscard]]
 AsyncRes Weaver_join(Weaver *this) {
 	constexpr AsyncRes res_origin = FIELD(AsyncRes_Origin, WeaverBoot);
-	#if Weaver_DEBUG
-		PRINTBP(128, Stdout, "Weaver_join\n");
-	#endif
+
+	XDEBUG();
 
 	#if Weaver_SAFE
-	{
-		auto state = atom_exchg(&this->state, WeaverState_JoinIdle, atom_sync);
-		ASSERT(state == WeaverState_Run);
-	}
+		ASSERT(
+			atom_exchg(&this->state, WeaverState_JoinIdle, atom_sync)
+				== WeaverState_Run
+			, "invalid state before join"
+		)
 	#else
 		atom_set(&this->state, WeaverState_JoinIdle, atom_sync);
 	#endif
 
+	auto const threads_size = this->threads_size;
+
+	// TODO check this->wake_sync !!!!
+
 	// check if all threads are already idle
 	auto it = this->threads;
-	auto const end = it + this->threads_size;
+	auto const end = it + threads_size;
 	for (; it < end; it++) {
 		if (
 			atom_get(&it->state, atom_acq) !=
@@ -178,16 +200,17 @@ AsyncRes Weaver_join(Weaver *this) {
 			goto wait;
 	}
 
-	#if Weaver_DEBUG
-		PRINTBP(128, Stdout, "Weaver_join: all threads already idle\n");
-	#endif
+	XDEBUG("all threads idle");
 
 	#if Weaver_SAFE
 	{
 		auto const state = atom_exchg(&this->state, WeaverState_JoinDown, atom_sync);
+		// edge case where all threads are detected as being idle but
+		// a thread was still in the process of going idle and changed
+		// our join state to sync could occur here
 		ASSERT(
-			(state == WeaverState_JoinIdle) ||
-			(state == WeaverState_Sync)
+			(state == WeaverState_JoinIdle) || (state == WeaverState_Sync)
+			, "invalid state"
 		);
 	}
 	#else
@@ -197,71 +220,79 @@ AsyncRes Weaver_join(Weaver *this) {
 	goto down;
 
 	wait:;
-	#if Weaver_DEBUG
-		PRINTBP(128, Stdout, "Weaver_join: wait for idle\n");
-	#endif
+	XDEBUG("wait for idle");
 
 	do {
 		auto const res = Async_wait32(&this->state, WeaverState_JoinIdle, 0);
 		switch (res) {
-			default: PANIC("Async_wait failed");
+			default: return (
+				res_origin |
+				FIELD(AsyncRes_Class, AsyncWaitRes) |
+				FIELD_SET(AsyncRes_Code, res)
+			);
 			case AsyncWaitRes_Mismatch:
 			case AsyncWaitRes_Ok:
 		}
 	} while (atom_get(&this->state, atom_acq) == WeaverState_JoinIdle);
 
 	#if Weaver_SAFE
-	{
 		ASSERT(
 			atom_exchg(&this->state, WeaverState_JoinDown, atom_sync)
 				== WeaverState_Sync
+			, "invalid state after wake"
 		);
 
-		ASSERT(atom_get(&this->idle_sync, atom_acq) == 0);
-	}
+		ASSERT(
+			atom_get(&this->idle_sync, atom_acq) == 0
+			, "invalid idle count"
+		);
 	#else
 		atom_set(&this->state, WeaverState_JoinDown, atom_sync);
 	#endif
 
-	#if Weaver_DEBUG
-		PRINTBP(128, Stdout, "Weaver_join: wake\n");
-	#endif
+	XDEBUG("wake");
 
 	down:;
 
 	#if Weaver_SAFE
-	{
-		ASSERT(atom_exchg(&this->down_sync, this->threads_size, atom_sync) == 0);
-	}
+		ASSERT(
+			atom_exchg(&this->down_sync, threads_size, atom_sync) == 0
+			, "down sync is not zero"
+		);
 	#else
-		atom_set(&this->down_sync, this->threads_size, atom_sync);
+		atom_set(&this->down_sync, threads_size, atom_sync);
 	#endif
-
 
 	it = this->threads;
 	for (; it < end; it++) {
 		#if Weaver_SAFE
 		{
-			// TODO replace with assert
 			auto const state = atom_exchg(&it->state, WeaverThreadState_Down, atom_sync);
-			if (state != WeaverThreadState_Idle) {
-				PRINTBP(128, Stdout, "thread[",(it - this->threads),"] invalid state = ",state,"\n");
-				PANIC("invalid state");
-			}
+			ASSERT_PRINT(
+				state == WeaverThreadState_Idle
+				, "invalid state(",state,") on thread [",((it - this->threads) + 1),"]"
+			);
 		}
 		#else
 			atom_set(&it->state, WeaverThreadState_Down, atom_sync);
 		#endif
 
 		auto const res = Async_wake32(&it->state, Async_wakeall);
-		if (res) TODO("handle error");
+		if (res) return (
+			res_origin |
+			FIELD(AsyncRes_Class, AsyncWaitRes) |
+			FIELD_SET(AsyncRes_Code, res)
+		);
 	}
 
 	do {
 		auto const res = Async_wait32(&this->state, WeaverState_JoinDown, 0);
 		switch (res) {
-			// TODO
-			default: PANIC("Async_wait failed");
+			default: return (
+				res_origin |
+				FIELD(AsyncRes_Class, AsyncWaitRes) |
+				FIELD_SET(AsyncRes_Code, res)
+			);
 			case AsyncWaitRes_Mismatch:
 			case AsyncWaitRes_Ok:
 		}
@@ -272,9 +303,13 @@ AsyncRes Weaver_join(Weaver *this) {
 		ASSERT(
 			atom_exchg(&this->state, WeaverState_Down, atom_sync)
 				== WeaverState_Sync
+			, "invalid state after wake"
 		);
 
-		ASSERT(atom_get(&this->down_sync, atom_acq) == 0);
+		ASSERT(
+			atom_get(&this->down_sync, atom_acq) == 0
+			, "down sync not zero"
+		);
 	}
 	#else
 		atom_set(&this->state, WeaverState_Down, atom_sync);
@@ -283,10 +318,17 @@ AsyncRes Weaver_join(Weaver *this) {
 	#if Weaver_USE_PTHREAD
 		it = this->threads;
 		for (; it < end; it++) {
+			// previous note on pthread return codes applies (in Weaver_boot)
 			auto const res = pthread_join(it->thread, nullptr);
-			if (res) PANIC("pthread_join failed");
+			if (res) return (
+				res_origin |
+				FIELD(AsyncRes_Class, Pthread) |
+				FIELD_SET(AsyncRes_Code, res)
+			);
 		}
 	#endif
+
+	return AsyncRes_Ok;
 }
 
 
@@ -294,6 +336,8 @@ AsyncRes Weaver_join(Weaver *this) {
 [[nodiscard]]
 AsyncRes Weaver_wake(Weaver *this, usize queue_size) {
 	constexpr AsyncRes res_origin = FIELD(AsyncRes_Origin, WeaverWake);
+
+	XDEBUG("queue_size=",queue_size);
 
 	// ensures at least queue_size threads (max threads_size) are running
 	auto it = this->threads;
@@ -304,7 +348,7 @@ AsyncRes Weaver_wake(Weaver *this, usize queue_size) {
 	else
 		end = it + queue_size;
 
-	for (; queue_size && (it < end); it++) {
+	for (; it < end; it++) {
 		if (
 			atom_exchg(&it->state, WeaverThreadState_Run, atom_sync)
 				== WeaverThreadState_Idle
@@ -333,6 +377,8 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 		FIELD_SET(AsyncRes_Code, WeaverRes_ErrTooManyTasks)
 	);
 
+	XDEBUG("tasks_size=",tasks_size_);
+
 	Weaver *const this = vthis;
 
 	#if Weaver_SAFE
@@ -342,18 +388,21 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 
 	auto const tasks_size = (WeaverQueueSize)tasks_size_;
 
-	resubmit:;
+	WeaverQueueInfo const info_add = WeaverQueue_Rc_one | (WeaverQueue_Pos_one * tasks_size);
+
+	retry:;
 	// acquire a write queue reference and insert position
 	WeaverQueueInfo winfo = atom_add(&this->write.info,
-		WeaverQueue_Rc_one | (WeaverQueue_Pos_one * tasks_size),
-		atom_sync
+		info_add, atom_sync
 	);
 
 	// if swap or resize is being performed
 	if (winfo & WeaverQueue_lockmask) {
 		wait_for_locks:;
-		// release our reference
-		winfo = atom_sub(&this->write.info, WeaverQueue_Rc_one, atom_sync);
+		// release our reference and subtract position
+		// subtracting position here makes a position overflow
+		// on the queue info unlikely
+		winfo = atom_sub(&this->write.info, info_add, atom_sync);
 
 		// wait for queue to unlock
 		while (winfo & WeaverQueue_lockmask) {
@@ -361,7 +410,7 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 			winfo = atom_get(&this->write.info, atom_acq);
 		}
 
-		goto resubmit;
+		goto retry;
 	}
 
 	// we have a valid reference
@@ -372,11 +421,19 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 	// we know that a thread before us overflowed the queue first
 	// and will handle the resize operation which will invalidate
 	// our insert position
-	if (wpos > wcapacity) goto wait_for_locks;
+	if (wpos > wcapacity) {
+		// yielding here hypothetically allows the first thread to
+		// set the resize lock because it is currently not set and avoids
+		// looping through this path too many times
+		CPU_YIELD;
+		goto wait_for_locks;
+	}
 
 	// perform resize
 	#if Weaver_SAFE
 		auto const target_pos = (usize)wpos + (usize)tasks_size;
+		// TODO invalidate global weaver state
+		// if this condition occured, the queue position has overflowed
 		if (target_pos > WeaverQueueSize_max)
 			return res_toomanytasks;
 	#else
@@ -387,14 +444,14 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 		// lock write queue for resizing
 		winfo = atom_or(&this->write.info, WeaverQueue_LockResize, atom_sync);
 
+		// resize queue up to the prelock position
+		usize const prelock_pos = FIELD_GET(WeaverQueue_Pos, winfo);
+
 		// wait until all other references are released
 		while (winfo & WeaverQueue_Rc_gtone) {
 			CPU_YIELD;
 			winfo = atom_get(&this->write.info, atom_acq);
 		}
-
-		// resize queue up to the prelock position
-		usize const prelock_pos = FIELD_GET(WeaverQueue_Pos, winfo);
 
 		usize capacity = wcapacity;
 		// TODO add overflow checking
@@ -523,9 +580,7 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 	atom_sub(&this->read.info, WeaverQueue_Rc_one, atom_sync);
 
 	// wake threads
-	Weaver_wake(this, wsize);
-
-	return AlcRes_Ok;
+	return Weaver_wake(this, wsize);
 }
 
 [[nodiscard]]
@@ -539,7 +594,7 @@ AlcRes Weaver_init(
 	Weaver *this, Alc alc, u32 threads_size, WeaverQueueSize queue_capacity
 ) {
 	if (threads_size > Weaver_maxthreads)
-		return AlcRes_Aux;
+		return AlcRes_ErrOverflow;
 
 	this->iface.alc = &Weaver_alc;
 	this->iface.submit = &Weaver_submit;
@@ -547,10 +602,10 @@ AlcRes Weaver_init(
 	this->alc = alc;
 	this->threads_size = threads_size;
 
-	//memset(this->idle_map, 0, sizeof(this->idle_map));
 	this->state = WeaverState_Down;
 	this->idle_sync = 0; // setup in boot function
 	this->down_sync = 0;
+	this->wake_sync = 0;
 
 
 	usize queue_allocsize = usize_align(queue_capacity * sizeof(AsyncTask), WeaverQueue_align);
@@ -563,7 +618,7 @@ AlcRes Weaver_init(
 
 	{ // read queue
 		AlcPtr ptr = Alc_invoke(alc, &req, nullptr, nullptr);
-		auto res = AlcPtr_get(ptr);
+		auto const res = AlcPtr_get(ptr);
 		if (res) return res;
 
 		usize capacity = req.size / sizeof(AsyncTask);
@@ -579,7 +634,7 @@ AlcRes Weaver_init(
 	{ // write queue
 		req.size = queue_allocsize;
 		AlcPtr ptr = Alc_invoke(alc, &req, nullptr, nullptr);
-		auto res = AlcPtr_get(ptr);
+		auto const res = AlcPtr_get(ptr);
 		if (res) return res;
 
 		usize capacity = req.size / sizeof(AsyncTask);
@@ -595,7 +650,7 @@ AlcRes Weaver_init(
 	// setup threads
 
 	for (u32 i = 0; i < threads_size; i++) {
-		this->threads[i].id = (WeaverThreadId)i;
+		this->threads[i].id = (WeaverThreadId)i + 1;
 		this->threads[i].rt = this;
 		this->threads[i].orphaned_task = AsyncTask_null;
 		this->threads[i].state = WeaverThreadState_Down;
@@ -646,3 +701,6 @@ AlcRes Weaver_destroy(Weaver *this) {
 
 	return AlcRes_Ok;
 }
+
+#undef XDEBUG
+#undef XTID

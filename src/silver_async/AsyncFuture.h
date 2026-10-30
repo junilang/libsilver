@@ -118,8 +118,8 @@ void AsyncFuture_init(AsyncFuture *this, u32 triggers) {
 
 	#if AsyncFuture_SAFE
 		ASSERT(
-			atom_exchg(&this->info, info, atom_sync) == 0,
-			"future not zeroed"
+			atom_exchg(&this->info, info, atom_sync) == 0
+			, "future not zeroed"
 		);
 	#else
 		this->info = info;
@@ -144,8 +144,8 @@ void AsyncFuture_inittask(
 
 	#if AsyncFuture_SAFE
 		ASSERT(
-			atom_exchg(&this->info, info, atom_sync) == 0,
-			"future not zeroed"
+			atom_exchg(&this->info, info, atom_sync) == 0
+			, "future not zeroed"
 		);
 	#else
 		this->info = info;
@@ -655,6 +655,8 @@ AsyncRes AsyncFuture_resolve(AsyncFuture *this, AsyncTask *out_task) {
 				}
 
 			#endif
+
+			return XRES(IsError);
 		}
 
 		#if AsyncFuture_STRICT
