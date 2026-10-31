@@ -4,7 +4,11 @@
 #define FLAG_CLEAR(flag) (~FLAG(flag))
 #define FLAG_NOT(flag) FLAG_CLEAR(flag)
 
-#define FLAGS(pfx, ...) (0ull __VA_OPT__(|FLAGS_0(pfx, __VA_ARGS__)))
+
+#define FLAGS_HEADER_ENABLE
+#define FLAGS_HEADER FLAGS_ERROR_NO_ARGS
+
+#define FLAGS(pfx, ...) (FLAGS_HEADER##__VA_OPT__(_ENABLE FLAGS_0(pfx, __VA_ARGS__)))
 #define FLAGS_CLEAR(pfx, ...) (~(FLAGS(pfx, __VA_ARGS__)))
 #define FLAGS_NOT(...) FLAGS_CLEAR(__VA_ARGS__)
 

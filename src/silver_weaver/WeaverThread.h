@@ -25,7 +25,7 @@ typedef struct {
 } WeaverThread;
 
 #if Weaver_USE_TLS
-	_Thread_local u32 t_WeaverThread_id = 0;
+	_Thread_local WeaverThreadId t_WeaverThread_id = 0;
 #endif
 
 #if Weaver_USE_PTHREAD

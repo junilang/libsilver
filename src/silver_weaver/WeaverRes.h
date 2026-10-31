@@ -22,5 +22,6 @@ enum : AsyncRes_Class {
 #define AsyncRes_Class_AUX AsyncRes_Class_WeaverAux
 
 enum : u8 {
-	WeaverRes_ErrTooManyTasks
+	WeaverRes_ErrTooManyTasks,
+	WeaverRes_QueueOverflow
 };

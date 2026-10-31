@@ -1,4 +1,6 @@
 typedef u32 WeaverQueueSize;
+typedef _Atomic u32_lf WeaverQueueSize_Atomic;
+
 constexpr u8 WeaverQueueSize_width = 32;
 constexpr auto WeaverQueueSize_max = u32_max;
 

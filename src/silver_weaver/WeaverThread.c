@@ -12,9 +12,9 @@
 	#endif
 
 	WeaverThread *const this = vthis;
-	auto const id = (u32)this->id + 1;
+	auto const id = this->id;
 	Weaver *const rt = this->rt;
-	AsyncTask pending_task = AsyncTask_null;
+	AsyncTask task = AsyncTask_null;
 	u32 state;
 
 	#if Weaver_USE_TLS
@@ -38,15 +38,14 @@
 	}
 
 	if (0) Brun: {
-		if (AsyncTask_isnull(pending_task))
+		if (AsyncTask_isnull(task))
 			goto fetch_task;
 
-		AsyncTask task;
-		auto const task_res = AsyncTask_call(pending_task, (AsyncRT*)rt, id, &task);
+		auto const task_res = AsyncTask_call(task, (AsyncRT*)rt, id, &task);
+
 		switch (task_res) {
 			case AsyncIntent_Call:
 				#if Weaver_CALL_IMMEDIATE
-					pending_task = task;
 					goto load_state;
 				#else
 					goto suspend_task;
@@ -54,7 +53,6 @@
 
 			case AsyncIntent_Resume:
 				#if Weaver_RESUME_IMMEDIATE
-					pending_task = task;
 					goto load_state;
 				#else
 					goto suspend_task;
@@ -64,21 +62,24 @@
 				goto suspend_task;
 
 			case AsyncIntent_Yield:
-				pending_task = AsyncTask_null;
+				task = AsyncTask_null;
 				goto load_state;
 
 			default:;
 		}
 
-		suspend_task:;
-		auto submit_res = Weaver_submit(rt, &task, 1);
-		pending_task = AsyncTask_null;
-		if (submit_res) TODO("handle error");
-		goto load_state;
+		PANIC("unhandled task error");
+
+		if (0) suspend_task: {
+			auto submit_res = Weaver_submit(rt, &task, 1);
+			task = AsyncTask_null;
+			if (submit_res) PANIC("unhandled submit error");
+			goto load_state;
+		}
 	}
 
 	if (0) fetch_task: {
-		// acquire read reference
+		// acquire reference to read queue and task position
 		WeaverQueueInfo rinfo = atom_add(&rt->read.info,
 			WeaverQueue_Rc_one | WeaverQueue_Pos_one,
 			atom_sync
@@ -88,7 +89,6 @@
 			wait_for_swap:;
 			rinfo = atom_sub(&rt->read.info, WeaverQueue_Rc_one, atom_sync);
 
-			// wait for swap to finish
 			while (rinfo & WeaverQueue_LockSwap) {
 				CPU_YIELD;
 				rinfo = atom_get(&rt->read.info, atom_acq);
@@ -107,7 +107,7 @@
 
 		// check if queue is not empty
 		if (pos < size) {
-			pending_task = rt->read.queue[pos];
+			task = rt->read.queue[pos];
 			// release reference
 			atom_sub(&rt->read.info, WeaverQueue_Rc_one, atom_sync);
 
@@ -118,7 +118,7 @@
 			#endif
 		}
 
-		// queue is empty, attempt swap
+		// queue is empty, try to swap
 		rinfo = atom_or(&rt->read.info, WeaverQueue_LockSwap, atom_sync);
 
 		// another thread is already swapping
@@ -127,13 +127,20 @@
 
 		// set swap lock on write queue
 		WeaverQueueInfo winfo = atom_or(&rt->write.info, WeaverQueue_LockSwap, atom_sync);
-		WeaverQueueSize const wsize = FIELD_GET(WeaverQueue_Pos, winfo);
 
-		// check if write queue is empty
+		// wait for all references to be released
+		while (winfo & WeaverQueue_Rc_mask) {
+			CPU_YIELD;
+			winfo = atom_get(&rt->write.info, atom_acq);
+		}
+
+		// get write queue size
+		auto const wsize = atom_exchg(&rt->write.size, 0, atom_sync);
+
+		// cancel if write queue is empty
 		if (!wsize) {
-			// release swap lock
+			// release references and locks if write queue is empty
 			atom_and(&rt->write.info, ~WeaverQueue_LockSwap, atom_sync);
-			// release reference and swap lock
 			atom_sub(&rt->read.info, WeaverQueue_Rc_one | WeaverQueue_LockSwap, atom_sync);
 
 			// set state to idle if state didnt change
@@ -143,11 +150,6 @@
 				goto dispatch_state;
 		}
 
-		// wait for all references to write queue to be released
-		while (winfo & WeaverQueue_Rc_mask) {
-			CPU_YIELD;
-			winfo = atom_get(&rt->write.info, atom_acq);
-		}
 
 		// wait for all references to read queue to be released
 		// except the one we hold
@@ -157,8 +159,8 @@
 		}
 
 		// perform swap
-		Ptr tmp_queue = rt->write.queue;
-		u32 tmp_capacity = rt->write.capacity;
+		auto const tmp_queue = rt->write.queue;
+		auto const tmp_capacity = rt->write.capacity;
 
 		rt->write.queue = rt->read.queue;
 		rt->write.capacity = rt->read.capacity;
@@ -169,35 +171,26 @@
 
 		atom_and(&rt->write.info, WeaverQueue_swapmask, atom_sync);
 		atom_and(&rt->read.info, WeaverQueue_swapmask, atom_sync);
+		atom_sub(&rt->read.info, WeaverQueue_Rc_one, atom_sync);
 
-		Weaver_wake(rt, wsize);
+		auto const wake_res = Weaver_wake(rt, wsize);
+		if (wake_res) PANIC("unhandled wake error");
 
 		goto load_state;
 	}
 
 	if (0) Bidle: {
-		// resubmit pending task if thread was requested to go idle
-		if (!AsyncTask_isnull(pending_task)) {
-			XDEBUG("resubmit");
-
-			auto res = Weaver_submit(rt, &pending_task, 1);
-			if (res) TODO("handle error");
-			pending_task = AsyncTask_null;
-		}
+		#if Weaver_SAFE
+			ASSERT(
+				AsyncTask_isnull(task)
+				, "cannot go idle with non null task"
+			);
+		#endif
 
 		idle:;
-		#if Weaver_DEBUG
-			XDEBUG("going idle ", atom_get(&this->state, atom_acq));
-		#endif
+		XDEBUG("going idle state=", atom_get(&this->state, atom_acq));
 
-		#if 0
-			// set bit in runtime idle bitmap
-			u8 const map_idx = id / 64;
-			u64 const map_bit = 1ull << (id % 64);
-			atom_or(&rt->idle_map[map_idx], map_bit, atom_sync);
-		#endif
-
-		// check if this is was the last running thread
+		// check if this was the last running thread
 		if (atom_sub(&rt->idle_sync, 1, atom_sync) == 1) {
 			XDEBUG("sync threads");
 
@@ -205,26 +198,28 @@
 			u32 want = WeaverState_JoinIdle;
 			if (atom_cmpx(&rt->state, &want, WeaverState_Sync, atom_sync, atom_acq)) {
 				auto res = Async_wake32(&rt->state, Async_wakeall);
-				if (res) TODO("handle error");
+				if (res) PANIC("unhandled wake error");
 			}
 		}
 
-		XDEBUG("wait")
+		XDEBUG("idle wait")
 
-		do switch (Async_wait32(&this->state, WeaverThreadState_Idle, 0)) {
-			default: TODO("handle error");
-			case AsyncWaitRes_Mismatch:
-			case AsyncWaitRes_Ok:
-		} while ((state = atom_get(&this->state, atom_acq)) == WeaverThreadState_Idle);
+		do {
+			auto const res = Async_wait32(&this->state, WeaverThreadState_Idle, 0);
+			switch (res) {
+				default: PANIC("unhandle wait error");
+				case AsyncWaitRes_Mismatch:
+				case AsyncWaitRes_Ok:
+			};
 
-		#if 0
-			// unset bit in idle bitmap
-			atom_and(&rt->idle_map[map_idx], ~map_bit, atom_sync);
-		#endif
+			state = atom_get(&this->state, atom_acq);
+		} while (state == WeaverThreadState_Idle);
+
 
 		XDEBUG("wake")
 
 		atom_add(&rt->idle_sync, 1, atom_sync);
+		atom_sub(&rt->wake_sync, 1, atom_sync);
 
 		goto dispatch_state;
 	}
@@ -232,7 +227,7 @@
 	if (0) Bdown: {
 		XDEBUG("down");
 
-		this->orphaned_task = pending_task;
+		this->orphaned_task = task;
 
 		// if this is the last thread to go down
 		if (atom_sub(&rt->down_sync, 1, atom_sync) == 1) {
@@ -240,10 +235,10 @@
 
 			u32 want = WeaverState_JoinDown;
 			if (atom_cmpx(&rt->state, &want, WeaverState_Sync, atom_sync, atom_acq)) {
-				XDEBUG("wake runtime");
+				XDEBUG("down sync");
 
-				auto res = Async_wake32(&rt->state, Async_wakeall);
-				if (res) TODO("handle error");
+				auto const res = Async_wake32(&rt->state, Async_wakeall);
+				if (res) PANIC("unhandled wake error");
 			}
 		}
 
@@ -254,7 +249,7 @@
 		#endif
 	}
 
-	if (0) Berror: TODO("handle error");
+	if (0) Berror: PANIC("unhandled error");
 
 	UNREACHABLE;
 

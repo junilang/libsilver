@@ -37,7 +37,7 @@ typedef struct {
 	Weaver_CACHE_ALIGN struct {
 		WeaverQueueInfo_Atomic info;
 		AsyncTask *queue;
-		WeaverQueueSize size;
+		WeaverQueueSize_Atomic size;
 		WeaverQueueSize capacity;
 	} write;
 
@@ -188,6 +188,8 @@ AsyncRes Weaver_join(Weaver *this) {
 	auto const threads_size = this->threads_size;
 
 	// TODO check this->wake_sync !!!!
+	// !!!!
+	// !!!!
 
 	// check if all threads are already idle
 	auto it = this->threads;
@@ -377,6 +379,12 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 		FIELD_SET(AsyncRes_Code, WeaverRes_ErrTooManyTasks)
 	);
 
+	constexpr AsyncRes res_queueoverflow = (
+		res_origin |
+		FIELD(AsyncRes_Class, WeaverRes) |
+		FIELD_SET(AsyncRes_Code, WeaverRes_QueueOverflow)
+	);
+
 	XDEBUG("tasks_size=",tasks_size_);
 
 	Weaver *const this = vthis;
@@ -388,21 +396,19 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 
 	auto const tasks_size = (WeaverQueueSize)tasks_size_;
 
-	WeaverQueueInfo const info_add = WeaverQueue_Rc_one | (WeaverQueue_Pos_one * tasks_size);
-
 	retry:;
 	// acquire a write queue reference and insert position
 	WeaverQueueInfo winfo = atom_add(&this->write.info,
-		info_add, atom_sync
+		WeaverQueue_Rc_one | (WeaverQueue_Pos_one * tasks_size),
+		atom_sync
 	);
 
 	// if swap or resize is being performed
 	if (winfo & WeaverQueue_lockmask) {
-		wait_for_locks:;
 		// release our reference and subtract position
 		// subtracting position here makes a position overflow
 		// on the queue info unlikely
-		winfo = atom_sub(&this->write.info, info_add, atom_sync);
+		winfo = atom_sub(&this->write.info, WeaverQueue_Rc_one, atom_sync);
 
 		// wait for queue to unlock
 		while (winfo & WeaverQueue_lockmask) {
@@ -415,37 +421,53 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 
 	// we have a valid reference
 	WeaverQueueSize const wpos = FIELD_GET(WeaverQueue_Pos, winfo);
-	auto wcapacity = this->write.capacity;
+	auto const wcapacity = this->write.capacity;
+	auto wqueue = this->write.queue;
 
 	// if the position was already past the capacity
 	// we know that a thread before us overflowed the queue first
 	// and will handle the resize operation which will invalidate
 	// our insert position
 	if (wpos > wcapacity) {
-		// yielding here hypothetically allows the first thread to
-		// set the resize lock because it is currently not set and avoids
-		// looping through this path too many times
-		CPU_YIELD;
-		goto wait_for_locks;
+		#if Weaver_SAFE
+			// wait for the other thread to actually set
+			// the resize lock while we have our reference
+			do {
+				CPU_YIELD;
+				winfo = atom_get(&this->write.info, atom_acq);
+			} while (!(winfo & WeaverQueue_LockResize));
+		#endif
+
+		// release our reference
+		winfo = atom_sub(&this->write.info, WeaverQueue_Rc_one, atom_sync);
+		// wait for queue to unlock
+		while (winfo & WeaverQueue_lockmask) {
+			CPU_YIELD;
+			winfo = atom_get(&this->write.info, atom_acq);
+		}
+
+		goto retry;
 	}
 
-	// perform resize
+	WeaverQueueSize target_pos;
 	#if Weaver_SAFE
-		auto const target_pos = (usize)wpos + (usize)tasks_size;
+	{
+		auto const target_pos_ = (usize)wpos + (usize)tasks_size;
 		// TODO invalidate global weaver state
 		// if this condition occured, the queue position has overflowed
-		if (target_pos > WeaverQueueSize_max)
-			return res_toomanytasks;
+		if (target_pos_ > WeaverQueueSize_max)
+			return res_queueoverflow;
+
+		target_pos = (WeaverQueueSize)target_pos_;
+	}
 	#else
 		auto const target_pos = wpos + tasks_size;
 	#endif
 
+	// perform resize if target_pos is beyond capacity
 	if (target_pos > wcapacity) {
 		// lock write queue for resizing
 		winfo = atom_or(&this->write.info, WeaverQueue_LockResize, atom_sync);
-
-		// resize queue up to the prelock position
-		usize const prelock_pos = FIELD_GET(WeaverQueue_Pos, winfo);
 
 		// wait until all other references are released
 		while (winfo & WeaverQueue_Rc_gtone) {
@@ -453,17 +475,18 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 			winfo = atom_get(&this->write.info, atom_acq);
 		}
 
-		usize capacity = wcapacity;
-		// TODO add overflow checking
-		do capacity *= 2;
-		while (prelock_pos > capacity);
+		usize new_capacity = wcapacity;
 
-		#if Weaver_SAFE
-			if (capacity > WeaverQueueSize_max)
-				capacity = WeaverQueueSize_max;
-		#endif
+		// enlarge queue until it fits target_pos
+		do {
+			new_capacity *= 2;
+			#if Weaver_SAFE
+				if (new_capacity > WeaverQueueSize_max)
+					return res_queueoverflow;
+			#endif
+		} while (target_pos > new_capacity);
 
-		usize alloc_size = usize_align(capacity * sizeof(AsyncTask), WeaverQueue_align);
+		auto const alloc_size = usize_align(new_capacity * sizeof(AsyncTask), WeaverQueue_align);
 
 		AlcReq req = {
 			.intent = AlcIntent_Resize,
@@ -471,16 +494,23 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 			.align = WeaverQueue_align
 		};
 
-		AlcPtr ptr = Alc_invoke(this->alc, &req, nullptr, this->write.queue);
-		auto res = AlcPtr_get(ptr);
-		if (res) return res;
+		AlcPtr ptr = Alc_invoke(this->alc, &req, nullptr, wqueue);
+		auto const res = AlcPtr_get(ptr);
+		if (res) return (
+			res_origin |
+			FIELD(AsyncRes_Class, AlcRes) |
+			FIELD_SET(AsyncRes_Code, res)
+		);
 
-		capacity = req.size / sizeof(AsyncTask);
-		if (capacity > WeaverQueueSize_max)
-			capacity = WeaverQueueSize_max;
+		new_capacity = req.size / sizeof(AsyncTask);
+		#if Weaver_SAFE
+			if (new_capacity > WeaverQueueSize_max)
+				new_capacity = WeaverQueueSize_max;
+		#endif
 
-		this->write.queue = (Ptr)ptr;
-		this->write.capacity = (WeaverQueueSize)capacity;
+		wqueue = (Ptr)ptr;
+		this->write.queue = wqueue;
+		this->write.capacity = (WeaverQueueSize)new_capacity;
 
 		// restore position to our state
 		while (
@@ -492,14 +522,15 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 						FLAG_CLEAR(WeaverQueue_LockResize)
 					)
 					// reset position back to the position we acquired
-				) | target_pos,
+				) | FIELD_SET(WeaverQueue_Pos, target_pos),
 				atom_sync, atom_acq
 			)
 		) {};
 	}
 
-	// insert tasks into queue
+	// insert tasks into queue and increment queue size
 	memcpy(this->write.queue + wpos, tasks, sizeof(AsyncTask) * tasks_size);
+	atom_add(&this->write.size, tasks_size, atom_sync);
 
 	// release our reference
 	winfo = atom_sub(&this->write.info, WeaverQueue_Rc_one, atom_sync);
@@ -507,48 +538,45 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 	// if another thread is performing a swap already
 	// or there are other threads with valid references
 	// we dont need to swap, the last thread will do the swap
+	//
+	// TODO analyze whether leaving swapping to the last submitting
+	// thread does not starve worker threads, or add a configuration
+	// option for this behavior
 	if (winfo & (WeaverQueue_LockSwap | WeaverQueue_Rc_gtone))
-		return AlcRes_Ok;
+		return AsyncRes_Ok;
 
+	// try performing a swap
 	// get a reference to read queue
+	// the read queue swap lock takes priority over the write queue
 	WeaverQueueInfo rinfo = atom_add(&this->read.info, WeaverQueue_Rc_one, atom_sync);
 
 	// if swap is being performed by other thread
 	if (rinfo & WeaverQueue_LockSwap) {
 		// release reference and return
 		atom_sub(&this->read.info, WeaverQueue_Rc_one, atom_sync);
-		return AlcRes_Ok;
+		return AsyncRes_Ok;
 	}
 
-	// we have a valid read queue reference
-	u32 rpos = FIELD_GET(WeaverQueue_Pos, rinfo);
-	u32 const rsize = this->read.size;
-
+	// we have a valid read queue reference and can check
+	// whether the queue is empty by comparing position and size
+	WeaverQueueSize const rpos = FIELD_GET(WeaverQueue_Pos, rinfo);
+	auto const rsize = this->read.size;
 	if (rpos < rsize) {
 		// if read queue is not empty release reference and return
 		atom_sub(&this->read.info, WeaverQueue_Rc_one, atom_sync);
-		return AlcRes_Ok;
+		return AsyncRes_Ok;
 	}
 
-	// set swap lock
+	// try to set read queue swap lock
 	rinfo = atom_or(&this->read.info, WeaverQueue_LockSwap, atom_sync);
 	if (rinfo & WeaverQueue_LockSwap) {
+		// cancel if swap is being performed by other thread
 		atom_sub(&this->read.info, WeaverQueue_Rc_one, atom_sync);
-		return AlcRes_Ok;
+		return AsyncRes_Ok;
 	}
 
 	// set swap lock on write queue
 	winfo = atom_or(&this->write.info, WeaverQueue_LockSwap, atom_sync);
-	// remember the queue size before we locked it
-	u32 const wsize = FIELD_GET(WeaverQueue_Pos, winfo);
-
-	// if write queue is empty release locks and return
-	if (!wsize) {
-		atom_and(&this->write.info, ~WeaverQueue_LockSwap, atom_sync);
-		// release reference and lock at the same time
-		atom_sub(&this->read.info, WeaverQueue_Rc_one | WeaverQueue_LockSwap, atom_sync);
-		return AlcRes_Ok;
-	}
 
 	// wait for all write queue references to be released
 	while (winfo & WeaverQueue_Rc_mask) {
@@ -556,16 +584,27 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 		winfo = atom_get(&this->write.info, atom_acq);
 	}
 
+	// exchange write queue size for 0
+	// we would need to zero it anyway after swapping
+	auto const wsize = atom_exchg(&this->write.size, 0, atom_sync);
+
+	if (!wsize) {
+		// release references and locks if write queue is empty
+		atom_and(&this->write.info, ~WeaverQueue_LockSwap, atom_sync);
+		atom_sub(&this->read.info, WeaverQueue_Rc_one | WeaverQueue_LockSwap, atom_sync);
+		return AsyncRes_Ok;
+	}
+
 	// wait for all read queue references to be released
 	// except the one we hold
-	while (winfo & WeaverQueue_Rc_gtone) {
+	while (rinfo & WeaverQueue_Rc_gtone) {
 		CPU_YIELD;
 		winfo = atom_get(&this->read.info, atom_acq);
 	}
 
 	// perform swap
-	auto tmp_queue = this->write.queue;
-	auto tmp_capacity = this->write.capacity;
+	auto const tmp_queue = this->write.queue;
+	auto const tmp_capacity = this->write.capacity;
 
 	this->write.queue = this->read.queue;
 	this->write.capacity = this->read.capacity;
