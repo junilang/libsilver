@@ -1,15 +1,23 @@
-AsyncWaitRes Async_ZZwait(Ptr addr, usize val, u64 timeout, uword flags) {
+struct AsyncTime {
 	linux_timespec ts;
-	const linux_timespec *tp = nullptr;
-	if (timeout) {
-		auto res = linux_clock_gettime(CLOCK_MONOTONIC, &ts);
-		if (res < 0)
-			return AsyncWaitRes_ErrClock;
+};
 
-		ts.tv_sec += (typeof(ts.tv_sec))(timeout / Async_seconds);
-		ts.tv_nsec += (typeof(ts.tv_sec))(timeout % Async_seconds);
-		tp = &ts;
-	}
+
+AsyncWaitRes Async_timeout(u64 duration, AsyncTime *out) {
+	linux_timespec ts;
+	auto res = linux_clock_gettime(CLOCK_MONOTONIC, &ts);
+	if (res < 0)
+		return AsyncWaitRes_ErrClock;
+
+	ts.tv_sec += (typeof(ts.tv_sec))(duration / Async_seconds);
+	ts.tv_nsec += (typeof(ts.tv_sec))(duration % Async_seconds);
+	out->ts = ts;
+
+	return AsyncWaitRes_Ok;
+}
+
+AsyncWaitRes Async_ZZwait(Ptr addr, usize val, const AsyncTime *timeout, uword flags) {
+	const linux_timespec *tp = timeout ? &timeout->ts : nullptr;
 
 	auto res = linux_futex_wait(
 		addr, val, FUTEX_BITSET_MATCH_ANY,
@@ -35,12 +43,12 @@ AsyncWaitRes Async_ZZwait(Ptr addr, usize val, u64 timeout, uword flags) {
 	return AsyncWaitRes_Ok;
 }
 
-AsyncWaitRes Async_sleep(u64 timeout) {
-	if (timeout == 0) return AsyncWaitRes_Ok;
+AsyncWaitRes Async_sleep(u64 duration) {
+	if (duration == 0) return AsyncWaitRes_Ok;
 
 	const linux_timespec ts = {
-		.tv_sec = (typeof(ts.tv_nsec))(timeout / Async_seconds),
-		.tv_nsec = (typeof(ts.tv_nsec))(timeout % Async_seconds)
+		.tv_sec = (typeof(ts.tv_nsec))(duration / Async_seconds),
+		.tv_nsec = (typeof(ts.tv_nsec))(duration % Async_seconds)
 	};
 
 	auto res = linux_clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, nullptr);
@@ -52,19 +60,19 @@ AsyncWaitRes Async_sleep(u64 timeout) {
 	return AsyncWaitRes_Ok;
 }
 
-AsyncWaitRes Async_wait8(Ptr addr, u8 val, u64 timeout) {
+AsyncWaitRes Async_wait8(Ptr addr, u8 val, const AsyncTime *timeout) {
 	return Async_ZZwait(addr, val, timeout, FUTEX2_SIZE_U8);
 }
 
-AsyncWaitRes Async_wait16(Ptr addr, u16 val, u64 timeout) {
+AsyncWaitRes Async_wait16(Ptr addr, u16 val, const AsyncTime *timeout) {
 	return Async_ZZwait(addr, val, timeout, FUTEX2_SIZE_U16);
 }
 
-AsyncWaitRes Async_wait32(Ptr addr, u32 val, u64 timeout) {
+AsyncWaitRes Async_wait32(Ptr addr, u32 val, const AsyncTime *timeout) {
 	return Async_ZZwait(addr, val, timeout, FUTEX2_SIZE_U32);
 }
 
-AsyncWaitRes Async_wait64(Ptr addr, u64 val, u64 timeout) {
+AsyncWaitRes Async_wait64(Ptr addr, u64 val, const AsyncTime *timeout) {
 	return Async_ZZwait(addr, val, timeout, FUTEX2_SIZE_U64);
 }
 

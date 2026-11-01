@@ -91,6 +91,9 @@ constexpr u8 AsyncRes_Origin_width = FIELD_WIDTH(AsyncRes_Origin);
 constexpr auto AsyncRes_Origin_max = FIELD_MAX(AsyncRes_Origin);
 
 constexpr AsyncRes AsyncRes_Ok = 0;
+constexpr AsyncRes AsyncRes_Err =
+	FIELD(AsyncRes_Class, Unknown) | FIELD_SET(AsyncRes_Code, 1)
+;
 
 AsyncRes_Origin AsyncRes_origin(AsyncRes error) {
 	return FIELD_GET(AsyncRes_Origin, error);

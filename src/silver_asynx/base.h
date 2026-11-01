@@ -89,5 +89,5 @@ typedef struct Asynx_TASKBODY(1) AsynxGenericTask;
 		asynx_catch_fork__:; \
 		[[maybe_unused]] \
 		asynx_catch_alc__:; \
-			TODO("handle error") \
+			PANIC("unhandled error") \
 	}

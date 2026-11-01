@@ -21,17 +21,20 @@
 
 #undef XS
 
+typedef STRUCTDECL(AsyncTime);
+
 constexpr u64 Async_seconds = 1'000'0000'000ull;
 constexpr u64 Async_millis = 1'000'000ull;
 constexpr u64 Async_micros = 1'000ull;
 constexpr u64 Async_nanos = 1ull;
 
-AsyncWaitRes Async_sleep(u64 timeout);
+AsyncWaitRes Async_sleep(u64 duration);
+AsyncWaitRes Async_timeout(u64 duration, AsyncTime *out_timeout);
 
-AsyncWaitRes Async_wait8(Ptr addr, u8 expected_value, u64 timeout);
-AsyncWaitRes Async_wait16(Ptr addr, u16 expected_value, u64 timeout);
-AsyncWaitRes Async_wait32(Ptr addr, u32 expected_value, u64 timeout);
-AsyncWaitRes Async_wait64(Ptr addr, u64 expected_value, u64 timeout);
+AsyncWaitRes Async_wait8(Ptr addr, u8 expected_value, const AsyncTime *timeout);
+AsyncWaitRes Async_wait16(Ptr addr, u16 expected_value, const AsyncTime *timeout);
+AsyncWaitRes Async_wait32(Ptr addr, u32 expected_value, const AsyncTime *timeout);
+AsyncWaitRes Async_wait64(Ptr addr, u64 expected_value, const AsyncTime *timeout);
 
 AsyncWaitRes Async_wake8_get(Ptr addr, int *io_n);
 AsyncWaitRes Async_wake16_get(Ptr addr, int *io_n);

@@ -134,7 +134,7 @@ AsyncRes Weaver_boot(Weaver *this) {
 	XDEBUG("wait");
 
 	do {
-		auto const res = Async_wait32(&this->state, WeaverState_JoinIdle, 0);
+		auto const res = Async_wait32(&this->state, WeaverState_JoinIdle, nullptr);
 		switch (res) {
 			default:
 				return (
@@ -225,7 +225,7 @@ AsyncRes Weaver_join(Weaver *this) {
 	XDEBUG("wait for idle");
 
 	do {
-		auto const res = Async_wait32(&this->state, WeaverState_JoinIdle, 0);
+		auto const res = Async_wait32(&this->state, WeaverState_JoinIdle, nullptr);
 		switch (res) {
 			default: return (
 				res_origin |
@@ -288,7 +288,7 @@ AsyncRes Weaver_join(Weaver *this) {
 	}
 
 	do {
-		auto const res = Async_wait32(&this->state, WeaverState_JoinDown, 0);
+		auto const res = Async_wait32(&this->state, WeaverState_JoinDown, nullptr);
 		switch (res) {
 			default: return (
 				res_origin |

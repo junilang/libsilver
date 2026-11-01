@@ -5,7 +5,7 @@
 		FIELD_SET(AsyncRes_Code, AsyncFutureRes_IsResolved) \
 	; \
 	auto const self__ = Asynx_SELF(lbl); \
-	asynx_error__.any = AsyncFuture_settask((future), self__); \
+	asynx_error__.any = AsyncFuture_settask((future), self__, AsyncIntent_Resume); \
 	if (asynx_error__.any == AsyncRes_Ok) \
 		return AsyncIntent_Yield; \
 	if (asynx_error__.any != resolved__) \
@@ -19,7 +19,7 @@
 
 #define Asynx_WAIT_IMMEDIATE(lbl, future) \
 	Asynx_WAIT_IMMEDIATE_TO(lbl, (future)); \
-	Asynx_GOTO(lbl);
+	Asynx_LABEL(lbl);
 
 #define Asynx_WAIT_RESUME_TO(lbl, future) { \
 	Asynx_WAIT_HEADER(lbl, (future)) \
@@ -29,7 +29,7 @@
 
 #define Asynx_WAIT_RESUME(lbl, future) \
 	Asynx_WAIT_RESUME_TO(lbl, (future)); \
-	Asynx_GOTO(lbl);
+	Asynx_LABEL(lbl);
 
 #define Asynx_WAIT_SUSPEND_TO(lbl, future) { \
 	Asynx_WAIT_HEADER(lbl, (future)) \
@@ -39,4 +39,4 @@
 
 #define Asynx_WAIT_SUSPEND(lbl, future) \
 	Asynx_WAIT_SUSPEND_TO(lbl, (future)); \
-	Asynx_GOTO(lbl);
+	Asynx_LABEL(lbl);

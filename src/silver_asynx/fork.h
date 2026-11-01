@@ -27,7 +27,7 @@ AsynxForkRes Asynx_forkvalidate(AsynxForkId id, usize n) {
 // size of stack array in Asynx_fork function
 constexpr usize Asynx_fsasize = Asynx_FSASIZE;
 
-AlcRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state) {
+AsyncRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state) {
 	AsyncTask tasks[Asynx_fsasize];
 	do {
 		AsynxForkId const n = count < Asynx_fsasize ? count : Asynx_fsasize;
@@ -58,8 +58,8 @@ AlcRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state
 #define Asynx_FORK_IMMEDIATE_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
 	auto const state = Asynx_makestate(2, Asynx_TOK(_label_##lbl)); \
-	asynx_error__.alc = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state); \
-	if (asynx_error__.alc) goto asynx_catch_alc__; \
+	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state); \
+	if (asynx_error__.any) goto asynx_catch_any__; \
 	asynx_fork_id__ = 1; \
 	goto asynx_label_##lbl##__; \
 }
@@ -71,8 +71,8 @@ AlcRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state
 #define Asynx_FORK_RESUME_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
 	auto const state = Asynx_makestate(1, Asynx_TOK(_label##lbl)); \
-	asynx_error__.alc = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state + AsynxForkId_one); \
-	if (asynx_error__.alc) goto asynx_catch_alc__; \
+	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state + AsynxForkId_one); \
+	if (asynx_error__.any) goto asynx_catch_any__; \
 	*asynx_out_task__ = AsyncTask_upcast(asynx_data__, state); \
 	return AsyncIntent_Resume; \
 }
@@ -84,8 +84,8 @@ AlcRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state
 #define Asynx_FORK_SUSPEND_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
 	auto const state = Asynx_makestate(1, Asynx_TOK(_label_##lbl)); \
-	asynx_error__.alc = Asynx_fork(asynx_rt__, asynx_data__, n, state); \
-	if (asynx_error__.alc) goto asynx_catch_alc__; \
+	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_data__, n, state); \
+	if (asynx_error__.any) goto asynx_catch_any__; \
 	return AsyncIntent_Yield; \
 }
 

@@ -26,9 +26,7 @@ int ZZentry(SilverTestContext *ctx) {
 	StaticAlc_LOCAL(alc, 16384);
 
 	auto weaver = (Weaver*)ZZweaver_;
-	AlcRes_UNWRAP(
-		Weaver_init(weaver, alc, ZZthreads, 8)
-	);
+	Weaver_init(weaver, alc, ZZthreads, 8);
 
 	Weaver_boot(weaver);
 
@@ -44,14 +42,12 @@ int ZZentry(SilverTestContext *ctx) {
 	;
 
 	AsyncTask task = AsyncTask_upcast(&task_data, 0);
-	AlcRes_UNWRAP(
-		Weaver_submit(weaver, &task, 1)
-	);
+	Weaver_submit(weaver, &task, 1);
 
 	//Async_sleep(Async_millis * 500);
 
 
-	AsyncFuture_wait(&future, 0);
+	AsyncFuture_wait(&future, nullptr);
 	//PRINTBP(128, Stdout, "nanosleep_res: ",res,"\n");
 	//
 	PRINTBP(128, Stdout, "result: ",atom_get(&counter, atom_acq),"\n");

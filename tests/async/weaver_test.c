@@ -5,9 +5,9 @@ typedef union {
 	};
 } ZZtest_Task;
 
-AsyncIntent ZZtest_entry(Ptr data, AsyncRT *rt, AsyncTaskArgs args, AsyncResult *result) {
+AsyncRes ZZtest_entry(Ptr data, AsyncRT *rt, AsyncTaskArgs args, AsyncTask *out_task) {
 	PRINTBP(128, Stdout, "Hello weaver!\n");
-	return AsyncIntent_Yield;
+	return AsyncRes_Ok;
 }
 
 constexpr u32 ZZthreads = 2;
@@ -17,10 +17,10 @@ _Alignas(Weaver) ubyte ZZweaver_[Weaver_ALLOCSIZE(ZZthreads)];
 int ZZentry(SilverTestContext *ctx) {
 	StaticAlc_LOCAL(alc, 16384);
 
+	PRINTBP(128, Stdout, "Bello!!!\n");
+
 	auto weaver = (Weaver*)ZZweaver_;
-	AlcRes_UNWRAP(
-		Weaver_init(weaver, alc, ZZthreads, 8)
-	);
+	Weaver_init(weaver, alc, ZZthreads, 8);
 
 	Weaver_boot(weaver);
 
@@ -29,11 +29,9 @@ int ZZentry(SilverTestContext *ctx) {
 	};
 
 	AsyncTask task = AsyncTask_upcast(&task_data, 0);
-	AlcRes_UNWRAP(
-		Weaver_submit(weaver, &task, 1)
-	);
+	Weaver_submit(weaver, &task, 1);
 
-	Async_sleep(Async_millis * 500);
+	//Async_sleep(Async_millis * 500);
 
 	//PRINTBP(128, Stdout, "nanosleep_res: ",res,"\n");
 
