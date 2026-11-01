@@ -5,10 +5,6 @@ typedef struct {
 
 constexpr StringSpan StringSpan_null = {.begin=nullptr,.end=nullptr};
 
-uhash StringSpan_hash(uhash base, StringSpan this) {
-	return memhash(base, this.begin, (usize)(this.end - this.begin));
-}
-
 usize StringSpan_size(StringSpan this) {
 	return (usize)(this.end - this.begin);
 }

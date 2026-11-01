@@ -11,6 +11,8 @@
 		#error "only one system interface can be included"
 	#endif
 
+	#include "config.h"
+
 	#ifdef __x86_64__
 		#include "x86_64.h"
 
@@ -26,6 +28,7 @@
 	#include "futex.h"
 	#include "memory.h"
 	#include "envinfo.h"
+	#include "vdso.h"
 	#include "panic.h"
 	#include "runtime.h"
 

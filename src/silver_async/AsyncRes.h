@@ -106,3 +106,12 @@ AsyncRes_Class AsyncRes_class(AsyncRes error) {
 AsyncRes_Code AsyncRes_code(AsyncRes error) {
 	return FIELD_GET(AsyncRes_Code, error);
 }
+
+static void AsyncRes_UNWRAP_internal(AsyncRes res, ConstPtr func_name, ConstPtr panic_header) {
+	IntFmt_Unsigned_tostr(res,);
+
+	if (res) PANIC_internal(func_name, panic_header, )
+}
+
+#define AsyncRes_UNWRAP(result) \
+	AsyncRes_UNWRAP_internal(result, __func__, PANIC_IDENTIFIER" AsyncRes_UNWRAP:")

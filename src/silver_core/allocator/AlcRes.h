@@ -63,7 +63,12 @@ static Ptr AlcPtr_UNWRAP_internal(AlcPtr result, ConstPtr func_name, ConstPtr pa
 	AlcPtr_UNWRAP_internal(result, __func__, PANIC_IDENTIFIER" AlcPtr_UNWRAP:")
 
 static void AlcRes_UNWRAP_internal(AlcRes res, ConstPtr func_name, ConstPtr panic_header) {
-	if (res) PANIC_internal(func_name, panic_header, AlcRes_repr[res].data, nullptr);
+	if (!res) return;
+
+	ubyte buf[IntFmt_bufsize];
+	
+
+	PANIC_internal(func_name, panic_header, AlcRes_repr[res].data, nullptr);
 }
 
 #define AlcRes_UNWRAP(result) \

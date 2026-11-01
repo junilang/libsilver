@@ -1,0 +1,3 @@
+#ifndef LIBSILVER_LINUX_USE_VDSO
+	#define LIBSILVER_LINUX_USE_VDSO false
+#endif

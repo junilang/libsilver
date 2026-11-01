@@ -24,10 +24,6 @@
 	#include "lptrtag.h"
 	#include "chars.h"
 
-	#include "hash/hash_crc32_x86.h"
-	#include "hash/hash_fnv1a.h"
-	#include "hash/hash.h"
-
 	#include "outstream/OutStream.h"
 	#include "printable/Printable.h"
 
@@ -41,7 +37,7 @@
 
 	#include "VString.h"
 
-	#include "IntFmt.c"
+	#include "inttostr.h"
 	#include "print.h"
 
 	#include "allocator/Alc.h"

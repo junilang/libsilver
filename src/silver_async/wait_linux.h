@@ -5,7 +5,7 @@ struct AsyncTime {
 
 AsyncWaitRes Async_timeout(u64 duration, AsyncTime *out) {
 	linux_timespec ts;
-	auto res = linux_clock_gettime(CLOCK_MONOTONIC, &ts);
+	auto res = linux_clock_gettime_fast(CLOCK_MONOTONIC, &ts);
 	if (res < 0)
 		return AsyncWaitRes_ErrClock;
 

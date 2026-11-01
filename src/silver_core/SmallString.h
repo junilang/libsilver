@@ -63,10 +63,6 @@
 
 #endif
 
-uhash SmallString_hash(uhash base, SmallString this) {
-	return memhash(base, SmallString_data(this), SmallString_size(this));
-}
-
 OutStreamRes SmallString_print(SmallString this, PrintFmt fmt, OutStream os) {
 	return OutStream_write(os, SmallString_data(this), SmallString_size(this));
 }

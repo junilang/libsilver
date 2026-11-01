@@ -19,4 +19,5 @@
 	#include <linux/auxvec.h>
 	#include <linux/time.h>
 	#include <linux/limits.h>
+	#include <elf.h>
 #endif

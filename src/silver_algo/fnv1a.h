@@ -17,7 +17,7 @@ u64 u64_fnv1a(u64 base, u64 value) {
 	return (base ^ value) * fnv1a_prime;
 }
 
-u64 memfnv1a(u64 base, ConstPtr data, usize size) {
+u64 fnv1a(u64 base, ConstPtr data, usize size) {
 	const ubyte *bytes = data;
 	const ubyte *end = bytes + size;
 	for (; bytes < end; bytes++) {

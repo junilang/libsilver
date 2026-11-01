@@ -1,0 +1,3 @@
+#if !LIBSILVER_ALGO_DEPENDS
+	#define LIBSILVER_ALGO_DEPENDS true
+#endif

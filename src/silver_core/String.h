@@ -12,10 +12,6 @@ usize String_size(String this) {
 	return this.size;
 }
 
-uhash String_hash(uhash base, String this) {
-	return memhash(base, this.data, this.size);
-}
-
 bool String_isnull(String this) {
 	return this.size == 0
 	#if LIBSILVER_SAFE

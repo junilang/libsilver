@@ -3,13 +3,13 @@ typedef struct {
 	ubyte data[];
 } StaticAlc_Buffer;
 
-constexpr ualign StaticAlc_minalign = alignof(StaticAlc_Buffer);
+constexpr ualign StaticAlc_minalign = _Alignof(StaticAlc_Buffer);
 constexpr auto StaticAlc_Buffer_dataoffset = __builtin_offsetof(StaticAlc_Buffer, data);
 
 typedef struct {
-	u32 end;
-	u32 head;
-	alignas(StaticAlc_minalign) ubyte data[];
+	_Atomic u32_lf end;
+	_Atomic u32_lf head;
+	_Alignas(StaticAlc_minalign) ubyte data[];
 } StaticAlc;
 
 [[nodiscard, gnu::malloc]]
@@ -98,6 +98,7 @@ AlcPtr StaticAlc_resize(StaticAlc *this, AlcReq *req, Ptr mem) {
 }
 
 AlcRes StaticAlc_query(AlcReq *req, usize *offers) {
+	// TODO add overflow check
 	switch (req->relative) {
 		default: return AlcRes_ErrInvalidRelative;
 		case AlcRelative_None:
