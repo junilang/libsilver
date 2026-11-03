@@ -6,7 +6,7 @@
 
 {
 	#if Weaver_DEBUG
-		#define XDEBUG(...) PRINTBP(128, Weaver_DEBUG_STREAM, "[",id,"] ", __func__, ": " __VA_OPT__(,) __VA_ARGS__, "\n")
+		#define XDEBUG(...) PRIBP(128, Weaver_DEBUG_STREAM, "[",id,"] ", __func__, ": " __VA_OPT__(,) __VA_ARGS__, "\n")
 	#else
 		#define XDEBUG(...)
 	#endif
@@ -251,7 +251,7 @@
 
 	if (0) Berror: PANIC("unhandled error");
 
-	UNREACHABLE;
+	UNREACHABLE(Weaver_SAFE);
 
 	#undef XDEBUG
 }

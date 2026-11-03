@@ -7,9 +7,6 @@ typedef AlcPtr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 	#define Alc_PTRTAG PTRTAG
 #endif
 
-#ifndef IAlc_SLOTS
-	#define IAlc_SLOTS 16
-#endif
 
 #if Alc_PTRTAG
 	typedef union {
@@ -21,13 +18,19 @@ typedef AlcPtr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 		IAlc_StaticAlc_ID,
 		IAlc_OsAlc_ID,
 		IAlc_ArenaAlc_ID,
-		IAlc_KNOWN
+		IAlc_reserved
 	};
 
-	INTERFACE_REGISTRY(IAlc, utag, IAlc_SLOTS)
+	#ifndef IAlc_SLOTS
+		#define IAlc_SLOTS 16
+	#endif
+
+	constexpr auto IAlc_slots = IAlc_SLOTS;
+
+	IFACEDB(IAlc, utag, IAlc_slots, IAlc_reserved)
 
 	IAlc Alc_iface(Alc this) {
-		return IAlc__registry[ptrread(this.value)];
+		return *IFACEDB_GET(IAlc, ptrread(this.value));
 	}
 
 	Ptr Alc_this(Alc this) {

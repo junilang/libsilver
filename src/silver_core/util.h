@@ -6,7 +6,7 @@
 
 #define LITERAL(T,...) ((T){__VA_ARGS__})
 
-#define STR(str) (ConstPtr)(str), (sizeof(str) - 1)
+#define STR(str) (ConstPtr)(str), __builtin_strlen(str)
 
 #define COUNTOF(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -15,4 +15,12 @@ typedef struct {
 	usize size;
 } String;
 
-#define String_INIT(str) {.data=(ConstPtr)(str), .size=(sizeof(str) - 1)}
+#define String_INIT(str) {.data=(ConstPtr)(str), .size=(__builtin_strlen(str) - 1)}
+
+#if __clang__
+	#define LIKELY [[clang::likely]]
+	#define UNLIKELY [[clang::unlikely]]
+#else
+	#define LIKELY
+	#define UNLIKELY
+#endif

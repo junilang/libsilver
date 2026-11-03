@@ -69,7 +69,7 @@ bool Arc_release(Arc this) {
 			ArcState *state = Arc_state(this);
 			return atom_sub(&state->count, 1, atom_seq) == 1;
 
-		default: UNREACHABLE;
+		default: UNREACHABLE(Arc_SAFE);
 	}
 }
 
@@ -97,7 +97,7 @@ Arc Arc_copy(Arc this) {
 			return Arc_upcast(state, ArcClass_Owner);
 		}
 
-		default: UNREACHABLE;
+		default: UNREACHABLE(Arc_SAFE);
 	}
 }
 
@@ -112,7 +112,7 @@ Arc Arc_weak(Arc this) {
 			atom_add(&state->count, 1, atom_seq);
 			return Arc_upcast(state, ArcClass_Owner);
 
-		default: UNREACHABLE;
+		default: UNREACHABLE(Arc_SAFE);
 	}
 }
 
@@ -124,6 +124,6 @@ Arc Arc_const(Arc this) {
 		case ArcClass_Owner:
 			return Arc_upcast(Arc_state(this), ArcClass_Const);
 
-		default: UNREACHABLE;
+		default: UNREACHABLE(Arc_SAFE);
 	}
 }

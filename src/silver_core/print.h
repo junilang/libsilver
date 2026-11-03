@@ -1,23 +1,12 @@
 #define PRINT(resp, stream, ...) { \
 	const OutStream PRINT_stream__ = (stream); \
 	OutStreamRes PRINT_res__ = OutStreamRes_Ok; \
-	PrintFmt PRINT_fmt__ = PrintFmt_Null; \
+	PrintFmt PRINT_fmt__ = PrintFmt_null; \
 	do { \
 		__VA_OPT__(PRINT_0(__VA_ARGS__)) \
 	} while (0); \
 	*(resp) = PRINT_res__; \
 }
-
-#define PRINT_PANIC(stream, ...) { \
-	OutStreamRes PRINT_outer_res__; \
-	PRINT(&PRINT_outer_res__, stream, __VA_ARGS__) \
-	if (PRINT_outer_res__) PANIC_internal( \
-		__func__, PANIC_IDENTIFIER" PRINT_PANIC OutStreamRes:", \
-		OutStreamRes_repr[PRINT_outer_res__].data, nullptr \
-	); \
-}
-
-#define PRINTP PRINT_PANIC
 
 #define PRINT_BUFFERED(resp, buffer_size, stream, ...) { \
 	constexpr usize PRINT_buffer_size__ = (buffer_size); \
@@ -26,7 +15,7 @@
 	BufferOutStream PRINT_buffer_os__ = {.buffer=PRINT_buffer__,.capacity=PRINT_buffer_size__}; \
 	const OutStream PRINT_stream__ = BufferOutStream_upcast(&PRINT_buffer_os__); \
 	OutStreamRes PRINT_res__ = OutStreamRes_Ok; \
-	PrintFmt PRINT_fmt__ = PrintFmt_Null; \
+	PrintFmt PRINT_fmt__ = PrintFmt_null; \
 	do { \
 		__VA_OPT__(PRINT_0(__VA_ARGS__)) \
 		PRINT_res__ = OutStream_write( \
@@ -36,19 +25,40 @@
 	*(resp) = PRINT_res__; \
 }
 
-#define PRINTB PRINT_BUFFERED
-
-#define PRINT_BUFFERED_PANIC(buffer_size, stream, ...) { \
-	OutStreamRes PRINT_outer_res__; \
-	PRINT_BUFFERED(&PRINT_outer_res__, buffer_size, stream, __VA_ARGS__); \
-	if (PRINT_outer_res__) PANIC_internal( \
-		__func__, PANIC_IDENTIFIER" PRINT_BUFFERED_PANIC OutStreamRes:", \
-		OutStreamRes_repr[PRINT_outer_res__].data, nullptr \
-	); \
+#define PRINT_FATAL(res, name) { \
+	if (res > OutStreamRes_Aux) \
+		res = OutStreamRes_Aux; \
+	const String msg[] = { \
+		String_INIT(__func__), \
+		String_INIT(SOURCE_IDENTIFIER " " name " fatal:"), \
+		OutStreamRes_repr[res] \
+	}; \
+	PANIC_MSG_internal(msg, COUNTOF(msg)); \
 }
 
-#define PRINTBP PRINT_BUFFERED_PANIC
+#define PRINT_ASSERT(stream, ...) { \
+	OutStreamRes PRINT_ASSERT_res__; \
+	PRINT(&PRINT_ASSERT_res__, stream, __VA_ARGS__) \
+	if (PRINT_ASSERT_res__) \
+		PRINT_FATAL(PRINT_ASSERT_res__, "PRINT_ASSERT"); \
+}
 
+#define PRINT_BUFFERED_ASSERT(buffer_size, stream, ...) { \
+	OutStreamRes PRINT_PANIC_res__; \
+	PRINT_BUFFERED(&PRINT_PANIC_res__, buffer_size, stream, __VA_ARGS__); \
+	if (PRINT_PANIC_res__) { \
+		PANIC_MSG_( \
+			__func__, " " SOURCE_IDENTIFIER " PRINT_BUFFERED_PANIC fatal:", \
+			OutStreamRes_repr[PRINT_PANIC_res__].data \
+		); \
+	} \
+}
+
+#define PRINTA PRINT_ASSERT
+#define PRINTB PRINT_BUFFERED
+#define PRINTBA PRINT_BUFFERED_PANIC
+
+#if 0
 #define PANIC_PRINT(...) { \
 	os_panic_write(STR(__func__)); \
 	os_panic_write(STR(" " PANIC_IDENTIFIER " PANIC: ")); \
@@ -83,49 +93,46 @@
 	} \
 }
 
+#endif
+
 #define PRINT_ITEM(V) { \
 	PRINT_res__ = _Generic((V), \
 		PrintFmt : PRINT_setfmt, \
-		char * : PRINT_cstring, \
-		const char * : PRINT_cstring, \
-		bool : PRINT_bool, \
 		Printable : PRINT_Printable, \
 		StaticPrintable : PRINT_StaticPrintable, \
 		FmtPrintable : PRINT_FmtPrintable, \
 		StaticFmtPrintable : PRINT_StaticFmtPrintable, \
+		char * : PRINT_cstring, \
+		const char * : PRINT_cstring, \
 		String : PRINT_String, \
-		SmallString : PRINT_SmallString, \
-		VString : PRINT_VString, \
-		VSmallString : PRINT_VSmallString, \
-		StringSpan : PRINT_StringSpan, \
-		signed char : PRINT_IntFmt_Signed, \
-		signed short : PRINT_IntFmt_Signed, \
-		signed int : PRINT_IntFmt_Signed, \
-		signed long : PRINT_IntFmt_Signed, \
-		signed long long : PRINT_IntFmt_Signed, \
-		unsigned char : PRINT_IntFmt_Unsigned,  \
-		unsigned short : PRINT_IntFmt_Unsigned, \
-		unsigned int : PRINT_IntFmt_Unsigned, \
-		unsigned long : PRINT_IntFmt_Unsigned, \
-		unsigned long long : PRINT_IntFmt_Unsigned, \
+		bool : PRINT_bool, \
+		signed char : PRINT_illong, \
+		signed short : PRINT_illong, \
+		signed int : PRINT_illong, \
+		signed long : PRINT_illong, \
+		signed long long : PRINT_illong, \
+		unsigned char : PRINT_ullong,  \
+		unsigned short : PRINT_ullong, \
+		unsigned int : PRINT_ullong, \
+		unsigned long : PRINT_ullong, \
+		unsigned long long : PRINT_ullong, \
 		default : PRINT_pointer \
 	)(PRINT_stream__, &PRINT_fmt__, (V)); \
 	if (PRINT_res__) break; \
 }
 
-OutStreamRes PRINT_setfmt(OutStream os, PrintFmt *fmtp, PrintFmt fmt) {
-	*fmtp = fmt;
+OutStreamRes PRINT_setfmt(OutStream os, PrintFmt *fmtp, PrintFmt v) {
+	*fmtp = v;
 	return OutStreamRes_Ok;
 }
 
 OutStreamRes PRINT_cstring(OutStream os, PrintFmt *fmtp, Str v) {
-	PrintFmt fmt = *fmtp;
-	*fmtp = PrintFmt_Null;
-	return String_print(String_from(v), fmt, os);
+	*fmtp = PrintFmt_null;
+	return OutStream_write(os, v, __builtin_strlen(v));
 }
 
-OutStreamRes PRINT_bool(OutStream os, PrintFmt *fmt, bool v) {
-	*fmt = PrintFmt_Null;
+OutStreamRes PRINT_bool(OutStream os, PrintFmt *fmtp, bool v) {
+	*fmtp = PrintFmt_null;
 
 	Str repr;
 	usize size;
@@ -143,26 +150,22 @@ OutStreamRes PRINT_bool(OutStream os, PrintFmt *fmt, bool v) {
 
 OutStreamRes PRINT_pointer(OutStream os, PrintFmt *fmtp, ConstPtr v) {
 	PrintFmt fmt = *fmtp;
-	*fmtp = PrintFmt_Null;
+	*fmtp = PrintFmt_null;
 	if (!fmt.value)
 		fmt.value = FIELD(IntFmt_Base, Hex) | FLAG(IntFmt_Header);
-	return IntFmt_Unsigned_print((usize)v, fmt, os);
+	return ullong_print((ullong)v, fmt, os);
 }
 
 #define PRINT_GENERATE(T) \
 	OutStreamRes PRINT_##T(OutStream os, PrintFmt *fmtp, T v) { \
 		PrintFmt fmt = *fmtp; \
-		*fmtp = PrintFmt_Null; \
+		*fmtp = PrintFmt_null; \
 		return T##_print(v, fmt, os); \
 	}
 
-PRINT_GENERATE(IntFmt_Unsigned)
-PRINT_GENERATE(IntFmt_Signed)
+PRINT_GENERATE(ullong)
+PRINT_GENERATE(illong)
 PRINT_GENERATE(String)
-PRINT_GENERATE(StringSpan)
-PRINT_GENERATE(SmallString)
-PRINT_GENERATE(VString)
-PRINT_GENERATE(VSmallString)
 PRINT_GENERATE(Printable)
 PRINT_GENERATE(StaticPrintable)
 PRINT_GENERATE(FmtPrintable)
@@ -232,4 +235,4 @@ PRINT_GENERATE(StaticFmtPrintable)
 #define PRINT_61(V, ...) PRINT_ITEM((V)); __VA_OPT__(PRINT_62(__VA_ARGS__))
 #define PRINT_62(V, ...) PRINT_ITEM((V)); __VA_OPT__(PRINT_63(__VA_ARGS__))
 #define PRINT_63(V, ...) PRINT_ITEM((V)); __VA_OPT__(PRINT_64(__VA_ARGS__))
-#define PRINT_64(V, ...) PRINT_TOO_MANY_ITEMS
+#define PRINT_64(V, ...) PRINT_ERROR_TOO_MANY_ITEMS

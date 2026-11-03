@@ -21,8 +21,8 @@
 			return (OutStream){.value=ptrtag((Ptr)(usize)this, IOutStream_##N##_ID)}; \
 		}
 
-	#define IOutStream_REGISTER(N) INTERFACE_REGISTER(IOutStream, N)
-	#define IOutStream_REGISTER_KNOWN(N) INTERFACE_REGISTER_KNOWN(IOutStream, N)
+	#define IOutStream_REGISTER(N) IFACEDB_REGISTER(IOutStream, N)
+	#define IOutStream_REGISTER_KNOWN(N) IFACEDB_SET(IOutStream, N)
 
 #else
 	#define IOutStream_GENERATE_UPCAST(N, E) \

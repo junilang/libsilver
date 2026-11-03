@@ -39,9 +39,9 @@
 	#define PTRTAG_MAX ((1ull << PTRTAG_WIDTH) - 1)
 
 	constexpr utag utag_max = PTRTAG_MAX;
-	constexpr u8 utag_width = PTRTAG_WIDTH;
+	constexpr auto utag_width = PTRTAG_WIDTH;
 
-	constexpr u8 ptrtag_addr_width = PTRTAG_ADDR_WIDTH;
+	constexpr auto ptrtag_addr_width = PTRTAG_ADDR_WIDTH;
 	constexpr usize ptrtag_lsb_mask = (1ull << utag_width) - 1;
 	constexpr usize ptrtag_addr_mask = (1ull << ptrtag_addr_width) - 1;
 	constexpr usize ptrtag_msb_mask = ~ptrtag_addr_mask;

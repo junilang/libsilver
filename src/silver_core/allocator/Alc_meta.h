@@ -9,8 +9,8 @@
 			return (Alc){.value=ptrtag((Ptr)(usize)this, IAlc_##N##_ID)}; \
 		}
 
-	#define IAlc_REGISTER(N) INTERFACE_REGISTER(IAlc, N)
-	#define IAlc_REGISTER_KNOWN(N) INTERFACE_REGISTER_KNOWN(IAlc, N)
+	#define IAlc_REGISTER(N) IFACEDB_REGISTER(IAlc, N)
+	#define IAlc_REGISTER_KNOWN(N) IFACEDB_SET(IAlc, N)
 
 #else
 	#define IAlc_GENERATE_UPCAST(N, E) \

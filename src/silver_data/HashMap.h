@@ -111,7 +111,7 @@ void HashMap_ZZupgrade(Ptr src_data, usize src_size, Ptr dst_data, usize dst_siz
 				if (result) goto found;
 			}
 
-			UNREACHABLE;
+			UNREACHABLE(HashMap_SAFE);
 
 			found:;
 			auto const entry_offset =
@@ -286,7 +286,7 @@ Ptr HashMap_add_unsafe(HashMap *this, usize hash) {
 	}
 
 	// something went wrong and there are no empty slots
-	UNREACHABLE;
+	UNREACHABLE(HashMap_SAFE);
 
 	found:;
 	auto const entry_offset = ((usize)__builtin_ctzg(result) - (ubyte_width - 1)) / ubyte_width;
@@ -328,7 +328,7 @@ void HashMap_bulkadd_unsafe(HashMap *this, const HashMapItem *items, usize items
 			if (result) goto found;
 		}
 
-		UNREACHABLE;
+		UNREACHABLE(HashMap_SAFE);
 
 		found:;
 		auto const entry_offset = ((usize)__builtin_ctzg(result) - (ubyte_width - 1)) / ubyte_width;

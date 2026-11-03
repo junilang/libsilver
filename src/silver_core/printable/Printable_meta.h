@@ -9,8 +9,8 @@
 			return (Printable){ptrtag((Ptr)(usize)this, IPrintable_##N##_ID)}; \
 		}
 
-	#define IPrintable_REGISTER(N) INTERFACE_REGISTER(IPrintable, N)
-	#define IPrintable_REGISTER_KNOWN(N) INTERFACE_REGISTER_KNOWN(IPrintable, N)
+	#define IPrintable_REGISTER(N) IFACEDB_REGISTER(IPrintable, N)
+	#define IPrintable_REGISTER_KNOWN(N) IFACEDB_SET(IPrintable, N)
 
 #else
 	#define IPrintable_GENERATE_UPCAST(N, E) \

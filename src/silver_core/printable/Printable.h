@@ -2,17 +2,13 @@
 	#define Printable_PTRTAG PTRTAG
 #endif
 
-#ifndef IPrintable_SLOTS
-	#define IPrintable_SLOTS 64
-#endif
-
 typedef struct {
 	usize value;
 } PrintFmt;
 
-constexpr u8 PrintFmt_width = usize_width;
+constexpr auto PrintFmt_width = usize_width;
 
-constexpr PrintFmt PrintFmt_Null = { .value = 0 };
+constexpr PrintFmt PrintFmt_null = { .value = 0 };
 
 typedef OutStreamRes (*IPrintable)(Ptr this, PrintFmt fmt, IARG(OutStream, os));
 
@@ -23,16 +19,25 @@ typedef OutStreamRes (*IPrintable)(Ptr this, PrintFmt fmt, IARG(OutStream, os));
 
 	enum {
 		IPrintable_StringPtr_ID,
-		IPrintable_IntFmt_SignedPtr_ID,
-		IPrintable_IntFmt_UnsignedPtr_ID,
-		IPrintable_KNOWN
+		IPrintable_ullongPtr_ID,
+		IPrintable_illongPtr_ID,
+		IPrintable_reserved
 	};
 
-	INTERFACE_REGISTRY(IPrintable, utag, IPrintable_SLOTS)
+	#ifndef IPrintable_SLOTS
+		#define IPrintable_SLOTS 32
+	#endif
+
+	constexpr auto IPrintable_slots = IPrintable_SLOTS;
+
+	IFACEDB(IPrintable, utag,
+		IPrintable_slots,
+		IPrintable_reserved
+	)
 
 	Ptr Printable_this(Printable this) { return ptrstrip(this.value); }
 	IPrintable Printable_iface(Printable this) {
-		return IPrintable__registry[ptrread(this.value)];
+		return *IFACEDB_GET(IPrintable, ptrread(this.value));
 	}
 #else
 	typedef struct {

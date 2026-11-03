@@ -56,7 +56,7 @@ bool Rc_release(Rc this) {
 			RcState *state = Rc_state(this);
 			return (state->count--) == 1;
 
-		default: UNREACHABLE;
+		default: UNREACHABLE(Rc_SAFE);
 	}
 }
 
@@ -82,7 +82,7 @@ Rc Rc_copy(Rc this) {
 			return Rc_upcast(state, RcClass_Owner);
 		}
 
-		default: UNREACHABLE;
+		default: UNREACHABLE(Rc_SAFE);
 	}
 }
 
@@ -97,7 +97,7 @@ Rc Rc_weak(Rc this) {
 			state->count++;
 			return Rc_upcast(state, RcClass_Owner);
 
-		default: UNREACHABLE;
+		default: UNREACHABLE(Rc_SAFE);
 	}
 }
 
@@ -109,6 +109,6 @@ Rc Rc_const(Rc this) {
 		case RcClass_Owner:
 			return Rc_upcast(Rc_state(this), RcClass_Const);
 
-		default: UNREACHABLE;
+		default: UNREACHABLE(Rc_SAFE);
 	}
 }

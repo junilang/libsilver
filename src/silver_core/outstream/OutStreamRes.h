@@ -1,9 +1,11 @@
 #define XS \
 	X(Ok) \
 	X(ErrInternal) \
-	X(ErrOverflow) \
 	X(ErrInvalidStream) \
-	X(ErrUnknown)
+	X(ErrInvalidInput) \
+	X(ErrOverflow) \
+	X(ErrUnknown) \
+	X(Aux)
 
 typedef enum : u8 {
 	#define X(N) OutStreamRes_##N,
@@ -18,6 +20,16 @@ const String OutStreamRes_repr[] = {
 };
 
 #undef XS
+
+[[noreturn, gnu::noinline]]
+void OutStreamRes_panic(
+	OutStreamRes res,
+	ConstPtr func_name,
+	ConstPtr source_identifier,
+	ConstPtr message
+) {
+	
+}
 
 static void OutStreamRes_UNWRAP_internal(OutStreamRes res, ConstPtr func_name, ConstPtr panic_header) {
 	if (res) PANIC_internal(func_name, panic_header, OutStreamRes_repr[res].data, nullptr);

@@ -14,14 +14,13 @@
 	#include "flag.h"
 	#include "field.h"
 	#include "enum.h"
-	#include "interface.h"
 	#include "cpu.h"
+	#include "iface.h"
 
 	#include "memory.h"
 	#include "chkdop.h"
 	#include "sizeutil.h"
 	#include "ptrtag.h"
-	#include "lptrtag.h"
 	#include "chars.h"
 
 	#include "outstream/OutStream.h"
@@ -32,12 +31,10 @@
 	#include "outstream/BufferedOutStream.c"
 
 	#include "String.h"
-	#include "StringSpan.h"
-	#include "SmallString.h"
 
-	#include "VString.h"
+	//#include "VString.h"
 
-	#include "inttostr.h"
+	#include "tostr.h"
 	#include "print.h"
 
 	#include "allocator/Alc.h"

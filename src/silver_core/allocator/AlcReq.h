@@ -30,13 +30,13 @@ typedef enum : u8 {
 constexpr auto Alc_ResolveNone = u8_max;
 
 typedef u8 AlcFlag; enum {
-	FLAG_DEF(AlcFlag_Zero)
+	FLAG_DEF(AlcFlag_Zero),
+	FLAG_DEF(AlcFlag_Locked)
 };
 
 typedef struct {
 	usize size;
 	ConstPtr hint;
-	// usize uid; // allocation request id
 	ualign align;
 	AlcIntent intent;
 	AlcRelative relative;

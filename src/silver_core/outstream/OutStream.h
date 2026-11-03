@@ -12,10 +12,6 @@ typedef struct {
 	OutStreamAttr (*attr)(Ptr this);
 } IOutStream;
 
-#ifndef OutStream_SLOTS
-	#define OutStream_SLOTS 8
-#endif
-
 #if OutStream_PTRTAG
 	typedef struct {
 		union {
@@ -29,14 +25,23 @@ typedef struct {
 		IOutStream_BufferOutStream_ID,
 		IOutStream_BufferedOutStream_ID,
 		IOutStream_OsFileOutStream_ID,
-		IOutStream_KNOWN
+		IOutStream_reserved
 	};
 
-	INTERFACE_REGISTRY(IOutStream, utag, 8)
+	#ifndef IOutStream_SLOTS
+		#define IOutStream_SLOTS 8
+	#endif
+
+	constexpr auto IOutStream_slots = IOutStream_SLOTS;
+
+	IFACEDB(IOutStream, utag,
+		IOutStream_slots,
+		IOutStream_reserved
+	)
 
 	Ptr OutStream_this(OutStream this) { return ptrstrip(this.value); }
 	const IOutStream *OutStream_iface(OutStream this) {
-		return &IOutStream__registry[ptrread(this.value)];
+		return IFACEDB_GET(IOutStream, ptrread(this.value));
 	}
 
 	#define CONSTEXPR_OutStream_upcast(name, this) \
@@ -57,8 +62,8 @@ typedef struct {
 #endif
 
 [[nodiscard]]
-OutStreamRes OutStream_write(OutStream this, ConstPtr buffer, usize buffer_size) {
-	return OutStream_iface(this)->write(OutStream_this(this), buffer, buffer_size);
+OutStreamRes OutStream_write(OutStream this, ConstPtr buf, usize buf_size) {
+	return OutStream_iface(this)->write(OutStream_this(this), buf, buf_size);
 }
 
 [[nodiscard]]
