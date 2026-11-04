@@ -16,7 +16,7 @@
 #define Asynx_JOIN_RESUME_TO(lbl) { \
 	Asynx_JOIN_SYNC \
 	*asynx_out_task__ = AsyncTask_upcast( \
-		asynx_data__, Asynx_makestate(0, Asynx_TOK(_Label_##lbl)) \
+		asynx_data__, Asynx_makestate(Asynx_TOK(_Label_##lbl), 0) \
 	); \
 	return AsyncIntent_Resume; \
 }
@@ -28,7 +28,7 @@
 #define Asynx_JOIN_SUSPEND_TO(lbl) { \
 	Asynx_JOIN_SYNC \
 	*asynx_out_task__ = AsyncTask_upcast( \
-		asynx_data__, Asynx_makestate(0, Asynx_TOK(_Label_##lbl)) \
+		asynx_data__, Asynx_makestate(Asynx_TOK(_Label_##lbl), 0) \
 	); \
 	return AsyncIntent_Suspend; \
 }

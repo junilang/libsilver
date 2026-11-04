@@ -54,7 +54,7 @@
 	constexpr uhash hash_base = crc64_base;
 
 	uhash memhash(uhash base, ConstPtr data, usize size) {
-		return memcrc64(base, data, size);
+		return crc64(base, data, size);
 	}
 
 	uhash u8_hash(uhash base, u8 value) {
@@ -85,7 +85,7 @@
 	constexpr uhash hash_base = crc32_base;
 
 	uhash memhash(uhash base, ConstPtr data, usize size) {
-		return memcrc32(base, data, size);
+		return crc32(base, data, size);
 	}
 
 	uhash u8_hash(uhash base, u8 value) {
@@ -114,7 +114,7 @@
 	constexpr uhash hash_base = fnv1a_base;
 
 	uhash memhash(uhash base, ConstPtr data, usize size) {
-		return memfnv1a(base, data, size);
+		return fnv1a(base, data, size);
 	}
 
 	uhash u8_hash(uhash base, u8 value) {

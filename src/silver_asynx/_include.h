@@ -20,4 +20,5 @@
 	#include "join.h"
 	#include "wait.h"
 	#include "base.h"
+	#include "alc.h"
 #endif

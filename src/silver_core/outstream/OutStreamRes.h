@@ -22,18 +22,45 @@ const String OutStreamRes_repr[] = {
 #undef XS
 
 [[noreturn, gnu::noinline]]
-void OutStreamRes_panic(
+void OutStreamRes_panic_(
 	OutStreamRes res,
 	ConstPtr func_name,
-	ConstPtr source_identifier,
-	ConstPtr message
+	ConstPtr header
 ) {
-	
+	#define XMSG "Aux("
+	constexpr auto msg_len = __builtin_strlen(XMSG);
+	constexpr auto buf_size = 16;
+	ubyte buf[msg_len + buf_size + 4] = {XMSG};
+
+	String msg[3] = {
+		String_INIT(func_name),
+		String_INIT(header)
+	};
+
+	if (res >= OutStreamRes_Aux) {
+		auto const r = ullong_tostr(
+			res, FLAG(IntFmt_ZeroOffset), buf + msg_len, buf_size
+		);
+		if (r < 0) msg[2] = (String)String_INIT("Aux(?tostr_error?)");
+		else {
+			auto const l = (usize)r;
+			buf[msg_len + l] = ')';
+			msg[2] = (String){.data = buf, .size = msg_len + l + 1 };
+		}
+	} else {
+		msg[2] = OutStreamRes_repr[res];
+	}
+
+	panic_msg_(msg, COUNTOF(msg));
 }
 
-static void OutStreamRes_UNWRAP_internal(OutStreamRes res, ConstPtr func_name, ConstPtr panic_header) {
-	if (res) PANIC_internal(func_name, panic_header, OutStreamRes_repr[res].data, nullptr);
+void OutStreamRes_assert_(
+	OutStreamRes res,
+	ConstPtr func_name,
+	ConstPtr header
+) {
+	if (res) OutStreamRes_panic_(res, func_name, header);
 }
 
-#define OutStreamRes_UNWRAP(result) \
-	OutStreamRes_UNWRAP_internal(result, __func__, PANIC_IDENTIFIER" OutStreamRes_UNWRAP:")
+#define OutStreamRes_ASSERT(result) \
+	OutStreamRes_assert_(result, __func__, SOURCE_IDENTIFIER " OutStreamRes_ASSERT(" #result "):")

@@ -4,7 +4,9 @@
 
 #include "OutStreamRes.h"
 
-typedef u32 OutStreamAttr;
+typedef u32 OutStreamAttr; enum {
+	FLAG_DEF(OutStreamAttr_ThreadSafe)
+};
 
 typedef struct {
 	OutStreamRes (*write)(Ptr this, ConstPtr buffer, usize buffer_size);

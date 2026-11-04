@@ -24,6 +24,7 @@ typedef enum : u8 {
 	AlcIntent_Promise,
 	AlcIntent_ResizePromise,
 	AlcIntent_Lock,
+	AlcIntent_TryLock,
 	AlcIntent_Unlock,
 } AlcIntent;
 
@@ -31,7 +32,8 @@ constexpr auto Alc_ResolveNone = u8_max;
 
 typedef u8 AlcFlag; enum {
 	FLAG_DEF(AlcFlag_Zero),
-	FLAG_DEF(AlcFlag_Locked)
+	FLAG_DEF(AlcFlag_Locked),
+	FLAG_DEF(AlcFlag_NoWait)
 };
 
 typedef struct {
@@ -54,6 +56,7 @@ typedef u32 AlcAttr; enum {
 	FLAG_DEF(AlcAttr_IntentPromise),
 	FLAG_DEF(AlcAttr_IntentResizePromise),
 	FLAG_DEF(AlcAttr_IntentLock),
+	FLAG_DEF(AlcAttr_IntentTryLock),
 	FLAG_DEF(AlcAttr_IntentUnlock),
 	FLAG_DEF(AlcAttr_FeatureZero),
 	FLAG_DEF(AlcAttr_FeatureRelativeLocal),

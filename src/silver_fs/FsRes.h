@@ -22,9 +22,19 @@ const String FsRes_repr[] = {
 
 #undef XS
 
-static void FsRes_UNWRAP_internal(FsRes res, ConstPtr func_name, ConstPtr panic_header) {
-	if (res) PANIC_internal(func_name, panic_header, FsRes_repr[res].data, nullptr);
+[[noreturn, gnu::noinline]]
+void FsRes_panic_(FsRes res, ConstPtr func_name, ConstPtr header) {
+	// TODO print res value
+	String msg[] = {
+		String_INIT(func_name),
+		String_INIT(header)
+	};
+	panic_msg_(msg, COUNTOF(msg));
 }
 
-#define FsRes_UNWRAP(result) \
-	FsRes_UNWRAP_internal(result, __func__, PANIC_IDENTIFIER" FsRes_UNWRAP:")
+void FsRes_assert_(FsRes res, ConstPtr func_name, ConstPtr header) {
+	if (res) FsRes_panic_(res, func_name, header);
+}
+
+#define FsRes_ASSERT(result) \
+	FsRes_assert_(result, __func__, SOURCE_IDENTIFIER " FsRes_ASSERT(" #result "):")

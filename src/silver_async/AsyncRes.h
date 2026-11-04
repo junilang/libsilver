@@ -107,11 +107,19 @@ AsyncRes_Code AsyncRes_code(AsyncRes error) {
 	return FIELD_GET(AsyncRes_Code, error);
 }
 
-static void AsyncRes_UNWRAP_internal(AsyncRes res, ConstPtr func_name, ConstPtr panic_header) {
-	IntFmt_Unsigned_tostr(res,);
-
-	if (res) PANIC_internal(func_name, panic_header, )
+[[noreturn, gnu::noinline]]
+void AsyncRes_panic_(AsyncRes res, ConstPtr func_name, ConstPtr header) {
+	// TODO print res value
+	String msg[] = {
+		String_INIT(func_name),
+		String_INIT(header)
+	};
+	panic_msg_(msg, COUNTOF(msg));
 }
 
-#define AsyncRes_UNWRAP(result) \
-	AsyncRes_UNWRAP_internal(result, __func__, PANIC_IDENTIFIER" AsyncRes_UNWRAP:")
+void AsyncRes_assert_(AsyncRes res, ConstPtr func_name, ConstPtr header) {
+	if (res) AsyncRes_panic_(res, func_name, header);
+}
+
+#define AsyncRes_ASSERT(result) \
+	AsyncRes_assert_(result, __func__, SOURCE_IDENTIFIER " AsyncRes_ASSERT(" #result "):")

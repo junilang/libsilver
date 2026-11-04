@@ -12,6 +12,8 @@
 		#error "unsupported platform"
 	#endif
 
+	#include "AsyncAlc.h"
+
 	#include "Async_decl.h"
 	#include "AsyncRes.h"
 	#include "AsyncRT.h"

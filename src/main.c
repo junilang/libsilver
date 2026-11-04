@@ -8,6 +8,7 @@
 	#define TEST_SUITE_BEGIN void libsilver_testsuite(SilverTestState *state) {
 	#define TEST_RUN(test, name) SilverTest_run(state, String_from(name), &test##_entry);
 	#define TEST_SUITE_END }
+	#define TEST(name) int name##entry(SilverTestContext *ctx)
 
 	#ifdef BUILD_TESTING_INCLUDE
 		#include BUILD_TESTING_INCLUDE

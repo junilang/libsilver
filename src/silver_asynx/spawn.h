@@ -6,7 +6,7 @@
 		tasks[i] = AsyncTask_upcast(tp[i], Asynx_nullstate); \
 	} \
 	auto res = AsyncRT_submit(rt, tasks, n); \
-	if (res) TODO("handle error"); \
+	if (res) PANIC("handle error"); \
 }
 
 #define Asynx_SPAWN(...) Asynx_SPAWN_WITH(asynx_rt__, __VA_ARGS__)

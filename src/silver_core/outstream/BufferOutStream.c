@@ -4,10 +4,6 @@ typedef struct {
 	u32 capacity;
 } BufferOutStream;
 
-#ifndef BufferOutStream_SAFE
-	#define BufferOutStream_SAFE LIBSILVER_SAFE
-#endif
-
 OutStreamRes BufferOutStream_write(BufferOutStream *this, ConstPtr buffer, usize buffer_size) {
 	auto const index = this->size;
 

@@ -1,10 +1,32 @@
-typedef enum : u8 {
-	AsynxForkRes_Ok,
-	AsynxForkRes_ErrRecursive,
-	AsynxForkRes_ErrOverflow,
-	AsynxForkRes_ErrZero,
-	AsynxForkRes_ErrOne
-} AsynxForkRes;
+#define XS \
+	X(Ok) \
+	X(ErrRecursive) \
+	X(ErrOverflow) \
+	X(ErrZero) \
+	X(ErrOne)
+
+	typedef enum : u8 {
+		#define X(N) AsynxForkRes_##N,
+			XS
+		#undef X
+	} AsynxForkRes;
+
+	const String AsynxForkRes_repr[] = {
+		#define X(N) [AsynxForkRes_##N] = String_INIT(#N),
+			XS
+		#undef X
+	};
+#undef XS
+
+[[noreturn, gnu::noinline]]
+void AsynxForkRes_panic_(AsynxForkRes res, ConstPtr func_name, ConstPtr header) {
+	String msg[] = {
+		String_INIT(func_name),
+		String_INIT(header),
+		AsynxForkRes_repr[res]
+	};
+	panic_msg_(msg, COUNTOF(msg));
+}
 
 AsynxForkRes Asynx_forkvalidate(AsynxForkId id, usize n) {
 	#if Asynx_SAFE
@@ -45,7 +67,6 @@ AsyncRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState sta
 }
 
 #define Asynx_SETFORK(data, n) { \
-	(data)->fork_count__ = n; \
 	(data)->fork_sync__ = n; \
 }
 
@@ -57,7 +78,7 @@ AsyncRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState sta
 
 #define Asynx_FORK_IMMEDIATE_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
-	auto const state = Asynx_makestate(2, Asynx_TOK(_label_##lbl)); \
+	auto const state = Asynx_makestate(Asynx_TOK(_label_##lbl), 0); \
 	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state); \
 	if (asynx_error__.any) goto asynx_catch_any__; \
 	asynx_fork_id__ = 1; \
@@ -70,7 +91,7 @@ AsyncRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState sta
 
 #define Asynx_FORK_RESUME_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
-	auto const state = Asynx_makestate(1, Asynx_TOK(_label##lbl)); \
+	auto const state = Asynx_makestate(Asynx_TOK(_label##lbl), 1); \
 	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state + AsynxForkId_one); \
 	if (asynx_error__.any) goto asynx_catch_any__; \
 	*asynx_out_task__ = AsyncTask_upcast(asynx_data__, state); \
@@ -83,7 +104,7 @@ AsyncRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState sta
 
 #define Asynx_FORK_SUSPEND_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
-	auto const state = Asynx_makestate(1, Asynx_TOK(_label_##lbl)); \
+	auto const state = Asynx_makestate(Asynx_TOK(_label_##lbl), 1); \
 	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_data__, n, state); \
 	if (asynx_error__.any) goto asynx_catch_any__; \
 	return AsyncIntent_Yield; \

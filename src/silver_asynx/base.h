@@ -8,7 +8,7 @@
 typedef struct Asynx_TASKBODY(1) AsynxGenericTask;
 
 #ifndef Asynx_TASKALIGN
-	#define Asynx_TASKALIGN 0
+	#define Asynx_TASKALIGN CPU_HDI_SIZE
 #endif
 
 #define Asynx_STATE_ALIGN(align, ...) \
@@ -23,7 +23,7 @@ typedef struct Asynx_TASKBODY(1) AsynxGenericTask;
 	[[maybe_unused]] asynx_label_##lbl##__:
 
 #define Asynx_SELF(lbl) \
-	AsyncTask_upcast(asynx_data__, Asynx_makestate(asynx_fork_id__, Asynx_TOK(_label_##lbl)))
+	AsyncTask_upcast(asynx_data__, Asynx_makestate(Asynx_TOK(_label_##lbl), asynx_fork_id__))
 
 #define Asynx_LOCAL_THIS [[maybe_unused]] auto const this = asynx_data__;
 
@@ -82,12 +82,14 @@ typedef struct Asynx_TASKBODY(1) AsynxGenericTask;
 			case AsynxReturn_Resolve: \
 				return AsyncFuture_resolve(asynx_data__->return_future__, asynx_out_task__); \
 		} \
-		UNREACHABLE; \
+		UNREACHABLE(Asynx_SAFE); \
 		[[maybe_unused]] \
 		asynx_catch_any__:; \
+			AsyncRes_panic_(asynx_error__.any, __func__, SOURCE_IDENTIFIER "unhandled AsyncRes:"); \
 		[[maybe_unused]] \
 		asynx_catch_fork__:; \
+			AsynxForkRes_panic_(asynx_error__.fork, __func__, SOURCE_IDENTIFIER " unhandled AsynxForkRes:"); \
 		[[maybe_unused]] \
 		asynx_catch_alc__:; \
-			PANIC("unhandled error") \
+			AlcRes_panic_(asynx_error__.alc, __func__, SOURCE_IDENTIFIER " unhandled AlcRes:"); \
 	}

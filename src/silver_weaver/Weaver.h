@@ -12,7 +12,8 @@ enum {
 typedef struct {
 	// const state
 	AsyncRT iface;
-	Alc alc;
+	Alc queue_alc;
+	Alc provider_alc;
 	u32 threads_size;
 
 	// shared state
@@ -63,7 +64,7 @@ AsyncRT *Weaver_upcast(Weaver *this) {
 #endif
 
 #if Weaver_DEBUG
-	#define XDEBUG(...) PRINTBP(128, Weaver_DEBUG_STREAM, "[",XTID,"] ", __func__, ": " __VA_OPT__(,) __VA_ARGS__, "\n")
+	#define XDEBUG(...) PRINTBA(128, Weaver_DEBUG_STREAM, "[",XTID,"] ", __func__, ": " __VA_OPT__(,) __VA_ARGS__, "\n")
 #else
 	#define XDEBUG(...)
 #endif
@@ -494,7 +495,7 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 			.align = WeaverQueue_align
 		};
 
-		AlcPtr ptr = Alc_invoke(this->alc, &req, nullptr, wqueue);
+		AlcPtr ptr = Alc_invoke(this->queue_alc, &req, nullptr, wqueue);
 		auto const res = AlcPtr_get(ptr);
 		if (res) return (
 			res_origin |
@@ -623,22 +624,24 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 }
 
 [[nodiscard]]
-AlcPtr Weaver_alc(Ptr vthis, AlcReq *req, Ptr arg, Ptr mem) {
+AlcPtr Weaver_alc(Ptr vthis, AsyncRT_AlcReq *req, Ptr arg, Ptr mem) {
 	Weaver *const this = vthis;
-	return Alc_invoke(this->alc, req, arg, mem);
+	return Alc_invoke(this->provider_alc, &req->req, arg, mem);
 }
 
 [[nodiscard]]
 AlcRes Weaver_init(
-	Weaver *this, Alc alc, u32 threads_size, WeaverQueueSize queue_capacity
+	Weaver *this, Alc queue_alc, Alc provider_alc, u32 threads_size, WeaverQueueSize queue_capacity
 ) {
-	if (threads_size > Weaver_maxthreads)
-		return AlcRes_ErrOverflow;
+	#if Weaver_SAFE
+		ASSERT(threads_size <= Weaver_maxthreads);
+	#endif
 
-	this->iface.alc = &Weaver_alc;
 	this->iface.submit = &Weaver_submit;
+	this->iface.alc = &Weaver_alc;
 
-	this->alc = alc;
+	this->queue_alc = queue_alc;
+	this->provider_alc = provider_alc;
 	this->threads_size = threads_size;
 
 	this->state = WeaverState_Down;
@@ -656,7 +659,7 @@ AlcRes Weaver_init(
 	};
 
 	{ // read queue
-		AlcPtr ptr = Alc_invoke(alc, &req, nullptr, nullptr);
+		AlcPtr ptr = Alc_invoke(queue_alc, &req, nullptr, nullptr);
 		auto const res = AlcPtr_get(ptr);
 		if (res) return res;
 
@@ -672,7 +675,7 @@ AlcRes Weaver_init(
 
 	{ // write queue
 		req.size = queue_allocsize;
-		AlcPtr ptr = Alc_invoke(alc, &req, nullptr, nullptr);
+		AlcPtr ptr = Alc_invoke(queue_alc, &req, nullptr, nullptr);
 		auto const res = AlcPtr_get(ptr);
 		if (res) return res;
 
@@ -700,7 +703,7 @@ AlcRes Weaver_init(
 
 [[nodiscard]]
 AlcRes Weaver_deinit(Weaver *this) {
-	auto const alc = this->alc;
+	auto const alc = this->queue_alc;
 
 	auto res = Alc_delete(alc, this->read.queue);
 	if (res) return res;
@@ -712,7 +715,7 @@ AlcRes Weaver_deinit(Weaver *this) {
 }
 
 [[nodiscard]]
-AlcPtr Weaver_create(Alc alc, u32 threads_size, WeaverQueueSize queue_capacity) {
+AlcPtr Weaver_create(Alc alc, Alc provider_alc, u32 threads_size, WeaverQueueSize queue_capacity) {
 	AlcReq req = {
 		.intent = AlcIntent_New,
 		.size = Weaver_allocsize(threads_size),
@@ -724,7 +727,7 @@ AlcPtr Weaver_create(Alc alc, u32 threads_size, WeaverQueueSize queue_capacity) 
 
 	auto this = (Weaver*)ptr;
 
-	auto res = Weaver_init(this, alc, threads_size, queue_capacity);
+	auto res = Weaver_init(this, alc, provider_alc, threads_size, queue_capacity);
 	if (res) return AlcPtr_set(res);
 
 	return (AlcPtr)this;
@@ -735,7 +738,7 @@ AlcRes Weaver_destroy(Weaver *this) {
 	auto res = Weaver_deinit(this);
 	if (res) return res;
 
-	auto const alc = this->alc;
+	auto const alc = this->queue_alc;
 	res = Alc_delete(alc, this);
 
 	return AlcRes_Ok;

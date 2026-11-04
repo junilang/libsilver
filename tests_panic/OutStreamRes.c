@@ -1,5 +1,4 @@
-int ZZentry(SilverTestContext *ctx) {
-	OutStreamRes_UNWRAP(OutStreamRes_ErrUnknown);
-
+TEST(ZZ) {
+	OutStreamRes_ASSERT(OutStreamRes_ErrUnknown);
 	return 666;
 }

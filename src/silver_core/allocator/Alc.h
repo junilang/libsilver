@@ -16,8 +16,9 @@ typedef AlcPtr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 
 	enum {
 		IAlc_StaticAlc_ID,
-		IAlc_OsAlc_ID,
+		IAlc_AsyncAlc_ID,
 		IAlc_ArenaAlc_ID,
+		IAlc_OsAlc_ID,
 		IAlc_reserved
 	};
 

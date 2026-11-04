@@ -4,21 +4,21 @@
 
 #if AsyncTask_PTRTAG
 	typedef utag AsyncTaskState;
-	constexpr u8 AsyncTaskState_width = utag_width;
+	constexpr auto AsyncTaskState_width = utag_width;
 	constexpr AsyncTaskState AsyncTaskState_max = utag_max;
 
 #else
 	typedef u32 AsyncTaskState;
-	constexpr u8 AsyncTaskState_width = 32;
+	constexpr auto AsyncTaskState_width = 32;
 	constexpr AsyncTaskState AsyncTaskState_max = u32_max;
 
 #endif
 
 typedef usize AsyncTaskArgs;
-constexpr u8 AsyncTaskArgs_width = usize_width;
+constexpr auto AsyncTaskArgs_width = usize_width;
 
 typedef usize AsyncTaskContext;
-constexpr u8 AsyncTaskContext_width = AsyncTaskArgs_width - AsyncTaskState_width;
+constexpr auto AsyncTaskContext_width = AsyncTaskArgs_width - AsyncTaskState_width;
 constexpr AsyncTaskContext AsyncTaskContext_max = ((1ull << AsyncTaskContext_width) - 1);
 
 AsyncTaskArgs AsyncTaskArgs_create(AsyncTaskContext context, AsyncTaskState state) {

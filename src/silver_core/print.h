@@ -25,75 +25,25 @@
 	*(resp) = PRINT_res__; \
 }
 
-#define PRINT_FATAL(res, name) { \
-	if (res > OutStreamRes_Aux) \
-		res = OutStreamRes_Aux; \
-	const String msg[] = { \
-		String_INIT(__func__), \
-		String_INIT(SOURCE_IDENTIFIER " " name " fatal:"), \
-		OutStreamRes_repr[res] \
-	}; \
-	PANIC_MSG_internal(msg, COUNTOF(msg)); \
-}
-
 #define PRINT_ASSERT(stream, ...) { \
 	OutStreamRes PRINT_ASSERT_res__; \
 	PRINT(&PRINT_ASSERT_res__, stream, __VA_ARGS__) \
-	if (PRINT_ASSERT_res__) \
-		PRINT_FATAL(PRINT_ASSERT_res__, "PRINT_ASSERT"); \
+	OutStreamRes_assert_( \
+		PRINT_ASSERT_res__, __func__, SOURCE_IDENTIFIER " PRINT_ASSERT failed:" \
+	); \
 }
 
 #define PRINT_BUFFERED_ASSERT(buffer_size, stream, ...) { \
-	OutStreamRes PRINT_PANIC_res__; \
-	PRINT_BUFFERED(&PRINT_PANIC_res__, buffer_size, stream, __VA_ARGS__); \
-	if (PRINT_PANIC_res__) { \
-		PANIC_MSG_( \
-			__func__, " " SOURCE_IDENTIFIER " PRINT_BUFFERED_PANIC fatal:", \
-			OutStreamRes_repr[PRINT_PANIC_res__].data \
-		); \
-	} \
+	OutStreamRes PRINT_ASSERT_res__; \
+	PRINT_BUFFERED(&PRINT_ASSERT_res__, buffer_size, stream, __VA_ARGS__); \
+	OutStreamRes_assert_( \
+		PRINT_ASSERT_res__, __func__, SOURCE_IDENTIFIER " PRINT_BUFFERED_ASSERT failed:" \
+	); \
 }
 
 #define PRINTA PRINT_ASSERT
 #define PRINTB PRINT_BUFFERED
-#define PRINTBA PRINT_BUFFERED_PANIC
-
-#if 0
-#define PANIC_PRINT(...) { \
-	os_panic_write(STR(__func__)); \
-	os_panic_write(STR(" " PANIC_IDENTIFIER " PANIC: ")); \
-	OutStreamRes PRINT_outer_res__; \
-	PRINT(&PRINT_outer_res__, os_panic_stream() __VA_OPT__(,) __VA_ARGS__, "\n"); \
-	if (PRINT_outer_res__) { \
-		os_panic_write(STR("\nPANIC_PRINT failed OutStreamRes: ")); \
-		os_panic_write( \
-			OutStreamRes_repr[PRINT_outer_res__].data, \
-			OutStreamRes_repr[PRINT_outer_res__].size \
-		); \
-		os_panic_write(STR("\n")); \
-	} \
-	os_panic(); \
-}
-
-#define ASSERT_PRINT(cond, ...) { \
-	if (!(cond)) { \
-		os_panic_write(STR(__func__)); \
-		os_panic_write(STR(" " PANIC_IDENTIFIER " ASSERT(" #cond "): ")); \
-		OutStreamRes PRINT_outer_res__; \
-		PRINT(&PRINT_outer_res__, os_panic_stream() __VA_OPT__(,) __VA_ARGS__, "\n"); \
-		if (PRINT_outer_res__) { \
-			os_panic_write(STR("\nASSERT_PRINT failed OutStreamRes: ")); \
-			os_panic_write( \
-				OutStreamRes_repr[PRINT_outer_res__].data, \
-				OutStreamRes_repr[PRINT_outer_res__].size \
-			); \
-			os_panic_write(STR("\n")); \
-		} \
-		os_panic(); \
-	} \
-}
-
-#endif
+#define PRINTBA PRINT_BUFFERED_ASSERT
 
 #define PRINT_ITEM(V) { \
 	PRINT_res__ = _Generic((V), \

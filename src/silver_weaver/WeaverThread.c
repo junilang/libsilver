@@ -6,7 +6,7 @@
 
 {
 	#if Weaver_DEBUG
-		#define XDEBUG(...) PRIBP(128, Weaver_DEBUG_STREAM, "[",id,"] ", __func__, ": " __VA_OPT__(,) __VA_ARGS__, "\n")
+		#define XDEBUG(...) PRINTBA(128, Weaver_DEBUG_STREAM, "[",id,"] ", __func__, ": " __VA_OPT__(,) __VA_ARGS__, "\n")
 	#else
 		#define XDEBUG(...)
 	#endif

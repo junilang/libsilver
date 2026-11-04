@@ -12,7 +12,7 @@ OutStreamRes OsFileOutStream_flush(linux_fd fd) {
 }
 
 OutStreamAttr OsFileOutStream_attr(linux_fd fd) {
-	return 0;
+	return FLAG(OutStreamAttr_ThreadSafe);
 }
 
 IOutStream_GENERATE_KNOWN(OsFileOutStream, linux_fd)

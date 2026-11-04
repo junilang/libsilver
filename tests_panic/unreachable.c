@@ -1,4 +1,4 @@
-int ZZentry(SilverTestContext *ctx) {
-	UNREACHABLE;
+TEST(ZZ) {
+	UNREACHABLE(true);
 	return 666;
 }

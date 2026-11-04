@@ -10,21 +10,25 @@
 	#include "atomic.h"
 
 	#include "util.h"
-	#include "panic.h"
 	#include "flag.h"
 	#include "field.h"
 	#include "enum.h"
-	#include "cpu.h"
 	#include "iface.h"
+	#include "cpu.h"
 
 	#include "memory.h"
 	#include "chkdop.h"
 	#include "sizeutil.h"
+
+	#include "panic.h"
+
 	#include "ptrtag.h"
 	#include "chars.h"
+	#include "tostr.h"
 
 	#include "outstream/OutStream.h"
 	#include "printable/Printable.h"
+	#include "printable/int.h"
 
 	#include "outstream/VoidOutStream.c"
 	#include "outstream/BufferOutStream.c"
@@ -34,7 +38,6 @@
 
 	//#include "VString.h"
 
-	#include "tostr.h"
 	#include "print.h"
 
 	#include "allocator/Alc.h"

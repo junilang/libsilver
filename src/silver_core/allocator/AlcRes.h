@@ -1,5 +1,6 @@
 #define XS \
 	X(Ok) \
+	X(Locked) \
 	X(ErrInvalidSize) \
 	X(ErrInvalidAlign) \
 	X(ErrInvalidRelative) \
@@ -51,39 +52,32 @@ AlcRes AlcPtr_get(AlcPtr result) {
 	return AlcRes_Ok;
 }
 
-static void AlcRes_UNWRAP_internal(AlcRes res, ConstPtr func_name, ConstPtr panic_header) {
-	if (!res) return;
-
-	ubyte buf[8];
-	ConstPtr str;
-	if (res < AlcRes_Aux) {
-		str = AlcRes_repr[res].data;
-	} else {
-		auto const r =
-			ullong_tostr(res, FLAGS(IntFmt, ZeroOffset, NullTerminate), buf, 8)
-		;
-
-		if (r < 0)
-			str = "tostr error :)";
-		else
-			str = buf;
-	}
-
-	PANIC_internal(func_name, panic_header, str, nullptr);
+[[noreturn, gnu::noinline]]
+void AlcRes_panic_(AlcRes res, ConstPtr func_name, ConstPtr header) {
+	// TODO print res value
+	String msg[] = {
+		String_INIT(func_name),
+		String_INIT(header)
+	};
+	panic_msg_(msg, COUNTOF(msg));
 }
 
-#define AlcRes_UNWRAP(result) \
-	AlcRes_UNWRAP_internal(result, __func__, PANIC_IDENTIFIER" AlcRes_UNWRAP: res=")
-
-
-static Ptr AlcPtr_UNWRAP_internal(AlcPtr result, ConstPtr func_name, ConstPtr panic_header) {
-	auto const res = AlcPtr_get(result);
-	AlcRes_UNWRAP_internal(res, func_name, panic_header);
-	return (Ptr)result;
+void AlcRes_assert_(AlcRes res, ConstPtr func_name, ConstPtr header) {
+	if (res) AlcRes_panic_(res, func_name, header);
 }
+
+Ptr AlcPtr_unwrap_(AlcPtr ptr, ConstPtr func_name, ConstPtr header) {
+	auto const res = AlcPtr_get(ptr);
+	if (res) AlcRes_panic_(res, func_name, header);
+	return (Ptr)ptr;
+}
+
+#define AlcRes_ASSERT(result) \
+	AlcRes_assert_(result, __func__, SOURCE_IDENTIFIER " AlcRes_ASSERT(" #result "):")
+
 
 #define AlcPtr_UNWRAP(result) \
-	AlcPtr_UNWRAP_internal(result, __func__, PANIC_IDENTIFIER" AlcPtr_UNWRAP:")
+	AlcPtr_unwrap_(result, __func__, SOURCE_IDENTIFIER " AlcPtr_UNWRAP(" #result "):")
 
 typedef struct {
 	usize size;

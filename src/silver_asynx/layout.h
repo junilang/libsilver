@@ -1,13 +1,21 @@
-typedef enum : u8 {
-	AsynxReturn_None,
-	AsynxReturn_Resume,
-	AsynxReturn_Suspend,
-	AsynxReturn_Resolve,
-	AsynxReturn_JoinResume,
-	AsynxReturn_JoinSuspend
-} AsynxReturn;
 
 constexpr AsyncTaskState Asynx_nullstate = 0;
+
+#ifndef AsynxLabel_WIDTH
+	#define AsynxLabel_WIDTH 8
+#endif
+
+#if AsynxLabel_WIDTH > 64
+	#error "AsynxLabel_WIDTH > 64"
+#elif AsynxLabel_WIDTH > 32
+	typedef u64 AsynxLabel;
+#elif AsynxLabel_WIDTH > 16
+	typedef u32 AsynxLabel;
+#elif AsynxLabel_WIDTH > 8
+	typedef u16 AsynxLabel;
+#else
+	typedef u8 AsynxLabel;
+#endif
 
 #ifndef AsynxForkId_WIDTH
 	#define AsynxForkId_WIDTH 8
@@ -29,49 +37,49 @@ constexpr AsyncTaskState Asynx_nullstate = 0;
 	typedef _Atomic u8_lf AsynxForkSync;
 #endif
 
-constexpr u8 AsynxForkId_width = AsynxForkId_WIDTH;
-constexpr AsynxForkId AsynxForkId_mask = (AsynxForkId)(u64_max >> (64 - AsynxForkId_width));
-constexpr AsynxForkId AsynxForkId_max = AsynxForkId_mask;
+constexpr auto AsynxForkId_width = AsynxForkId_WIDTH;
+constexpr auto AsynxLabel_width = AsynxLabel_WIDTH;
 
-#ifndef AsynxLabel_WIDTH
-	#define AsynxLabel_WIDTH 8
-#endif
+enum {
+	FIELD_DEF(AsynxLabel, AsynxLabel_width),
+	FIELD_DEF(AsynxForkId, AsynxForkId_width),
+	Asynx_statewidth
+};
 
-#if AsynxLabel_WIDTH > 64
-	#error "AsynxLabel_WIDTH > 64"
-#elif AsynxLabel_WIDTH > 32
-	typedef u64 AsynxLabel;
-#elif AsynxLabel_WIDTH > 16
-	typedef u32 AsynxLabel;
-#elif AsynxLabel_WIDTH > 8
-	typedef u16 AsynxLabel;
-#else
-	typedef u8 AsynxLabel;
-#endif
+static_assert(Asynx_statewidth <= AsyncTaskState_width);
 
-constexpr u8 AsynxLabel_width = AsynxLabel_WIDTH;
-constexpr AsynxLabel AsynxLabel_max = (AsynxLabel)(~0ull);
+constexpr AsynxForkId AsynxForkId_max = FIELD_MAX(AsynxForkId);
+constexpr AsyncTaskState AsynxForkId_one = FIELD_SET(AsynxForkId, 1);
 
-constexpr AsyncTaskState AsynxForkId_one = 1ull << AsynxLabel_width;
 
-AsyncTaskState Asynx_makestate(AsynxForkId fork_id, AsynxLabel label) {
+AsyncTaskState Asynx_makestate(AsynxLabel label, AsynxForkId fork_id) {
 	return (AsyncTaskState)(
-		((AsyncTaskState)(fork_id) << AsynxLabel_width) | (AsyncTaskState)label
+		FIELD_SET(AsynxLabel, label),
+		FIELD_SET(AsynxForkId, fork_id)
 	);
 }
 
 AsynxForkId Asynx_getforkid(AsyncTaskState state) {
-	return (AsynxForkId)(state >> AsynxLabel_width);
+	return FIELD_GET(AsynxForkId, state);
 }
 
-AsynxForkId Asynx_getlabel(AsyncTaskState state) {
-	return (AsynxForkId)(state & AsynxLabel_max);
+AsynxLabel Asynx_getlabel(AsyncTaskState state) {
+	return FIELD_GET(AsynxLabel, state);
 }
+
+typedef enum : u8 {
+	AsynxReturn_None,
+	AsynxReturn_Resume,
+	AsynxReturn_Suspend,
+	AsynxReturn_Resolve,
+	AsynxReturn_JoinResume,
+	AsynxReturn_JoinSuspend
+} AsynxReturn;
 
 #define Asynx_TASKBODY(align, ...) \
 	{ \
 		union { \
-			_Alignas((align ? align : cpu_hdi_size)) char align__; \
+			_Alignas(align) char align__; \
 			struct { \
 				AsyncFn entry__; \
 				union { \
@@ -79,7 +87,6 @@ AsynxForkId Asynx_getlabel(AsyncTaskState state) {
 					AsyncFuture *return_future__; \
 				}; \
 				AsynxForkSync fork_sync__; \
-				AsynxForkId fork_count__; \
 				AsynxReturn return__; \
 				__VA_ARGS__ \
 			}; \

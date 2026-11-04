@@ -15,7 +15,7 @@ typedef struct {
 	usize size;
 } String;
 
-#define String_INIT(str) {.data=(ConstPtr)(str), .size=(__builtin_strlen(str) - 1)}
+#define String_INIT(str) {.data=(ConstPtr)(str), .size=(__builtin_strlen(str))}
 
 #if __clang__
 	#define LIKELY [[clang::likely]]

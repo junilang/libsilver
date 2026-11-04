@@ -1,5 +1,5 @@
 typedef struct {
-	u32 size; // max 4GB
+	usize size; // max 4GB
 	ubyte data[];
 } StaticAlc_Buffer;
 
@@ -7,8 +7,8 @@ constexpr ualign StaticAlc_minalign = _Alignof(StaticAlc_Buffer);
 constexpr auto StaticAlc_Buffer_dataoffset = __builtin_offsetof(StaticAlc_Buffer, data);
 
 typedef struct {
-	_Atomic u32_lf end;
-	_Atomic u32_lf head;
+	usize end;
+	usize head;
 	_Alignas(StaticAlc_minalign) ubyte data[];
 } StaticAlc;
 
@@ -21,26 +21,23 @@ AlcPtr StaticAlc_new(StaticAlc *this, AlcReq *req) {
 		case AlcRelative_Local:
 	}
 
-	ualign align = req->align;
+	auto align = req->align;
 	if (align < StaticAlc_minalign)
 		align = StaticAlc_minalign;
 
-	usize size = usize_align(req->size, align);
-
-	if (size > u32_max)
-		return AlcPtr_set(AlcRes_ErrInvalidSize);
+	auto size = usize_align(req->size, align);
 
 	usize ptr = (usize)this->data + this->head;
 	ptr = usize_align(ptr + StaticAlc_Buffer_dataoffset, align);
 
-	u32 new_head = (u32)((ptr + size) - (usize)this->data);
+	usize new_head = (ptr + size) - (usize)this->data;
 
 	if (new_head > this->end)
 		return AlcPtr_set(AlcRes_ErrNoMemory);
 
 	auto buffer = (StaticAlc_Buffer*)(ptr - StaticAlc_Buffer_dataoffset);
 
-	buffer->size = (u32)size;
+	buffer->size = size;
 
 	this->head = new_head;
 
@@ -67,26 +64,23 @@ AlcPtr StaticAlc_resize(StaticAlc *this, AlcReq *req, Ptr mem) {
 
 	usize size = usize_align(req->size, align);
 
-	if (size > u32_max)
-		return AlcPtr_set(AlcRes_ErrInvalidSize);
-
 	auto buffer = (StaticAlc_Buffer*)((usize)mem - StaticAlc_Buffer_dataoffset);
 	auto const old_size = buffer->size;
 
 	// if size does not need to increase and alignment matches, do nothing
-	if ((size <= old_size) && (((usize)mem & align) == 0))
+	if (size <= old_size && !((usize)mem & (align - 1)))
 		return mem;
 
 	usize ptr = (usize)this->data + this->head;
 	ptr = usize_align(ptr + StaticAlc_Buffer_dataoffset, align);
 
-	u32 new_head = (u32)((ptr + size) - (usize)this->data);
+	usize new_head = (ptr + size) - (usize)this->data;
 
 	if (new_head > this->end)
 		return AlcPtr_set(AlcRes_ErrNoMemory);
 
 	auto new_buffer = (StaticAlc_Buffer*)(ptr - StaticAlc_Buffer_dataoffset);
-	new_buffer->size = (u32)size;
+	new_buffer->size = size;
 
 	memcpy((Ptr)ptr, mem, old_size);
 	if (req->flags & FLAG(AlcFlag_Zero))
@@ -98,7 +92,6 @@ AlcPtr StaticAlc_resize(StaticAlc *this, AlcReq *req, Ptr mem) {
 }
 
 AlcRes StaticAlc_query(AlcReq *req, usize *offers) {
-	// TODO add overflow check
 	switch (req->relative) {
 		default: return AlcRes_ErrInvalidRelative;
 		case AlcRelative_None:
@@ -138,16 +131,12 @@ AlcPtr StaticAlc_invoke(StaticAlc *this, AlcReq *req, Ptr arg, Ptr mem) {
 IAlc_GENERATE_KNOWN(StaticAlc, StaticAlc*)
 
 StaticAlc *StaticAlc_init(Ptr mem, usize size) {
-	usize end = ((usize)mem + size) & (~(usize)StaticAlc_minalign);
-	usize ptr = usize_align((usize)mem, StaticAlc_minalign);
-
-	end -= ptr;
-
-	if (end > u32_max) PANIC("overflow");
+	auto const ptr = usize_align((usize)mem, _Alignof(StaticAlc));
+	auto const end = ((usize)mem + size) - ptr;
 
 	auto this = (StaticAlc*)ptr;
 	this->head = 0;
-	this->end = (u32)end;
+	this->end = end;
 
 	return this;
 }
