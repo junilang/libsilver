@@ -71,7 +71,7 @@
 		PANIC("unhandled task error");
 
 		if (0) suspend_task: {
-			auto submit_res = Weaver_submit(rt, &task, 1);
+			auto submit_res = Weaver_submit(rt, 0, &task, 1);
 			task = AsyncTask_null;
 			if (submit_res) PANIC("unhandled submit error");
 			goto load_state;
@@ -173,8 +173,8 @@
 		atom_and(&rt->read.info, WeaverQueue_swapmask, atom_sync);
 		atom_sub(&rt->read.info, WeaverQueue_Rc_one, atom_sync);
 
-		auto const wake_res = Weaver_wake(rt, wsize);
-		if (wake_res) PANIC("unhandled wake error");
+		auto const wake_res = Weaver_wake(rt, id, wsize);
+		AsyncRes_ASSERT(wake_res);
 
 		goto load_state;
 	}

@@ -14,25 +14,27 @@
 
 #endif
 
-typedef usize AsyncTaskArgs;
-constexpr auto AsyncTaskArgs_width = usize_width;
-
 typedef usize AsyncTaskContext;
-constexpr auto AsyncTaskContext_width = AsyncTaskArgs_width - AsyncTaskState_width;
+constexpr auto AsyncTaskContext_width = usize_width - AsyncTaskState_width;
 constexpr AsyncTaskContext AsyncTaskContext_max = ((1ull << AsyncTaskContext_width) - 1);
 
-AsyncTaskArgs AsyncTaskArgs_create(AsyncTaskContext context, AsyncTaskState state) {
-	return (AsyncTaskArgs)(
-		((AsyncTaskArgs)context << AsyncTaskState_width) |
-		(AsyncTaskArgs)state
+usize AsyncTask_makeargs(AsyncTaskState state, AsyncTaskContext context) {
+	#if AsyncTask_SAFE
+		ASSERT(state <= AsyncTaskState_max);
+		ASSERT(context <= AsyncTaskContext_max);
+	#endif
+
+	return (usize)(
+		((usize)context << AsyncTaskState_width) |
+		(usize)state
 	);
 }
 
-AsyncTaskState AsyncTaskArgs_state(AsyncTaskArgs args) {
+AsyncTaskState AsyncTask_getstate(usize args) {
 	return (AsyncTaskState)(args & AsyncTaskState_max);
 }
 
-AsyncTaskContext AsyncTaskArgs_context(AsyncTaskArgs args) {
+AsyncTaskContext AsyncTask_getcontext(usize args) {
 	return (AsyncTaskContext)((args >> AsyncTaskState_width) & AsyncTaskContext_max);
 }
 
@@ -86,12 +88,12 @@ AsyncTaskContext AsyncTaskArgs_context(AsyncTaskArgs args) {
 #endif
 
 typedef AsyncRes (*AsyncFn)(
-	Ptr data, AsyncRT *rt, AsyncTaskArgs args, AsyncTask *out_task
+	Ptr data, AsyncRT *rt, usize args, AsyncTask *out_task
 );
 
 AsyncRes AsyncTask_call(AsyncTask this, AsyncRT *rt, AsyncTaskContext ctx, AsyncTask *out_task) {
 	auto data = AsyncTask_data(this);
-	auto args = AsyncTaskArgs_create(ctx, AsyncTask_state(this));
+	auto args = AsyncTask_makeargs(AsyncTask_state(this), ctx);
 
 	return (*(AsyncFn*)data)(data, rt, args, out_task);
 }

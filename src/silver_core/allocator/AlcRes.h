@@ -52,29 +52,14 @@ AlcRes AlcPtr_get(AlcPtr result) {
 	return AlcRes_Ok;
 }
 
-[[noreturn, gnu::noinline]]
-void AlcRes_panic_(AlcRes res, ConstPtr func_name, ConstPtr header) {
-	// TODO print res value
-	String msg[] = {
-		String_INIT(func_name),
-		String_INIT(header)
-	};
-	panic_msg_(msg, COUNTOF(msg));
-}
+PANIC_RES_GENERATE(AlcRes)
 
-void AlcRes_assert_(AlcRes res, ConstPtr func_name, ConstPtr header) {
-	if (res) AlcRes_panic_(res, func_name, header);
-}
+#define AlcRes_ASSERT(result) ASSERT_RES(AlcRes, result)
 
 Ptr AlcPtr_unwrap_(AlcPtr ptr, ConstPtr func_name, ConstPtr header) {
-	auto const res = AlcPtr_get(ptr);
-	if (res) AlcRes_panic_(res, func_name, header);
+	AlcRes_assert_(AlcPtr_get(ptr), func_name, header);
 	return (Ptr)ptr;
 }
-
-#define AlcRes_ASSERT(result) \
-	AlcRes_assert_(result, __func__, SOURCE_IDENTIFIER " AlcRes_ASSERT(" #result "):")
-
 
 #define AlcPtr_UNWRAP(result) \
 	AlcPtr_unwrap_(result, __func__, SOURCE_IDENTIFIER " AlcPtr_UNWRAP(" #result "):")

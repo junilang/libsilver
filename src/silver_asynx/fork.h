@@ -49,7 +49,10 @@ AsynxForkRes Asynx_forkvalidate(AsynxForkId id, usize n) {
 // size of stack array in Asynx_fork function
 constexpr usize Asynx_fsasize = Asynx_FSASIZE;
 
-AsyncRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState state) {
+AsyncRes Asynx_fork(
+	AsyncRT *rt, usize context, Ptr data, AsynxForkId count, AsyncTaskState state
+) {
+
 	AsyncTask tasks[Asynx_fsasize];
 	do {
 		AsynxForkId const n = count < Asynx_fsasize ? count : Asynx_fsasize;
@@ -59,7 +62,7 @@ AsyncRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState sta
 		}
 		count -= n;
 
-		auto res = AsyncRT_submit(rt, tasks, n);
+		auto const res = AsyncRT_submit(rt, context, tasks, n);
 		if (res) return res;
 	} while (count);
 
@@ -79,7 +82,7 @@ AsyncRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState sta
 #define Asynx_FORK_IMMEDIATE_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
 	auto const state = Asynx_makestate(Asynx_TOK(_label_##lbl), 0); \
-	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state); \
+	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_context__, asynx_data__, n - 1, state); \
 	if (asynx_error__.any) goto asynx_catch_any__; \
 	asynx_fork_id__ = 1; \
 	goto asynx_label_##lbl##__; \
@@ -92,7 +95,7 @@ AsyncRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState sta
 #define Asynx_FORK_RESUME_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
 	auto const state = Asynx_makestate(Asynx_TOK(_label##lbl), 1); \
-	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_data__, n - 1, state + AsynxForkId_one); \
+	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_context__, asynx_data__, n - 1, state + AsynxForkId_one); \
 	if (asynx_error__.any) goto asynx_catch_any__; \
 	*asynx_out_task__ = AsyncTask_upcast(asynx_data__, state); \
 	return AsyncIntent_Resume; \
@@ -105,7 +108,7 @@ AsyncRes Asynx_fork(AsyncRT *rt, Ptr data, AsynxForkId count, AsyncTaskState sta
 #define Asynx_FORK_SUSPEND_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
 	auto const state = Asynx_makestate(Asynx_TOK(_label_##lbl), 1); \
-	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_data__, n, state); \
+	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_context__, asynx_data__, n, state); \
 	if (asynx_error__.any) goto asynx_catch_any__; \
 	return AsyncIntent_Yield; \
 }

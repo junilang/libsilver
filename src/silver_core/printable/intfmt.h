@@ -15,11 +15,11 @@ OutStreamRes ullong_print(ullong val, PrintFmt vfmt, OutStream os) {
 		fmt &= FLAGS_CLEAR(IntFmt, ZeroOffset, NullTerminate);
 	#endif
 
-	auto const res = ullong_tostr(val, fmt, buf, buf_size);
+	auto const res = ullong_fmt(val, fmt, buf, buf_size);
 	if (res < 0) switch (-res) {
-		case IntToStr_ErrInvalidFmt:
+		case IntFmtRes_ErrInvalidFmt:
 			return OutStreamRes_ErrInvalidInput;
-		case IntToStr_ErrOverflow:
+		case IntFmtRes_ErrOverflow:
 			return OutStreamRes_ErrOverflow;
 		default:
 			return OutStreamRes_ErrUnknown;
@@ -42,11 +42,11 @@ OutStreamRes illong_print(illong val, PrintFmt vfmt, OutStream os) {
 		fmt &= FLAGS_CLEAR(IntFmt, ZeroOffset, NullTerminate);
 	#endif
 
-	auto const res = illong_tostr(val, fmt, buf, buf_size);
+	auto const res = illong_fmt(val, fmt, buf, buf_size);
 	if (res < 0) switch (-res) {
-		case IntToStr_ErrInvalidFmt:
+		case IntFmtRes_ErrInvalidFmt:
 			return OutStreamRes_ErrInvalidInput;
-		case IntToStr_ErrOverflow:
+		case IntFmtRes_ErrOverflow:
 			return OutStreamRes_ErrOverflow;
 		default:
 			return OutStreamRes_ErrUnknown;

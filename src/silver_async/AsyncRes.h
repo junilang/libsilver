@@ -121,5 +121,4 @@ void AsyncRes_assert_(AsyncRes res, ConstPtr func_name, ConstPtr header) {
 	if (res) AsyncRes_panic_(res, func_name, header);
 }
 
-#define AsyncRes_ASSERT(result) \
-	AsyncRes_assert_(result, __func__, SOURCE_IDENTIFIER " AsyncRes_ASSERT(" #result "):")
+#define AsyncRes_ASSERT(result) ASSERT_RES(AsyncRes, result)

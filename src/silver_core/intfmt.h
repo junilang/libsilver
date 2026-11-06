@@ -25,23 +25,48 @@ enum {
 	IntFmt_Base_Oct
 };
 
-enum {
-	// returned as negatives
-	IntToStr_ErrInvalidFmt = 1,
-	IntToStr_ErrOverflow,
-	IntToStr_ErrUnknown
-};
+#define XS \
+	X(Ok) \
+	X(ErrInvalidFmt) \
+	X(ErrOverflow) \
+	X(ErrUnknown)
+
+	enum {
+		#define X(N) IntFmtRes_##N,
+			XS
+		#undef X
+	};
+
+	const String IntFmtRes_repr[] = {
+		#define X(N) [IntFmtRes_##N] = String_INIT(#N),
+			XS
+		#undef X
+	};
+
+#undef XS
+
+usize IntFmtRes_put(int r, ubyte *buf, usize buf_size) {
+	if (r > 0) r = IntFmtRes_Ok;
+	else if (r < -IntFmtRes_ErrUnknown) r = IntFmtRes_ErrUnknown;
+	else r = -r;
+
+	String s = IntFmtRes_repr[r];
+	if (s.size > buf_size) s.size = buf_size;
+	memcpy(buf, s.data, s.size);
+	return s.size;
+}
+
 
 // returns length of generated string representation
 //	including null terminator (if requested by format specifier)
 // by default the string is written from the end of the provided
 // output buffer to the front, unless ZeroOffset flag is set
-int ullong_tostr(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size) {
+int ullong_fmt(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size) {
 	ubyte *bp = buf + buf_size;
 
 	u8 const base = FIELD_GET(IntFmt_Base, fmt);
 	if (base > IntFmt_Base_Oct) {
-		return -IntToStr_ErrInvalidFmt;
+		return -IntFmtRes_ErrInvalidFmt;
 	}
 
 	ubyte delim;
@@ -60,7 +85,7 @@ int ullong_tostr(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size)
 			break;
 		default:
 			// invalid delimiter value
-			return -IntToStr_ErrInvalidFmt;
+			return -IntFmtRes_ErrInvalidFmt;
 	}
 
 	u16 const digits = FIELD_GET(IntFmt_Digits, fmt);
@@ -83,7 +108,7 @@ int ullong_tostr(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size)
 		auto const n = (n_); \
 		auto const d = bp - buf; \
 		if (d >= n) bp -= n; \
-		else return -IntToStr_ErrOverflow; \
+		else return -IntFmtRes_ErrOverflow; \
 	}
 
 	if (nullterminate) {
@@ -107,7 +132,8 @@ int ullong_tostr(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size)
 	}
 
 	// value of base was validated before
-	__builtin_unreachable();
+	return -IntFmtRes_ErrUnknown;
+
 
 	if (0) base_dec: do {
 		ubyte const c = '0' + val % 10;
@@ -222,14 +248,14 @@ int ullong_tostr(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size)
 	}
 
 	if (len > int_max)
-		return -IntToStr_ErrOverflow;
+		return -IntFmtRes_ErrOverflow;
 
 	return (int)len;
 
 	#undef XPUT
 }
 
-int illong_tostr(illong val, IntFmt fmt, ubyte *buf, usize buf_size) {
+int illong_fmt(illong val, IntFmt fmt, ubyte *buf, usize buf_size) {
 	ullong uval;
 	if (val == illong_min) {
 		fmt |= FLAG(IntFmt_Negative);
@@ -241,5 +267,5 @@ int illong_tostr(illong val, IntFmt fmt, ubyte *buf, usize buf_size) {
 		uval = (ullong)val;
 	}
 
-	return ullong_tostr(uval, fmt, buf, buf_size);
+	return ullong_fmt(uval, fmt, buf, buf_size);
 }

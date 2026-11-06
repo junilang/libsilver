@@ -124,6 +124,42 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 
 #define UNREACHABLE(...) UNREACHABLE_##__VA_OPT__(GUARD(__VA_ARGS__))
 
+#define PANIC_RES_GENERATE(R) \
+	[[noreturn, gnu::noinline]] \
+	void R##_panic_( \
+		R const res, ConstPtr const func_name, ConstPtr const header \
+	) { \
+		constexpr auto plen = __builtin_strlen(#R "_"); \
+		constexpr auto bsize = 32; \
+		ubyte buf[plen + bsize + 8] = {#R "_"}; \
+		usize bend = plen; \
+		if (res < R##_Aux) {  \
+			auto const s = R##_repr[res]; \
+			memcpy(buf + bend, s.data, s.size); \
+		} else { \
+			memcpy(buf + bend, STR("Aux(")); \
+			bend += __builtin_strlen("Aux("); \
+			auto const r = ullong_fmt(res, FLAG(IntFmt_ZeroOffset), buf + bend, bsize); \
+			if (r < 0) \
+				bend += IntFmtRes_put(r, buf + bend, bsize); \
+			else \
+				bend += (usize)r; \
+			buf[bend++] = ')'; \
+		} \
+		const String msg[] = { \
+			String_INIT(func_name), \
+			String_INIT(header), \
+			{ .data = buf, .size = bend } \
+		}; \
+		panic_msg_(msg, COUNTOF(msg)); \
+	} \
+	void R##_assert_(R res, ConstPtr func_name, ConstPtr header) { \
+		if (res) R##_panic_(res, func_name, header); \
+	}
+
+#define ASSERT_RES(R, res) \
+	R##_assert_(res, __func__, SOURCE_IDENTIFIER #R "_ASSERT(" #res "):")
+
 #define PANIC PANIC_MSG
 #define ASSERT ASSERT_MSG
 

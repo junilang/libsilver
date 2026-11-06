@@ -24,11 +24,11 @@
 
 	#include "ptrtag.h"
 	#include "chars.h"
-	#include "tostr.h"
+	#include "intfmt.h"
 
 	#include "outstream/OutStream.h"
 	#include "printable/Printable.h"
-	#include "printable/int.h"
+	#include "printable/intfmt.h"
 
 	#include "outstream/VoidOutStream.c"
 	#include "outstream/BufferOutStream.c"

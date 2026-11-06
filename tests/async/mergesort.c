@@ -10,22 +10,20 @@
 
 	async_begin {
 		if (this->size > 4) {
-			AsyncRT_AlcReq req = {
-				.context = asynx_context__,
-				.req = {
-					.intent = AlcIntent_New,
-					.size = sizeof(ZZmergesort_Task) * 2,
-					.align = _Alignof(ZZmergesort_Task)
-				}
+			auto const alc = AsyncRT_alc(asynx_rt__, asynx_context__);
+			AlcReq req = {
+				.intent = AlcIntent_New,
+				.size = sizeof(ZZmergesort_Task) * 2,
+				.align = _Alignof(ZZmergesort_Task)
 			};
-			auto const ptr = AsyncRT_alc(asynx_rt__, &req, nullptr, nullptr);
+			auto const ptr = Alc_invoke(alc, &req, nullptr, nullptr);
 			asynx_error__.alc = AlcPtr_get(ptr);
 			if (asynx_error__.alc) goto asynx_catch_alc__;
 			this->children = (Ptr)ptr;
 		}
 	}
 
-	async_fork_suspend(fork, 2) {
+	async_fork(fork, 2) {
 		auto src = this->src;
 		auto dst = this->dst;
 		auto size = this->size / 2;
@@ -63,15 +61,8 @@
 
 	async_join(join) {
 		if (this->children) {
-			AsyncRT_AlcReq req = {
-				.context = asynx_context__,
-				.req = {
-					.intent = AlcIntent_Delete
-				}
-			};
-
-			auto const ptr = AsyncRT_alc(asynx_rt__, &req, nullptr, this->children);
-			asynx_error__.alc = AlcPtr_get(ptr);
+			auto const alc = AsyncRT_alc(asynx_rt__, asynx_context__);
+			asynx_error__.alc = Alc_delete(alc, this->children);
 			if (asynx_error__.alc) goto asynx_catch_alc__;
 		}
 
@@ -195,6 +186,8 @@ TEST(ZZ) {
 		.dst = dst,
 		.size = array_size
 	);
+
+	constexpr usize asynx_context__ = 0;
 	async_spawn_with((AsyncRT*)weaver, &task)
 
 	AsyncFuture_wait(&future, nullptr);

@@ -6,7 +6,8 @@
 	X(ErrInvalidMappingMode) \
 	X(ErrPermission) \
 	X(ErrNotFound) \
-	X(ErrUnknown)
+	X(ErrUnknown) \
+	X(Aux)
 
 typedef enum : u8 {
 	#define X(N) FsRes_##N,
@@ -22,19 +23,6 @@ const String FsRes_repr[] = {
 
 #undef XS
 
-[[noreturn, gnu::noinline]]
-void FsRes_panic_(FsRes res, ConstPtr func_name, ConstPtr header) {
-	// TODO print res value
-	String msg[] = {
-		String_INIT(func_name),
-		String_INIT(header)
-	};
-	panic_msg_(msg, COUNTOF(msg));
-}
+PANIC_RES_GENERATE(FsRes)
 
-void FsRes_assert_(FsRes res, ConstPtr func_name, ConstPtr header) {
-	if (res) FsRes_panic_(res, func_name, header);
-}
-
-#define FsRes_ASSERT(result) \
-	FsRes_assert_(result, __func__, SOURCE_IDENTIFIER " FsRes_ASSERT(" #result "):")
+#define FsRes_ASSERT(result) ASSERT_RES(FsRes, result)

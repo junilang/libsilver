@@ -337,21 +337,20 @@ AsyncRes Weaver_join(Weaver *this) {
 
 
 [[nodiscard]]
-AsyncRes Weaver_wake(Weaver *this, usize queue_size) {
+AsyncRes Weaver_wake(Weaver *this, WeaverThreadId caller_id, usize nwake) {
 	constexpr AsyncRes res_origin = FIELD(AsyncRes_Origin, WeaverWake);
+	XDEBUG("nwake=",nwake);
 
-	XDEBUG("queue_size=",queue_size);
-
-	// ensures at least queue_size threads (max threads_size) are running
-	auto it = this->threads;
 	auto const threads_size = this->threads_size;
-	WeaverThread *end;
-	if (queue_size > threads_size)
-		end = it + threads_size;
-	else
-		end = it + queue_size;
+	for (u32 i = 0; i < threads_size && nwake; i++) {
+		auto const id = (WeaverThreadId)(i + 1);
 
-	for (; it < end; it++) {
+		// dont wake up caller thread
+		if (id == caller_id) continue;
+
+		auto const it = &this->threads[i];
+		nwake--;
+
 		if (
 			atom_exchg(&it->state, WeaverThreadState_Run, atom_sync)
 				== WeaverThreadState_Idle
@@ -364,6 +363,7 @@ AsyncRes Weaver_wake(Weaver *this, usize queue_size) {
 				FIELD_SET(AsyncRes_Code, res)
 			);
 		}
+
 	}
 
 	return AsyncRes_Ok;
@@ -372,7 +372,7 @@ AsyncRes Weaver_wake(Weaver *this, usize queue_size) {
 
 
 [[nodiscard]]
-AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
+AsyncRes Weaver_submit(Ptr vthis, usize context, const AsyncTask *tasks, usize tasks_size_) {
 	constexpr AsyncRes res_origin = FIELD(AsyncRes_Origin, WeaverSubmit);
 	constexpr AsyncRes res_toomanytasks = (
 		res_origin |
@@ -620,14 +620,20 @@ AsyncRes Weaver_submit(Ptr vthis, const AsyncTask *tasks, usize tasks_size_) {
 	atom_sub(&this->read.info, WeaverQueue_Rc_one, atom_sync);
 
 	// wake threads
-	return Weaver_wake(this, wsize);
+	return Weaver_wake(this, (WeaverThreadId)context, wsize);
 }
 
-[[nodiscard]]
-AlcPtr Weaver_alc(Ptr vthis, AsyncRT_AlcReq *req, Ptr arg, Ptr mem) {
-	Weaver *const this = vthis;
-	return Alc_invoke(this->provider_alc, &req->req, arg, mem);
-}
+#if Alc_PTRTAG
+	Alc Weaver_alc(Ptr vthis, usize context) {
+		auto const this = (Weaver*)vthis;
+		return this->provider_alc;
+	}
+#else
+	void Weaver_alc(Ptr vthis, usize context, Alc *out_alc) {
+		auto const this = (Weaver*)vthis;
+		*out_alc = this->provider_alc;
+	}
+#endif
 
 [[nodiscard]]
 AlcRes Weaver_init(

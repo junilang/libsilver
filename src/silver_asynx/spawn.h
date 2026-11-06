@@ -5,7 +5,7 @@
 	for (usize i = 0; i < n; i++) { \
 		tasks[i] = AsyncTask_upcast(tp[i], Asynx_nullstate); \
 	} \
-	auto res = AsyncRT_submit(rt, tasks, n); \
+	auto const res = AsyncRT_submit(rt, asynx_context__, tasks, n); \
 	if (res) PANIC("handle error"); \
 }
 

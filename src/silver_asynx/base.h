@@ -34,7 +34,7 @@ typedef struct Asynx_TASKBODY(1) AsynxGenericTask;
 #define Asynx_BEGIN \
 	AsyncRes Asynx_TOK(_entry)( \
 		Ptr const asynx_vdata__, AsyncRT *const asynx_rt__, \
-		AsyncTaskArgs const asynx_args__, AsyncTask *asynx_out_task__ \
+		usize const asynx_args__, AsyncTask *asynx_out_task__ \
 	) { \
 		[[maybe_unused]] \
 		union { \
@@ -42,9 +42,9 @@ typedef struct Asynx_TASKBODY(1) AsynxGenericTask;
 			AlcRes alc; \
 			AsynxForkRes fork; \
 		} asynx_error__; \
-		auto const asynx_state__ = AsyncTaskArgs_state(asynx_args__); \
+		auto const asynx_state__ = AsyncTask_getstate(asynx_args__); \
 		[[maybe_unused]] \
-		auto const asynx_context__ = AsyncTaskArgs_context(asynx_args__); \
+		auto const asynx_context__ = AsyncTask_getcontext(asynx_args__); \
 		auto const asynx_label__ = Asynx_getlabel(asynx_state__); \
 		[[maybe_unused]] \
 		auto asynx_fork_id__ = Asynx_getforkid(asynx_state__); \
