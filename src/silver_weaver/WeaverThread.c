@@ -202,7 +202,7 @@
 			}
 		}
 
-		XDEBUG("idle wait")
+		XDEBUG("idle wait");
 
 		do {
 			auto const res = Async_wait32(&this->state, WeaverThreadState_Idle, 0);
@@ -216,7 +216,7 @@
 		} while (state == WeaverThreadState_Idle);
 
 
-		XDEBUG("wake")
+		XDEBUG("wake");
 
 		atom_add(&rt->idle_sync, 1, atom_sync);
 		atom_sub(&rt->wake_sync, 1, atom_sync);

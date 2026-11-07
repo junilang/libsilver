@@ -74,25 +74,25 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 #define PANIC_MSG_7(M, ...) String_INIT(M), __VA_OPT__(PANIC_MSG_8(__VA_ARGS__))
 #define PANIC_MSG_8(M, ...) PANIC_MSG_ERROR_TOO_MANY_MESSAGES
 
-#define PANIC_MSG_(...) { \
+#define PANIC_MSG_(...) do { \
 	const String msg[] = { __VA_OPT__(PANIC_MSG_0(__VA_ARGS__)) }; \
 	panic_msg_(msg, COUNTOF(msg)); \
-}
+} while (0)
 
-#define PANIC_PRINT_(...) { \
+#define PANIC_PRINT_(...) do { \
 	OutStreamRes PANIC_PRINT_res__; \
 	PRINT_BUFFERED(&PANIC_PRINT_res__, (PANIC_BUFSIZE), os_panic_stream(), __VA_ARGS__); \
 	OutStreamRes_assert_(PANIC_PRINT_res__, __func__, SOURCE_IDENTIFIER " PANIC_PRINT failed:"); \
 	os_panic(); \
-}
+} while (0)
 
-#define ASSERT_MSG_(cond, ...) { \
-	if (!(cond)) { PANIC_MSG_(__VA_ARGS__) } \
-}
+#define ASSERT_MSG_(cond, ...) do { \
+	if (!(cond)) PANIC_MSG_(__VA_ARGS__); \
+} while (0)
 
-#define ASSERT_PRINT_(cond, ...) { \
-	if (!(cond)) { PANIC_PRINT_(__VA_ARGS__) } \
-}
+#define ASSERT_PRINT_(cond, ...) do { \
+	if (!(cond)) PANIC_PRINT_(__VA_ARGS__); \
+} while (0)
 
 #define PANIC_MSG(...) PANIC_MSG_( \
 	__func__, SOURCE_IDENTIFIER " PANIC" __VA_OPT__(":", __VA_ARGS__) \
@@ -110,11 +110,11 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 	cond, __func__, " " SOURCE_IDENTIFIER " ASSERT(" #cond ")" __VA_OPT__(": ", __VA_ARGS__) \
 )
 
-#define UNREACHABLE_GUARD(guard) { \
+#define UNREACHABLE_GUARD(guard) do { \
 	if (guard) {  \
 		PANIC_MSG_(__func__, SOURCE_IDENTIFIER " UNREACHABLE"); \
 	} else { __builtin_unreachable(); } \
-};
+} while (0)
 
 #ifndef UNREACHABLE_DEFAULT_GUARD
 	#define UNREACHABLE_DEFAULT_GUARD LIBSILVER_SAFE
@@ -133,12 +133,20 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 		constexpr auto bsize = 32; \
 		ubyte buf[plen + bsize + 8] = {#R "_"}; \
 		usize bend = plen; \
-		if (res < R##_Aux) {  \
-			auto const s = R##_repr[res]; \
-			memcpy(buf + bend, s.data, s.size); \
-		} else { \
+		if (res >= R##_Aux) { \
 			memcpy(buf + bend, STR("Aux(")); \
 			bend += __builtin_strlen("Aux("); \
+			goto put_num; \
+		} \
+		auto const s = R##_repr[res]; \
+		if (s.size > bsize) { \
+			memcpy(buf + bend, STR("\?\?(")); \
+			bend += __builtin_strlen("\?\?("); \
+			goto put_num; \
+		} \
+		memcpy(buf + bend, s.data, s.size); \
+		bend += s.size; \
+		if (0) put_num: { \
 			auto const r = ullong_fmt(res, FLAG(IntFmt_ZeroOffset), buf + bend, bsize); \
 			if (r < 0) \
 				bend += IntFmtRes_put(r, buf + bend, bsize); \
@@ -158,7 +166,7 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 	}
 
 #define ASSERT_RES(R, res) \
-	R##_assert_(res, __func__, SOURCE_IDENTIFIER #R "_ASSERT(" #res "):")
+	R##_assert_(res, __func__, SOURCE_IDENTIFIER " " #R "_ASSERT(" #res "):")
 
 #define PANIC PANIC_MSG
 #define ASSERT ASSERT_MSG

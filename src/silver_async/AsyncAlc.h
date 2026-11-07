@@ -44,7 +44,7 @@ AlcPtr AsyncAlc_invoke(AsyncAlc *this, AlcReq *req, Ptr arg, Ptr mem) {
 
 	bool const locked = req->flags & FLAG(AlcFlag_Locked);
 	if (locked) {
-		req->flags &= FLAG_CLEAR(AlcFlag_Locked);
+		req->flags &= (AlcFlag)FLAG_CLEAR(AlcFlag_Locked);
 	} else {
 		if (req->flags & FLAG(AlcFlag_NoWait)) {
 			auto const res = AsyncAlc_trylock(this);

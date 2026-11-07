@@ -3,7 +3,8 @@
 	X(ErrRecursive) \
 	X(ErrOverflow) \
 	X(ErrZero) \
-	X(ErrOne)
+	X(ErrOne) \
+	X(Aux)
 
 	typedef enum : u8 {
 		#define X(N) AsynxForkRes_##N,
@@ -18,15 +19,9 @@
 	};
 #undef XS
 
-[[noreturn, gnu::noinline]]
-void AsynxForkRes_panic_(AsynxForkRes res, ConstPtr func_name, ConstPtr header) {
-	String msg[] = {
-		String_INIT(func_name),
-		String_INIT(header),
-		AsynxForkRes_repr[res]
-	};
-	panic_msg_(msg, COUNTOF(msg));
-}
+PANIC_RES_GENERATE(AsynxForkRes)
+
+#define AsynxForkRes_ASSERT(res) ASSERT_RES(AsynxForkRes, res)
 
 AsynxForkRes Asynx_forkvalidate(AsynxForkId id, usize n) {
 	#if Asynx_SAFE
@@ -81,7 +76,7 @@ AsyncRes Asynx_fork(
 
 #define Asynx_FORK_IMMEDIATE_TO(lbl, n_) { \
 	Asynx_FORK_COMMON(n_) \
-	auto const state = Asynx_makestate(Asynx_TOK(_label_##lbl), 0); \
+	auto const state = Asynx_makestate(Asynx_TOK(_label_##lbl), 2); \
 	asynx_error__.any = Asynx_fork(asynx_rt__, asynx_context__, asynx_data__, n - 1, state); \
 	if (asynx_error__.any) goto asynx_catch_any__; \
 	asynx_fork_id__ = 1; \

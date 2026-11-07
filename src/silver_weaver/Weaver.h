@@ -181,7 +181,7 @@ AsyncRes Weaver_join(Weaver *this) {
 			atom_exchg(&this->state, WeaverState_JoinIdle, atom_sync)
 				== WeaverState_Run
 			, "invalid state before join"
-		)
+		);
 	#else
 		atom_set(&this->state, WeaverState_JoinIdle, atom_sync);
 	#endif
@@ -374,12 +374,15 @@ AsyncRes Weaver_wake(Weaver *this, WeaverThreadId caller_id, usize nwake) {
 [[nodiscard]]
 AsyncRes Weaver_submit(Ptr vthis, usize context, const AsyncTask *tasks, usize tasks_size_) {
 	constexpr AsyncRes res_origin = FIELD(AsyncRes_Origin, WeaverSubmit);
+
+	[[maybe_unused]]
 	constexpr AsyncRes res_toomanytasks = (
 		res_origin |
 		FIELD(AsyncRes_Class, WeaverRes) |
 		FIELD_SET(AsyncRes_Code, WeaverRes_ErrTooManyTasks)
 	);
 
+	[[maybe_unused]]
 	constexpr AsyncRes res_queueoverflow = (
 		res_origin |
 		FIELD(AsyncRes_Class, WeaverRes) |
@@ -519,7 +522,7 @@ AsyncRes Weaver_submit(Ptr vthis, usize context, const AsyncTask *tasks, usize t
 				(winfo &
 					// clear position and resize lock
 					(
-						FIELD_CLEAR(WeaverQueue_Pos) |
+						FIELD_CLEAR(WeaverQueue_Pos) &
 						FLAG_CLEAR(WeaverQueue_LockResize)
 					)
 					// reset position back to the position we acquired

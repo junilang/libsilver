@@ -1,4 +1,4 @@
-#define PRINT(resp, stream, ...) { \
+#define PRINT(resp, stream, ...) do { \
 	const OutStream PRINT_stream__ = (stream); \
 	OutStreamRes PRINT_res__ = OutStreamRes_Ok; \
 	PrintFmt PRINT_fmt__ = PrintFmt_null; \
@@ -6,9 +6,9 @@
 		__VA_OPT__(PRINT_0(__VA_ARGS__)) \
 	} while (0); \
 	*(resp) = PRINT_res__; \
-}
+} while (0)
 
-#define PRINT_BUFFERED(resp, buffer_size, stream, ...) { \
+#define PRINT_BUFFERED(resp, buffer_size, stream, ...) do { \
 	constexpr usize PRINT_buffer_size__ = (buffer_size); \
 	const OutStream PRINT_parent_stream__ = (stream); \
 	ubyte PRINT_buffer__[PRINT_buffer_size__]; \
@@ -23,23 +23,23 @@
 		); \
 	} while (0); \
 	*(resp) = PRINT_res__; \
-}
+} while (0)
 
-#define PRINT_ASSERT(stream, ...) { \
+#define PRINT_ASSERT(stream, ...) do { \
 	OutStreamRes PRINT_ASSERT_res__; \
-	PRINT(&PRINT_ASSERT_res__, stream, __VA_ARGS__) \
+	PRINT(&PRINT_ASSERT_res__, stream, __VA_ARGS__); \
 	OutStreamRes_assert_( \
 		PRINT_ASSERT_res__, __func__, SOURCE_IDENTIFIER " PRINT_ASSERT failed:" \
 	); \
-}
+} while (0)
 
-#define PRINT_BUFFERED_ASSERT(buffer_size, stream, ...) { \
+#define PRINT_BUFFERED_ASSERT(buffer_size, stream, ...) do { \
 	OutStreamRes PRINT_ASSERT_res__; \
 	PRINT_BUFFERED(&PRINT_ASSERT_res__, buffer_size, stream, __VA_ARGS__); \
 	OutStreamRes_assert_( \
 		PRINT_ASSERT_res__, __func__, SOURCE_IDENTIFIER " PRINT_BUFFERED_ASSERT failed:" \
 	); \
-}
+} while (0)
 
 #define PRINTA PRINT_ASSERT
 #define PRINTB PRINT_BUFFERED

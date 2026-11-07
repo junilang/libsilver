@@ -96,15 +96,15 @@ constexpr AsyncRes AsyncRes_Err =
 ;
 
 AsyncRes_Origin AsyncRes_origin(AsyncRes error) {
-	return FIELD_GET(AsyncRes_Origin, error);
+	return FIELD_GET_CAST(AsyncRes_Origin, error);
 }
 
 AsyncRes_Class AsyncRes_class(AsyncRes error) {
-	return FIELD_GET(AsyncRes_Origin, error);
+	return FIELD_GET_CAST(AsyncRes_Class, error);
 }
 
 AsyncRes_Code AsyncRes_code(AsyncRes error) {
-	return FIELD_GET(AsyncRes_Code, error);
+	return FIELD_GET_CAST(AsyncRes_Code, error);
 }
 
 [[noreturn, gnu::noinline]]

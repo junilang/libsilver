@@ -9,6 +9,7 @@
 	async_labels(fork, join)
 
 	async_begin {
+		//PRINTBA(128, Stdout, this->src, " ", this->size, "\n");
 		if (this->size > 4) {
 			auto const alc = AsyncRT_alc(asynx_rt__, asynx_context__);
 			AlcReq req = {
@@ -24,6 +25,7 @@
 	}
 
 	async_fork(fork, 2) {
+		//PRINTBA(128, Stdout, "fork ", asynx_fork_id__, "\n");
 		auto src = this->src;
 		auto dst = this->dst;
 		auto size = this->size / 2;
@@ -111,7 +113,7 @@ TEST(ZZ) {
 	{
 		AlcReq req = {
 			.intent = AlcIntent_New,
-			.size = (1024 * 1024) * 128,
+			.size = (1024 * 1024) * 1024,
 		};
 		AlcPtr ptr = Alc_invoke(OsAlc, &req, nullptr, nullptr);
 		AlcRes res = AlcPtr_get(ptr);
@@ -136,7 +138,7 @@ TEST(ZZ) {
 		weaver = (Ptr)ptr;
 	}
 
-	constexpr usize array_size = 1024;
+	constexpr usize array_size = 1024 * 1024 * 10;
 	i32 *array;
 	{
 		AlcReq req = {
@@ -158,7 +160,7 @@ TEST(ZZ) {
 		auto const end = array + array_size;
 
 		for (; it < end; it++) {
-			*it = splitmix64(&state) % 10'000;
+			*it = (int)(splitmix64(&state) % 10'000);
 		}
 	}
 
@@ -191,6 +193,24 @@ TEST(ZZ) {
 	async_spawn_with((AsyncRT*)weaver, &task)
 
 	AsyncFuture_wait(&future, nullptr);
+
+	if (array_size < 200) {
+		PRINTBA(32, Stdout, array[0]);
+		for (usize i = 1; i < array_size; i++) {
+			PRINTBA(32, Stdout, ", ", dst[i]);
+		}
+		PRINTA(Stdout, "\n");
+	}
+
+	{
+		auto last_val = dst[0];
+		for (usize i = 1; i < array_size; i++) {
+			auto val = dst[i];
+			if (val < last_val) return 6969;
+		}
+	}
+
+	PRINTBA(32, Stdout, "SORTED YAYYYY :3 !!!!\n");
 
 	ares = Weaver_join(weaver);
 	if (ares) goto async_error;

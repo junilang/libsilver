@@ -54,17 +54,17 @@ constexpr AsyncTaskState AsynxForkId_one = FIELD_SET(AsynxForkId, 1);
 
 AsyncTaskState Asynx_makestate(AsynxLabel label, AsynxForkId fork_id) {
 	return (AsyncTaskState)(
-		FIELD_SET(AsynxLabel, label),
+		FIELD_SET(AsynxLabel, label) |
 		FIELD_SET(AsynxForkId, fork_id)
 	);
 }
 
 AsynxForkId Asynx_getforkid(AsyncTaskState state) {
-	return FIELD_GET(AsynxForkId, state);
+	return FIELD_GET_CAST(AsynxForkId, state);
 }
 
 AsynxLabel Asynx_getlabel(AsyncTaskState state) {
-	return FIELD_GET(AsynxLabel, state);
+	return FIELD_GET_CAST(AsynxLabel, state);
 }
 
 typedef enum : u8 {

@@ -85,11 +85,11 @@ typedef struct Asynx_TASKBODY(1) AsynxGenericTask;
 		UNREACHABLE(Asynx_SAFE); \
 		[[maybe_unused]] \
 		asynx_catch_any__:; \
-			AsyncRes_panic_(asynx_error__.any, __func__, SOURCE_IDENTIFIER "unhandled AsyncRes:"); \
+			AsyncRes_panic_(asynx_error__.any, __func__, SOURCE_IDENTIFIER "unhandled:"); \
 		[[maybe_unused]] \
 		asynx_catch_fork__:; \
-			AsynxForkRes_panic_(asynx_error__.fork, __func__, SOURCE_IDENTIFIER " unhandled AsynxForkRes:"); \
+			AsynxForkRes_panic_(asynx_error__.fork, __func__, SOURCE_IDENTIFIER " unhandled:"); \
 		[[maybe_unused]] \
 		asynx_catch_alc__:; \
-			AlcRes_panic_(asynx_error__.alc, __func__, SOURCE_IDENTIFIER " unhandled AlcRes:"); \
+			AlcRes_panic_(asynx_error__.alc, __func__, SOURCE_IDENTIFIER " unhandled:"); \
 	}

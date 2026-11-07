@@ -101,8 +101,8 @@ int ullong_fmt(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size) {
 	bool const header = fmt & FLAG(IntFmt_Header);
 	bool const negative = fmt & FLAG(IntFmt_Negative);
 	bool const fillspacing = fmt & FLAG(IntFmt_FillSpacing);
-	bool const zerooffset = fmt & FLAG(IntFmt_FillSpacing);
-	bool const nullterminate = fmt & FLAG(IntFmt_FillSpacing);
+	bool const zerooffset = fmt & FLAG(IntFmt_ZeroOffset);
+	bool const nullterminate = fmt & FLAG(IntFmt_NullTerminate);
 
 	#define XPUT(n_) { \
 		auto const n = (n_); \
@@ -136,7 +136,7 @@ int ullong_fmt(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size) {
 
 
 	if (0) base_dec: do {
-		ubyte const c = '0' + val % 10;
+		auto const c = (ubyte)('0' + val % 10);
 		val /= 10;
 		dig++;
 		if (spc) {

@@ -601,6 +601,8 @@ AsyncRes AsyncFuture_wait(AsyncFuture *this, const AsyncTime *timeout) {
 
 		return error;
 	}
+
+	__builtin_unreachable();
 }
 
 
