@@ -19,4 +19,4 @@ typedef STRUCTDECL(FsMapping);
 FsRes FsFile_map(FsFile this, FsMappingMode mode, FsMapping *out_mapping);
 FsRes FsMapping_unmap(FsMapping *mapping);
 usize FsMapping_size(const FsMapping *this);
-const ubyte *FsMapping_data(const FsMapping *this);
+ConstPtr FsMapping_data(const FsMapping *this);

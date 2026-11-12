@@ -6,7 +6,7 @@
 	#define LIBSILVER_TEST_INCLUDE true
 
 	typedef struct {
-		OutStream log;
+		Sink log;
 	} SilverTestContext;
 
 	typedef int (*SilverTest)(SilverTestContext *ctx);
@@ -14,7 +14,7 @@
 	typedef struct {
 		uint total;
 		uint failed;
-		OutStream log;
+		Sink log;
 	} SilverTestState;
 
 	void SilverTest_run(SilverTestState *state, String name, SilverTest entry) {
@@ -33,9 +33,7 @@
 			PRINTA(state->log, "> ",name," failed: ",code,"\n");
 		}
 
-		OutStreamRes_ASSERT(
-			OutStream_flush(state->log)
-		);
+		SinkRes_ASSERT(Sink_flush(state->log));
 	}
 
 	typedef void (*SilverTestSuite)(SilverTestState *state);
@@ -47,17 +45,17 @@
 	int SilverTest_entry(int argc, Str *argv, SilverTestSuite suite) {
 		int res = 0;
 
-		const OutStream pstream = LIBSILVER_TEST_STREAM;
+		const Sink psink = LIBSILVER_TEST_STREAM;
 
 		ubyte buf[1024];
-		BufferedOutStream bufstream;
-		BufferedOutStream_init(&bufstream, pstream, buf, COUNTOF(buf));
+		BufferedSink bsink;
+		BufferedSink_init(&bsink, psink, buf, _Countof(buf));
 
 
 		SilverTestState state = {
 			.total = 0,
 			.failed = 0,
-			.log = BufferedOutStream_upcast(&bufstream)
+			.log = BufferedSink_asSink(&bsink)
 		};
 
 		suite(&state);
@@ -67,7 +65,7 @@
 			res = 1;
 		}
 
-		OutStreamRes_ASSERT(BufferedOutStream_flush(&bufstream));
+		SinkRes_ASSERT(BufferedSink_flush(&bsink));
 		return res;
 	}
 

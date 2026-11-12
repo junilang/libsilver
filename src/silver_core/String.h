@@ -1,7 +1,20 @@
+typedef struct {
+	const ubyte *data;
+	usize size;
+} String;
+
+#define String_INIT(str) {.data=(ConstPtr)(str), .size=(__builtin_strlen(str))}
+#define String_FROM(str) ((String)String_INIT(str))
+
 constexpr String String_null = {.data=nullptr,.size=0};
 
 String String_from(Str s) {
-	return (String) {.data = (ConstPtr)s, .size = __builtin_strlen(s)};
+	auto const size = __builtin_strlen(s);
+	return (String) {.data = (ConstPtr)s, .size = size};
+}
+
+String String_create(ConstPtr data, usize size) {
+	return (String) { .data = data, .size = size };
 }
 
 const ubyte *String_data(String this) {
@@ -19,13 +32,3 @@ bool String_isnull(String this) {
 	#endif
 	;
 }
-
-OutStreamRes String_print(String this, PrintFmt fmt, OutStream os) {
-	return OutStream_write(os, this.data, this.size);
-}
-
-OutStreamRes StringPtr_print(const String *this, PrintFmt fmt, OutStream os) {
-	return OutStream_write(os, this->data, this->size);
-}
-
-IPrintable_GENERATE_KNOWN(StringPtr, const String*)

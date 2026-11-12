@@ -20,23 +20,7 @@
 	#define XS XU
 
 #else
-	#define XU(T) \
-		bool T##_chkdadd(T a, T b, T *result) { \
-			if (a > (T##_max - b)) \
-				return true; \
-			*result = a + b; \
-			return false; \
-		}
-
-	#define XS(T) \
-		bool T##_chkdadd(T a, T b, T *result) { \
-			if ((b > 0) && (a > (T##_max - b))) \
-				return true; \
-			if (a < (T##_min - b)) \
-				return true; \
-			*result = a + b; \
-			return false; \
-		}
+	#error "chkdadd unimplemented"
 
 #endif
 
@@ -68,17 +52,7 @@ XTYPES
 	#define XS XU
 
 #else
-	#define XU(T) \
-		bool T##_chkdsub(T a, T b, T *result) { \
-			if (b > a) \
-				return true; \
-			*result = a - b; \
-			return false; \
-		}
-
-	// TODO
 	#error "chkdsub unimplemented"
-	#define XS(T)
 
 #endif
 
@@ -110,9 +84,6 @@ XTYPES
 	#define XS XU
 #else
 	#error "chkdmul unimplemented"
-
-	#define XU(T)
-	#define XS(T)
 
 #endif
 

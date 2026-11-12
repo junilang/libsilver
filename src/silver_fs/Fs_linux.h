@@ -64,7 +64,7 @@ FsRes FsFile_size(FsFile this, usize *out_size) {
 
 struct FsMapping {
 	usize size;
-	Ptr data;
+	ConstPtr data;
 };
 
 FsRes FsFile_map(FsFile this, FsMappingMode mode, FsMapping *out_mapping) {
@@ -105,6 +105,6 @@ usize FsMapping_size(const FsMapping *this) {
 	return this->size;
 }
 
-const ubyte *FsMapping_data(const FsMapping *this) {
+ConstPtr FsMapping_data(const FsMapping *this) {
 	return this->data;
 }

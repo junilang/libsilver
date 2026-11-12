@@ -1,4 +1,4 @@
-void os_panic_write(const ubyte *message, usize size) {
+void os_panic_write(ConstPtr message, usize size) {
 	linux_write(linux_stderr, message, size);
 }
 

@@ -23,7 +23,7 @@
 	},
 
 	"flags": [
-		"-std=gnu23",
+		"-std=gnu2y",
 		"-pedantic",
 		"-lgcc",
 		"-fwhole-program",
@@ -33,7 +33,8 @@
 		"-Wconversion",
 		"-Wimplicit-fallthrough",
 		"-Wno-unused-function",
-		"-Wno-unused-parameter"
+		"-Wno-unused-parameter",
+		"-Wno-gnu-statement-expression"
 	],
 
 	"profile_nt": {

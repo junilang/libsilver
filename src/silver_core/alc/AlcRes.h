@@ -15,17 +15,17 @@
 	X(ErrUnknown) \
 	X(Aux)
 
-typedef enum : u8 {
-	#define X(N) AlcRes_##N,
-		XS
-	#undef X
-} AlcRes;
+	typedef enum : u8 {
+		#define X(N) AlcRes_##N,
+			XS
+		#undef X
+	} AlcRes;
 
-const String AlcRes_repr[] = {
-	#define X(N) [AlcRes_##N] = String_INIT(#N),
-		XS
-	#undef X
-};
+	const String AlcRes_str[] = {
+		#define X(N) [AlcRes_##N] = String_INIT(#N),
+			XS
+		#undef X
+	};
 
 #undef XS
 
@@ -52,17 +52,17 @@ AlcRes AlcPtr_get(AlcPtr result) {
 	return AlcRes_Ok;
 }
 
-PANIC_RES_GENERATE(AlcRes)
+PANIC_RES_GENERATE(AlcRes, AlcRes_str)
 
-#define AlcRes_ASSERT(result) ASSERT_RES(AlcRes, result)
+#define AlcRes_ASSERT(res) ASSERT_RES(AlcRes, res)
 
 Ptr AlcPtr_unwrap_(AlcPtr ptr, ConstPtr func_name, ConstPtr header) {
 	AlcRes_assert_(AlcPtr_get(ptr), func_name, header);
 	return (Ptr)ptr;
 }
 
-#define AlcPtr_UNWRAP(result) \
-	AlcPtr_unwrap_(result, __func__, SOURCE_IDENTIFIER " AlcPtr_UNWRAP(" #result "):")
+#define AlcPtr_UNWRAP(res) \
+	AlcPtr_unwrap_(res, __func__, SOURCE_IDENTIFIER " AlcPtr_UNWRAP(" #res "):")
 
 typedef struct {
 	usize size;

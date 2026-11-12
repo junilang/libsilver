@@ -16,6 +16,8 @@
 	#include "iface.h"
 	#include "cpu.h"
 
+	#include "String.h"
+
 	#include "memory.h"
 	#include "chkdop.h"
 	#include "sizeutil.h"
@@ -26,21 +28,16 @@
 	#include "chars.h"
 	#include "intfmt.h"
 
-	#include "outstream/OutStream.h"
-	#include "printable/Printable.h"
-	#include "printable/intfmt.h"
+	#include "sink/Sink.h"
+	#include "fmt/Fmt.h"
+	#include "fmt/intfmt.h"
 
-	#include "outstream/VoidOutStream.c"
-	#include "outstream/BufferOutStream.c"
-	#include "outstream/BufferedOutStream.c"
-
-	#include "String.h"
-
-	//#include "VString.h"
+	#include "sink/BufferSink.c"
+	#include "sink/BufferedSink.c"
 
 	#include "print.h"
 
-	#include "allocator/Alc.h"
-	#include "allocator/StaticAlc.c"
+	#include "alc/Alc.h"
+	#include "alc/StaticAlc.c"
 
 #endif

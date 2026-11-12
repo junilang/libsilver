@@ -66,3 +66,5 @@ enum { FIELD_DEF(u8, 8) };
 enum { FIELD_DEF(u16, 16) };
 enum { FIELD_DEF(u32, 32) };
 enum { FIELD_DEF(u64, 64) };
+
+enum { FIELD_DEF(usize, usize_width) };

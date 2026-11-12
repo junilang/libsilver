@@ -16,7 +16,7 @@ AsyncWaitRes Async_timeout(u64 duration, AsyncTime *out) {
 	return AsyncWaitRes_Ok;
 }
 
-AsyncWaitRes Async_ZZwait(Ptr addr, usize val, const AsyncTime *timeout, uword flags) {
+AsyncWaitRes Async_wait_(Ptr addr, usize val, const AsyncTime *timeout, uword flags) {
 	const linux_timespec *tp = timeout ? &timeout->ts : nullptr;
 
 	auto res = linux_futex_wait(
@@ -61,26 +61,26 @@ AsyncWaitRes Async_sleep(u64 duration) {
 }
 
 AsyncWaitRes Async_wait8(Ptr addr, u8 val, const AsyncTime *timeout) {
-	return Async_ZZwait(addr, val, timeout, FUTEX2_SIZE_U8);
+	return Async_wait_(addr, val, timeout, FUTEX2_SIZE_U8);
 }
 
 AsyncWaitRes Async_wait16(Ptr addr, u16 val, const AsyncTime *timeout) {
-	return Async_ZZwait(addr, val, timeout, FUTEX2_SIZE_U16);
+	return Async_wait_(addr, val, timeout, FUTEX2_SIZE_U16);
 }
 
 AsyncWaitRes Async_wait32(Ptr addr, u32 val, const AsyncTime *timeout) {
-	return Async_ZZwait(addr, val, timeout, FUTEX2_SIZE_U32);
+	return Async_wait_(addr, val, timeout, FUTEX2_SIZE_U32);
 }
 
 AsyncWaitRes Async_wait64(Ptr addr, u64 val, const AsyncTime *timeout) {
-	return Async_ZZwait(addr, val, timeout, FUTEX2_SIZE_U64);
+	return Async_wait_(addr, val, timeout, FUTEX2_SIZE_U64);
 }
 
 constexpr int Async_wakeall = int_max;
 constexpr int Async_wakeone = 1;
 
 
-AsyncWaitRes Async_ZZwake(Ptr addr, int *io_n, uword flags) {
+AsyncWaitRes Async_wake_(Ptr addr, int *io_n, uword flags) {
 	auto res = linux_futex_wake(
 		addr, FUTEX_BITSET_MATCH_ANY, *io_n,
 		flags | FUTEX2_PRIVATE
@@ -96,33 +96,33 @@ AsyncWaitRes Async_ZZwake(Ptr addr, int *io_n, uword flags) {
 }
 
 AsyncWaitRes Async_wake8_get(Ptr addr, int *io_n) {
-	return Async_ZZwake(addr, io_n, FUTEX2_SIZE_U8);
+	return Async_wake_(addr, io_n, FUTEX2_SIZE_U8);
 }
 
 AsyncWaitRes Async_wake16_get(Ptr addr, int *io_n) {
-	return Async_ZZwake(addr, io_n, FUTEX2_SIZE_U16);
+	return Async_wake_(addr, io_n, FUTEX2_SIZE_U16);
 }
 
 AsyncWaitRes Async_wake32_get(Ptr addr, int *io_n) {
-	return Async_ZZwake(addr, io_n, FUTEX2_SIZE_U32);
+	return Async_wake_(addr, io_n, FUTEX2_SIZE_U32);
 }
 
 AsyncWaitRes Async_wake64_get(Ptr addr, int *io_n) {
-	return Async_ZZwake(addr, io_n, FUTEX2_SIZE_U64);
+	return Async_wake_(addr, io_n, FUTEX2_SIZE_U64);
 }
 
 AsyncWaitRes Async_wake8(Ptr addr, int n) {
-	return Async_ZZwake(addr, &n, FUTEX2_SIZE_U8);
+	return Async_wake_(addr, &n, FUTEX2_SIZE_U8);
 }
 
 AsyncWaitRes Async_wake16(Ptr addr, int n) {
-	return Async_ZZwake(addr, &n, FUTEX2_SIZE_U16);
+	return Async_wake_(addr, &n, FUTEX2_SIZE_U16);
 }
 
 AsyncWaitRes Async_wake32(Ptr addr, int n) {
-	return Async_ZZwake(addr, &n, FUTEX2_SIZE_U32);
+	return Async_wake_(addr, &n, FUTEX2_SIZE_U32);
 }
 
 AsyncWaitRes Async_wake64(Ptr addr, int n) {
-	return Async_ZZwake(addr, &n, FUTEX2_SIZE_U64);
+	return Async_wake_(addr, &n, FUTEX2_SIZE_U64);
 }

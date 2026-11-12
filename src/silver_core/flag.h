@@ -4,13 +4,16 @@
 #define FLAG_CLEAR(flag) (~FLAG(flag))
 #define FLAG_NOT(flag) FLAG_CLEAR(flag)
 
-
 #define FLAGS_HEADER_ENABLE
 #define FLAGS_HEADER FLAGS_ERROR_NO_ARGS
 
 #define FLAGS(pfx, ...) (FLAGS_HEADER##__VA_OPT__(_ENABLE FLAGS_0(pfx, __VA_ARGS__)))
 #define FLAGS_CLEAR(pfx, ...) (~(FLAGS(pfx, __VA_ARGS__)))
-#define FLAGS_NOT(...) FLAGS_CLEAR(__VA_ARGS__)
+#define FLAGS_NOT FLAGS_CLEAR
+
+#define FLAGS_CAST(pfx, ...) ((pfx)FLAGS(pfx, __VA_ARGS__))
+#define FLAGS_CLEAR_CAST(pfx, ...) ((pfx)FLAGS_CLEAR(pfx, __VA_ARGS__))
+#define FLAGS_NOT_CAST FLAGS_CLEAR_CAST
 
 #define FLAGS_0(pfx, flag, ...) FLAG(pfx##_##flag)__VA_OPT__(|FLAGS_1(pfx, __VA_ARGS__))
 #define FLAGS_1(pfx, flag, ...) FLAG(pfx##_##flag)__VA_OPT__(|FLAGS_2(pfx, __VA_ARGS__))
@@ -76,4 +79,4 @@
 #define FLAGS_61(pfx, flag, ...) FLAG(pfx##_##flag)__VA_OPT__(|FLAGS_62(pfx, __VA_ARGS__))
 #define FLAGS_62(pfx, flag, ...) FLAG(pfx##_##flag)__VA_OPT__(|FLAGS_63(pfx, __VA_ARGS__))
 #define FLAGS_63(pfx, flag, ...) FLAG(pfx##_##flag)__VA_OPT__(|FLAGS_64(pfx, __VA_ARGS__))
-#define FLAGS_64(pfx, flag, ...) FLAGS_TOO_MANY_ARGUMENTS
+#define FLAGS_64(pfx, flag, ...) _Pragma("GCC error \"FLAGS: too many items (max 64)\"")

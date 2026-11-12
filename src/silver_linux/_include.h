@@ -33,5 +33,5 @@
 	#include "runtime.h"
 
 	#include "OsAlc.c"
-	#include "OsFileOutStream.c"
+	#include "OsSink.c"
 #endif

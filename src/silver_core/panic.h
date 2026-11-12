@@ -1,4 +1,4 @@
-extern void os_panic_write(const ubyte *message, usize size);
+extern void os_panic_write(ConstPtr message, usize size);
 [[noreturn]] extern void os_panic();
 
 #ifndef PANIC_BUFSIZE
@@ -72,11 +72,11 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 #define PANIC_MSG_5(M, ...) String_INIT(M), __VA_OPT__(PANIC_MSG_6(__VA_ARGS__))
 #define PANIC_MSG_6(M, ...) String_INIT(M), __VA_OPT__(PANIC_MSG_7(__VA_ARGS__))
 #define PANIC_MSG_7(M, ...) String_INIT(M), __VA_OPT__(PANIC_MSG_8(__VA_ARGS__))
-#define PANIC_MSG_8(M, ...) PANIC_MSG_ERROR_TOO_MANY_MESSAGES
+#define PANIC_MSG_8(M, ...) _Pragma("GCC error \"PANIC: too many messages (max 8)\"")
 
 #define PANIC_MSG_(...) do { \
 	const String msg[] = { __VA_OPT__(PANIC_MSG_0(__VA_ARGS__)) }; \
-	panic_msg_(msg, COUNTOF(msg)); \
+	panic_msg_(msg, _Countof(msg)); \
 } while (0)
 
 #define PANIC_PRINT_(...) do { \
@@ -124,7 +124,7 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 
 #define UNREACHABLE(...) UNREACHABLE_##__VA_OPT__(GUARD(__VA_ARGS__))
 
-#define PANIC_RES_GENERATE(R) \
+#define PANIC_RES_GENERATE(R, S) \
 	[[noreturn, gnu::noinline]] \
 	void R##_panic_( \
 		R const res, ConstPtr const func_name, ConstPtr const header \
@@ -138,7 +138,7 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 			bend += __builtin_strlen("Aux("); \
 			goto put_num; \
 		} \
-		auto const s = R##_repr[res]; \
+		auto const s = S[res]; \
 		if (s.size > bsize) { \
 			memcpy(buf + bend, STR("\?\?(")); \
 			bend += __builtin_strlen("\?\?("); \
@@ -147,7 +147,7 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 		memcpy(buf + bend, s.data, s.size); \
 		bend += s.size; \
 		if (0) put_num: { \
-			auto const r = ullong_fmt(res, FLAG(IntFmt_ZeroOffset), buf + bend, bsize); \
+			auto const r = ullong_rawfmt(res, FLAG(IntFmt_ZeroOffset), buf + bend, bsize); \
 			if (r < 0) \
 				bend += IntFmtRes_put(r, buf + bend, bsize); \
 			else \
@@ -159,7 +159,7 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 			String_INIT(header), \
 			{ .data = buf, .size = bend } \
 		}; \
-		panic_msg_(msg, COUNTOF(msg)); \
+		panic_msg_(msg, _Countof(msg)); \
 	} \
 	void R##_assert_(R res, ConstPtr func_name, ConstPtr header) { \
 		if (res) R##_panic_(res, func_name, header); \

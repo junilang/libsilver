@@ -1,125 +1,153 @@
-#define PRINT(resp, stream, ...) do { \
-	const OutStream PRINT_stream__ = (stream); \
-	OutStreamRes PRINT_res__ = OutStreamRes_Ok; \
-	PrintFmt PRINT_fmt__ = PrintFmt_null; \
-	do { \
-		__VA_OPT__(PRINT_0(__VA_ARGS__)) \
-	} while (0); \
-	*(resp) = PRINT_res__; \
-} while (0)
+#define PRINT_INTERNAL(...) \
+	[[maybe_unused]] auto const SPEC = &PRINT_FmtSpec_create; \
+	[[maybe_unused]] auto const S = &PRINT_FmtSpec_create; \
+	[[maybe_unused]] PRINT_CmdFlush constexpr FLUSH = {}; \
+	[[maybe_unused]] PRINT_CmdPush constexpr PUSH = {}; \
+	FmtSpec PRINT_spec__ = FmtSpec_null; \
+	__VA_OPT__(PRINT_0(__VA_ARGS__))
 
-#define PRINT_BUFFERED(resp, buffer_size, stream, ...) do { \
-	constexpr usize PRINT_buffer_size__ = (buffer_size); \
-	const OutStream PRINT_parent_stream__ = (stream); \
-	ubyte PRINT_buffer__[PRINT_buffer_size__]; \
-	BufferOutStream PRINT_buffer_os__ = {.buffer=PRINT_buffer__,.capacity=PRINT_buffer_size__}; \
-	const OutStream PRINT_stream__ = BufferOutStream_upcast(&PRINT_buffer_os__); \
-	OutStreamRes PRINT_res__ = OutStreamRes_Ok; \
-	PrintFmt PRINT_fmt__ = PrintFmt_null; \
-	do { \
-		__VA_OPT__(PRINT_0(__VA_ARGS__)) \
-		PRINT_res__ = OutStream_write( \
-			PRINT_parent_stream__, PRINT_buffer__, PRINT_buffer_os__.size \
-		); \
-	} while (0); \
-	*(resp) = PRINT_res__; \
-} while (0)
+#define PRINT_BUF_INTERNAL(buf_size, sink, ...) \
+	usize constexpr PRINT_buf_size__ = (buf_size); \
+	Sink const PRINT_parent_sink__ = (sink); \
+	ubyte PRINT_buf__[PRINT_buf_size__]; \
+	BufferedSink PRINT_buf_sink__; \
+	BufferedSink_init(&PRINT_buf_sink__, PRINT_parent_sink__, PRINT_buf__, PRINT_buf_size__); \
+	Sink const PRINT_sink__ = BufferedSink_asSink(&PRINT_buf_sink__); \
+	PRINT_INTERNAL(__VA_ARGS__) \
+	PRINT_res__ = BufferedSink_push(&PRINT_buf_sink__); \
 
-#define PRINT_ASSERT(stream, ...) do { \
-	OutStreamRes PRINT_ASSERT_res__; \
-	PRINT(&PRINT_ASSERT_res__, stream, __VA_ARGS__); \
-	OutStreamRes_assert_( \
-		PRINT_ASSERT_res__, __func__, SOURCE_IDENTIFIER " PRINT_ASSERT failed:" \
-	); \
-} while (0)
+#ifndef PRINT_BUF_SIZE
+	#define PRINT_BUF_SIZE 64
+#endif
 
-#define PRINT_BUFFERED_ASSERT(buffer_size, stream, ...) do { \
-	OutStreamRes PRINT_ASSERT_res__; \
-	PRINT_BUFFERED(&PRINT_ASSERT_res__, buffer_size, stream, __VA_ARGS__); \
-	OutStreamRes_assert_( \
-		PRINT_ASSERT_res__, __func__, SOURCE_IDENTIFIER " PRINT_BUFFERED_ASSERT failed:" \
-	); \
-} while (0)
+#define PRINT_RAW(sink, ...) ({ \
+	__label__ PRINT_early_exit__; \
+	SinkRes PRINT_res__ = SinkRes_Ok; \
+	Sink const PRINT_sink__ = (sink); \
+	PRINT_INTERNAL(__VA_ARGS__) \
+	PRINT_early_exit__:; \
+	PRINT_res__; \
+})
 
-#define PRINTA PRINT_ASSERT
-#define PRINTB PRINT_BUFFERED
-#define PRINTBA PRINT_BUFFERED_ASSERT
+#define PRINT_BUF_(buf_size, sink, ...) ({ \
+	__label__ PRINT_early_exit__; \
+	SinkRes PRINT_res__ = SinkRes_Ok; \
+	PRINT_BUF_INTERNAL(buf_size, sink, __VA_ARGS__) \
+	PRINT_early_exit__:; \
+	PRINT_res__; \
+})
+
+#define PRINT_BUF(sink, ...) PRINT_BUF_(PRINT_BUF_SIZE, sink, __VA_ARGS__)
+
+#ifndef PRINT
+	#define PRINT PRINT_BUF
+#endif
+
+#define PRINTR PRINT_RAW
+#define PRINTA(sink, ...) \
+	SinkRes_assert_(PRINT(sink, __VA_ARGS__), __func__, SOURCE_IDENTIFIER " PRINT failed:")
+
+typedef struct {
+	FmtSpec value;
+} PRINT_FmtSpec;
+
+PRINT_FmtSpec PRINT_FmtSpec_create(FmtSpec value) {
+	return (PRINT_FmtSpec){value};
+}
+
+SinkRes PRINT_ITEM_PRINT_FmtSpec(Sink sink, FmtSpec *specp, PRINT_FmtSpec val) {
+	*specp = val.value;
+	return SinkRes_Ok;
+}
+
+typedef struct { ubyte dummy__; } PRINT_CmdFlush;
+
+SinkRes PRINT_ITEM_PRINT_CmdFlush(Sink sink, FmtSpec *specp, PRINT_CmdFlush val) {
+	return Sink_flush(sink);
+}
+
+typedef struct { ubyte dummy__; } PRINT_CmdPush;
+
+SinkRes PRINT_ITEM_PRINT_CmdPush(Sink sink, FmtSpec *specp, PRINT_CmdPush val) {
+	return Sink_push(sink);
+}
+
+SinkRes PRINT_ITEM_illong(Sink sink, FmtSpec *specp, illong val) {
+	auto const spec = *specp;
+	*specp = FmtSpec_null;
+	return illong_fmt(val, (IntFmtSpec)spec, sink);
+}
+
+SinkRes PRINT_ITEM_ullong(Sink sink, FmtSpec *specp, ullong val) {
+	auto const spec = *specp;
+	*specp = FmtSpec_null;
+	return ullong_fmt(val, (IntFmtSpec)spec, sink);
+}
+
+SinkRes PRINT_ITEM_ConstPtr(Sink sink, FmtSpec *specp, ConstPtr val) {
+	auto spec = *specp;
+	*specp = FmtSpec_null;
+	if (!spec)
+		spec = FIELD(IntFmt_Base, Hex) | FLAG(IntFmt_Header);
+	return ullong_fmt((ullong)val, (IntFmtSpec)spec, sink);
+}
+
+SinkRes PRINT_ITEM_bool(Sink sink, FmtSpec *specp, bool val) {
+	*specp = FmtSpec_null;
+
+	Str str;
+	usize str_size;
+	if (val) {
+		str = "true";
+		str_size = 4;
+	} else {
+		str = "false";
+		str_size = 5;
+	}
+
+	return Sink_write(sink, str, str_size);
+}
+
+SinkRes PRINT_ITEM_Fmt(Sink sink, FmtSpec *specp, Fmt val) {
+	auto const spec = *specp;
+	*specp = FmtSpec_null;
+	return Fmt_invoke(val, spec, sink);
+}
+
+SinkRes PRINT_ITEM_Str(Sink sink, FmtSpec *specp, Str val) {
+	*specp = FmtSpec_null;
+	return Sink_write(sink, val, __builtin_strlen(val));
+}
+
+SinkRes PRINT_ITEM_String(Sink sink, FmtSpec *specp, String val) {
+	*specp = FmtSpec_null;
+	return Sink_write(sink, val.data, val.size);
+}
 
 #define PRINT_ITEM(V) { \
 	PRINT_res__ = _Generic((V), \
-		PrintFmt : PRINT_setfmt, \
-		Printable : PRINT_Printable, \
-		StaticPrintable : PRINT_StaticPrintable, \
-		FmtPrintable : PRINT_FmtPrintable, \
-		StaticFmtPrintable : PRINT_StaticFmtPrintable, \
-		char * : PRINT_cstring, \
-		const char * : PRINT_cstring, \
-		String : PRINT_String, \
-		bool : PRINT_bool, \
-		signed char : PRINT_illong, \
-		signed short : PRINT_illong, \
-		signed int : PRINT_illong, \
-		signed long : PRINT_illong, \
-		signed long long : PRINT_illong, \
-		unsigned char : PRINT_ullong,  \
-		unsigned short : PRINT_ullong, \
-		unsigned int : PRINT_ullong, \
-		unsigned long : PRINT_ullong, \
-		unsigned long long : PRINT_ullong, \
-		default : PRINT_pointer \
-	)(PRINT_stream__, &PRINT_fmt__, (V)); \
-	if (PRINT_res__) break; \
+		PRINT_FmtSpec : PRINT_ITEM_PRINT_FmtSpec, \
+		PRINT_CmdFlush : PRINT_ITEM_PRINT_CmdFlush, \
+		PRINT_CmdPush : PRINT_ITEM_PRINT_CmdPush, \
+		char * : PRINT_ITEM_Str, \
+		const char * : PRINT_ITEM_Str, \
+		String : PRINT_ITEM_String, \
+		Fmt : PRINT_ITEM_Fmt, \
+		bool : PRINT_ITEM_bool, \
+		ichar : PRINT_ITEM_illong, \
+		ishort : PRINT_ITEM_illong, \
+		int : PRINT_ITEM_illong, \
+		ilong : PRINT_ITEM_illong, \
+		illong : PRINT_ITEM_illong, \
+		uchar : PRINT_ITEM_ullong, \
+		ushort : PRINT_ITEM_ullong, \
+		uint : PRINT_ITEM_ullong, \
+		ulong : PRINT_ITEM_ullong, \
+		ullong : PRINT_ITEM_ullong, \
+		default: PRINT_ITEM_ConstPtr \
+	)(PRINT_sink__, &PRINT_spec__, (V)); \
+	if (PRINT_res__) goto PRINT_early_exit__; \
 }
-
-OutStreamRes PRINT_setfmt(OutStream os, PrintFmt *fmtp, PrintFmt v) {
-	*fmtp = v;
-	return OutStreamRes_Ok;
-}
-
-OutStreamRes PRINT_cstring(OutStream os, PrintFmt *fmtp, Str v) {
-	*fmtp = PrintFmt_null;
-	return OutStream_write(os, v, __builtin_strlen(v));
-}
-
-OutStreamRes PRINT_bool(OutStream os, PrintFmt *fmtp, bool v) {
-	*fmtp = PrintFmt_null;
-
-	Str repr;
-	usize size;
-
-	if (v) {
-		repr = "true";
-		size = 4;
-	} else {
-		repr = "false";
-		size = 5;
-	}
-
-	return OutStream_write(os, repr, size);
-}
-
-OutStreamRes PRINT_pointer(OutStream os, PrintFmt *fmtp, ConstPtr v) {
-	PrintFmt fmt = *fmtp;
-	*fmtp = PrintFmt_null;
-	if (!fmt.value)
-		fmt.value = FIELD(IntFmt_Base, Hex) | FLAG(IntFmt_Header);
-	return ullong_print((ullong)v, fmt, os);
-}
-
-#define PRINT_GENERATE(T) \
-	OutStreamRes PRINT_##T(OutStream os, PrintFmt *fmtp, T v) { \
-		PrintFmt fmt = *fmtp; \
-		*fmtp = PrintFmt_null; \
-		return T##_print(v, fmt, os); \
-	}
-
-PRINT_GENERATE(ullong)
-PRINT_GENERATE(illong)
-PRINT_GENERATE(String)
-PRINT_GENERATE(Printable)
-PRINT_GENERATE(StaticPrintable)
-PRINT_GENERATE(FmtPrintable)
-PRINT_GENERATE(StaticFmtPrintable)
 
 #define PRINT_0(V, ...) PRINT_ITEM((V)); __VA_OPT__(PRINT_1(__VA_ARGS__))
 #define PRINT_1(V, ...) PRINT_ITEM((V)); __VA_OPT__(PRINT_2(__VA_ARGS__))
@@ -185,4 +213,4 @@ PRINT_GENERATE(StaticFmtPrintable)
 #define PRINT_61(V, ...) PRINT_ITEM((V)); __VA_OPT__(PRINT_62(__VA_ARGS__))
 #define PRINT_62(V, ...) PRINT_ITEM((V)); __VA_OPT__(PRINT_63(__VA_ARGS__))
 #define PRINT_63(V, ...) PRINT_ITEM((V)); __VA_OPT__(PRINT_64(__VA_ARGS__))
-#define PRINT_64(V, ...) PRINT_ERROR_TOO_MANY_ITEMS
+#define PRINT_64(V, ...) _Pragma("GCC error "\"PRINT: too many items (max 64)\"")

@@ -1,4 +1,4 @@
-typedef u32 IntFmt; enum {
+enum {
 	FIELD_DEF(IntFmt_Base, 2),
 	FIELD_DEF(IntFmt_Delimiter, 2),
 	FIELD_DEF(IntFmt_Digits, 8),
@@ -8,8 +8,11 @@ typedef u32 IntFmt; enum {
 	FLAG_DEF(IntFmt_Capitalize),
 	FLAG_DEF(IntFmt_Header),
 	FLAG_DEF(IntFmt_ZeroOffset),
-	FLAG_DEF(IntFmt_NullTerminate)
+	FLAG_DEF(IntFmt_NullTerminate),
+	IntFmtSpec_width
 };
+
+typedef u32 IntFmtSpec;
 
 enum {
 	IntFmt_Delimiter_Space,
@@ -27,7 +30,7 @@ enum {
 
 #define XS \
 	X(Ok) \
-	X(ErrInvalidFmt) \
+	X(ErrInvalidSpec) \
 	X(ErrOverflow) \
 	X(ErrUnknown)
 
@@ -47,8 +50,8 @@ enum {
 
 usize IntFmtRes_put(int r, ubyte *buf, usize buf_size) {
 	if (r > 0) r = IntFmtRes_Ok;
-	else if (r < -IntFmtRes_ErrUnknown) r = IntFmtRes_ErrUnknown;
 	else r = -r;
+	if (r > IntFmtRes_ErrUnknown) r = IntFmtRes_ErrUnknown;
 
 	String s = IntFmtRes_repr[r];
 	if (s.size > buf_size) s.size = buf_size;
@@ -61,16 +64,16 @@ usize IntFmtRes_put(int r, ubyte *buf, usize buf_size) {
 //	including null terminator (if requested by format specifier)
 // by default the string is written from the end of the provided
 // output buffer to the front, unless ZeroOffset flag is set
-int ullong_fmt(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size) {
+int ullong_rawfmt(ullong val, IntFmtSpec spec, ubyte *const buf, usize const buf_size) {
 	ubyte *bp = buf + buf_size;
 
-	u8 const base = FIELD_GET(IntFmt_Base, fmt);
+	u8 const base = FIELD_GET(IntFmt_Base, spec);
 	if (base > IntFmt_Base_Oct) {
-		return -IntFmtRes_ErrInvalidFmt;
+		return -IntFmtRes_ErrInvalidSpec;
 	}
 
 	ubyte delim;
-	switch (FIELD_GET(IntFmt_Delimiter, fmt)) {
+	switch (FIELD_GET(IntFmt_Delimiter, spec)) {
 		case IntFmt_Delimiter_Space:
 			delim = ' ';
 			break;
@@ -85,24 +88,24 @@ int ullong_fmt(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size) {
 			break;
 		default:
 			// invalid delimiter value
-			return -IntFmtRes_ErrInvalidFmt;
+			return -IntFmtRes_ErrInvalidSpec;
 	}
 
-	u16 const digits = FIELD_GET(IntFmt_Digits, fmt);
+	u16 const digits = FIELD_GET(IntFmt_Digits, spec);
 	u16 dig = 0;
 
-	u16 spacing = FIELD_GET(IntFmt_Spacing, fmt);
+	u16 spacing = FIELD_GET(IntFmt_Spacing, spec);
 	if (!spacing)
 		spacing = u16_max;
 
 	auto spc = spacing;
 
-	bool const capitalize = fmt & FLAG(IntFmt_Capitalize);
-	bool const header = fmt & FLAG(IntFmt_Header);
-	bool const negative = fmt & FLAG(IntFmt_Negative);
-	bool const fillspacing = fmt & FLAG(IntFmt_FillSpacing);
-	bool const zerooffset = fmt & FLAG(IntFmt_ZeroOffset);
-	bool const nullterminate = fmt & FLAG(IntFmt_NullTerminate);
+	bool const capitalize = spec & FLAG(IntFmt_Capitalize);
+	bool const header = spec & FLAG(IntFmt_Header);
+	bool const negative = spec & FLAG(IntFmt_Negative);
+	bool const fillspacing = spec & FLAG(IntFmt_FillSpacing);
+	bool const zerooffset = spec & FLAG(IntFmt_ZeroOffset);
+	bool const nullterminate = spec & FLAG(IntFmt_NullTerminate);
 
 	#define XPUT(n_) { \
 		auto const n = (n_); \
@@ -255,17 +258,17 @@ int ullong_fmt(ullong val, IntFmt fmt, ubyte *const buf, usize const buf_size) {
 	#undef XPUT
 }
 
-int illong_fmt(illong val, IntFmt fmt, ubyte *buf, usize buf_size) {
+int illong_rawfmt(illong val, IntFmtSpec spec, ubyte *buf, usize buf_size) {
 	ullong uval;
 	if (val == illong_min) {
-		fmt |= FLAG(IntFmt_Negative);
+		spec |= FLAG(IntFmt_Negative);
 		uval = (ullong)illong_max + 1;
 	} else if (val < 0) {
-		fmt |= FLAG(IntFmt_Negative);
+		spec |= FLAG(IntFmt_Negative);
 		uval = (ullong)(-val);
 	} else {
 		uval = (ullong)val;
 	}
 
-	return ullong_fmt(uval, fmt, buf, buf_size);
+	return ullong_rawfmt(uval, spec, buf, buf_size);
 }

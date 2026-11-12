@@ -13,6 +13,7 @@
 	#endif
 
 	#include "AsyncAlc.h"
+	#include "AsyncSink.h"
 
 	#include "Async_decl.h"
 	#include "AsyncRes.h"
