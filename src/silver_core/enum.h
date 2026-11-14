@@ -1,67 +1,31 @@
-#define ENUM(pfx, T, base, v, ...) \
-	enum : T { pfx##v = base, __VA_OPT__(ENUM_1(pfx, __VA_ARGS__)) }
+#define ENUM_LAST_(pfx, v) pfx##v, pfx##END = pfx##v
+#define ENUM_LAST(pfx, v) ENUM_END_(pfx##_, v)
 
-#define ENUM_1(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_2(pfx, __VA_ARGS__))
-#define ENUM_2(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_3(pfx, __VA_ARGS__))
-#define ENUM_3(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_4(pfx, __VA_ARGS__))
-#define ENUM_4(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_5(pfx, __VA_ARGS__))
-#define ENUM_5(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_6(pfx, __VA_ARGS__))
-#define ENUM_6(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_7(pfx, __VA_ARGS__))
-#define ENUM_7(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_8(pfx, __VA_ARGS__))
-#define ENUM_8(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_9(pfx, __VA_ARGS__))
-#define ENUM_9(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_10(pfx, __VA_ARGS__))
-#define ENUM_10(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_11(pfx, __VA_ARGS__))
-#define ENUM_11(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_12(pfx, __VA_ARGS__))
-#define ENUM_12(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_13(pfx, __VA_ARGS__))
-#define ENUM_13(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_14(pfx, __VA_ARGS__))
-#define ENUM_14(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_15(pfx, __VA_ARGS__))
-#define ENUM_15(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_16(pfx, __VA_ARGS__))
-#define ENUM_16(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_17(pfx, __VA_ARGS__))
-#define ENUM_17(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_18(pfx, __VA_ARGS__))
-#define ENUM_18(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_19(pfx, __VA_ARGS__))
-#define ENUM_19(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_20(pfx, __VA_ARGS__))
-#define ENUM_20(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_21(pfx, __VA_ARGS__))
-#define ENUM_21(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_22(pfx, __VA_ARGS__))
-#define ENUM_22(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_23(pfx, __VA_ARGS__))
-#define ENUM_23(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_24(pfx, __VA_ARGS__))
-#define ENUM_24(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_25(pfx, __VA_ARGS__))
-#define ENUM_25(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_26(pfx, __VA_ARGS__))
-#define ENUM_26(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_27(pfx, __VA_ARGS__))
-#define ENUM_27(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_28(pfx, __VA_ARGS__))
-#define ENUM_28(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_29(pfx, __VA_ARGS__))
-#define ENUM_29(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_30(pfx, __VA_ARGS__))
-#define ENUM_30(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_31(pfx, __VA_ARGS__))
-#define ENUM_31(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_32(pfx, __VA_ARGS__))
-#define ENUM_32(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_33(pfx, __VA_ARGS__))
-#define ENUM_33(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_34(pfx, __VA_ARGS__))
-#define ENUM_34(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_35(pfx, __VA_ARGS__))
-#define ENUM_35(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_36(pfx, __VA_ARGS__))
-#define ENUM_36(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_37(pfx, __VA_ARGS__))
-#define ENUM_37(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_38(pfx, __VA_ARGS__))
-#define ENUM_38(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_39(pfx, __VA_ARGS__))
-#define ENUM_39(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_40(pfx, __VA_ARGS__))
-#define ENUM_40(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_41(pfx, __VA_ARGS__))
-#define ENUM_41(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_42(pfx, __VA_ARGS__))
-#define ENUM_42(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_43(pfx, __VA_ARGS__))
-#define ENUM_43(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_44(pfx, __VA_ARGS__))
-#define ENUM_44(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_45(pfx, __VA_ARGS__))
-#define ENUM_45(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_46(pfx, __VA_ARGS__))
-#define ENUM_46(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_47(pfx, __VA_ARGS__))
-#define ENUM_47(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_48(pfx, __VA_ARGS__))
-#define ENUM_48(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_49(pfx, __VA_ARGS__))
-#define ENUM_49(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_50(pfx, __VA_ARGS__))
-#define ENUM_50(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_51(pfx, __VA_ARGS__))
-#define ENUM_51(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_52(pfx, __VA_ARGS__))
-#define ENUM_52(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_53(pfx, __VA_ARGS__))
-#define ENUM_53(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_54(pfx, __VA_ARGS__))
-#define ENUM_54(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_55(pfx, __VA_ARGS__))
-#define ENUM_55(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_56(pfx, __VA_ARGS__))
-#define ENUM_56(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_57(pfx, __VA_ARGS__))
-#define ENUM_57(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_58(pfx, __VA_ARGS__))
-#define ENUM_58(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_59(pfx, __VA_ARGS__))
-#define ENUM_59(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_60(pfx, __VA_ARGS__))
-#define ENUM_60(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_61(pfx, __VA_ARGS__))
-#define ENUM_61(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_62(pfx, __VA_ARGS__))
-#define ENUM_62(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_63(pfx, __VA_ARGS__))
-#define ENUM_63(pfx, v, ...) pfx##v, __VA_OPT__(ENUM_64(pfx, __VA_ARGS__))
-#define ENUM_64(pfx, v, ...) ENUM_TOO_MANY_ARGUMENTS
+#define ENUM_VALUE_WIDTH(max) (ullong_width - __builtin_clzll(max))
+#define ENUM_WIDTH_(pfx) ENUM_VALUE_WIDTH(pfx##END)
+#define ENUM_WIDTH(pfx) ENUM_WIDTH_(pfx##_)
+
+#define ENUM_(pfx, T, base, ...) enum : T { ENUM_0(pfx, base, __VA_ARGS__) }
+
+#define ENUM_XOPT(pfx, v) pfx##v
+#define ENUM_X(pfx, v) ENUM_LAST_(pfx, v)
+
+#define ENUM_0_OPT(pfx, base, v) pfx##v = (base)
+#define ENUM_0_(pfx, base, v) pfx##v = (base), pfx##LAST = pfx##v
+
+#define ENUM_0(pfx, base, v, ...) \
+	ENUM_0_##__VA_OPT__(OPT)(pfx, base, v)__VA_OPT__(,ENUM_1(pfx, __VA_ARGS__))
+
+//#define ENUM_1(pfx, v, ...) ENUM_X##__VA_OPT__(OPT)(pfx, v)__VA_OPT__(,ENUM_2(pfx, __VA_ARGS__))
+
+#define ENUM_STR_X(pfx, v) [pfx##v] = String_INIT(#v)
+#define ENUM_STR_0(pfx, v, ...) ENUM_STR_X(pfx, v)__VA_OPT__(,ENUM_STR_1(pfx, __VA_ARGS__))
+
+#define ENUM_ERROR_TOO_MANY_VALUES _Pragma("GCC error \"ENUM: too many values\"")
+
+#define ENUM_GENERATE(pfx, T, ...) \
+	typedef enum : T { ENUM_0(pfx##_, 0, __VA_ARGS__) } pfx; \
+	const String pfx##_str[] = { ENUM_STR_0(pfx##_, __VA_ARGS__) };
+
+// repetitive macros generated by python scrips
+#include "enum_gen.h"

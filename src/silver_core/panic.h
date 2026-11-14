@@ -72,7 +72,9 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 #define PANIC_MSG_5(M, ...) String_INIT(M), __VA_OPT__(PANIC_MSG_6(__VA_ARGS__))
 #define PANIC_MSG_6(M, ...) String_INIT(M), __VA_OPT__(PANIC_MSG_7(__VA_ARGS__))
 #define PANIC_MSG_7(M, ...) String_INIT(M), __VA_OPT__(PANIC_MSG_8(__VA_ARGS__))
-#define PANIC_MSG_8(M, ...) _Pragma("GCC error \"PANIC: too many messages (max 8)\"")
+#define PANIC_MSG_8(...) PANIC_MSG_ERROR_TOO_MANY_MESSAGES
+
+#define PANIC_MSG_ERROR_TOO_MANY_MESSAGES _Pragma("GCC error \"PANIC: too many messages\"")
 
 #define PANIC_MSG_(...) do { \
 	const String msg[] = { __VA_OPT__(PANIC_MSG_0(__VA_ARGS__)) }; \
@@ -80,9 +82,13 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 } while (0)
 
 #define PANIC_PRINT_(...) do { \
-	OutStreamRes PANIC_PRINT_res__; \
-	PRINT_BUFFERED(&PANIC_PRINT_res__, (PANIC_BUFSIZE), os_panic_stream(), __VA_ARGS__); \
-	OutStreamRes_assert_(PANIC_PRINT_res__, __func__, SOURCE_IDENTIFIER " PANIC_PRINT failed:"); \
+	usize constexpr PANIC_PRINT_buf_size__ = (PANIC_PRINT_BUFSIZE); \
+	ubyte PANIC_PRINT_buf__[PANIC_PRINT_buf_size__]; \
+	BufferSink PANIC_PRINT_buf_sink__; \
+	BufferSink_init(&PANIC_PRINT_buf_sink__, PANIC_PRINT_buf__, PANIC_PRINT_buf_size__); \
+	Sink const PANIC_PRINT_sink__ = BufferSink_asSink(&PANIC_PRINT_buf_sink__); \
+	SinkRes const PANIC_PRINT_res__ = PRINT_RAW(PANIC_PRINT_sink__, __VA_ARGS__); \
+	SinkRes_assert_(PANIC_PRINT_res__, __func__, SOURCE_IDENTIFIER " PANIC_PRINT failed:"); \
 	os_panic(); \
 } while (0)
 
@@ -133,7 +139,7 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 		constexpr auto bsize = 32; \
 		ubyte buf[plen + bsize + 8] = {#R "_"}; \
 		usize bend = plen; \
-		if (res >= R##_Aux) { \
+		if (res >= _Countof(S)) { \
 			memcpy(buf + bend, STR("Aux(")); \
 			bend += __builtin_strlen("Aux("); \
 			goto put_num; \

@@ -5,7 +5,7 @@
 
 #if Alc_PTRTAG
 	#define IAlc_GENERATE_UPCAST(N, E) \
-		Alc N##_upcast(E this) { \
+		Alc N##_asAlc(E this) { \
 			return (Alc){.value=ptrtag((Ptr)(usize)this, IAlc_##N##_ID)}; \
 		}
 
@@ -14,7 +14,7 @@
 
 #else
 	#define IAlc_GENERATE_UPCAST(N, E) \
-		Alc N##_upcast(E this) { \
+		Alc N##_asAlc(E this) { \
 			return (Alc){.this=(Ptr)(usize)this,.iface=&IAlc_##N}; \
 		}
 

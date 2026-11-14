@@ -20,7 +20,7 @@ String BufferSink_asString(BufferSink *this) {
 
 SinkRes BufferSink_invoke(BufferSink *this, SinkReq req, Ptr aux, ConstPtr src) {
 	constexpr SinkAttr attr = FLAGS(SinkAttr,
-		IntentWrite, IntentFlush
+		IntentWrite, IntentFlush, Buffered
 	);
 
 	switch (FIELD_GET_CAST(SinkIntent, req)) {

@@ -1,6 +1,6 @@
 SinkRes OsSink_invoke(linux_fd fd, SinkReq req, Ptr aux, ConstPtr src) {
 	constexpr SinkAttr attr = FLAGS(SinkAttr,
-		IntentWrite, IntentFlush, ThreadSafe
+		IntentWrite, IntentFlush, Concurrent
 	);
 
 	switch (FIELD_GET_CAST(SinkIntent, req)) {

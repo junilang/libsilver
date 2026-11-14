@@ -1,3 +1,47 @@
+#ifndef AlcSize_WIDTH
+	#define AlcSize_WIDTH 48
+#endif
+
+#if SIZE_WIDTH < AlcSize_WIDTH
+	#undef AlcSize_WIDTH
+	#define AlcSize_WIDTH SIZE_WIDTH
+#endif
+
+auto constexpr AlcSize_width = AlcSize_WIDTH;
+
+ENUM_GENERATE(AlcIntent, u8,
+	New, Resize, Delete, Attr, Lock, Unlock
+)
+
+auto constexpr AlcIntent_width = ENUM_WIDTH(AlcIntent);
+auto constexpr AlcAlignBits_width = ENUM_VALUE_WIDTH(15);
+
+typedef u64 AlcReq; enum {
+	FIELD_DEF(AlcSize, AlcSize_width),
+	FIELD_DEF(AlcAlignBits, AlcAlignBits_width),
+	FIELD_DEF(AlcIntent, AlcIntent_width),
+	FLAGS_DEF(AlcFlag,
+		Aux, Zero, Locked, NoWait
+	),
+	AlcReq_width
+};
+
+static_assert(AlcReq_width <= 64);
+
+usize constexpr AlcSize_max = FIELD_MAX(AlcSize);
+
+/*
+typedef struct {
+	usize size;
+	ConstPtr hint;
+	ualign align;
+	AlcIntent intent;
+	AlcRelative relative;
+	AlcRange range;
+	AlcFlag flags;
+	u8 offers_size;
+} AlcReq;
+
 typedef enum : u8 {
 	AlcRelative_None,
 	AlcRelative_Local,
@@ -14,55 +58,19 @@ typedef enum : u8 {
 	AlcRange_Loose,
 } AlcRange;
 
-typedef enum : u8 {
-	AlcIntent_Attr,
-	AlcIntent_New,
-	AlcIntent_Resize,
-	AlcIntent_Delete,
-	AlcIntent_Query,
-	AlcIntent_ResizeQuery,
-	AlcIntent_Promise,
-	AlcIntent_ResizePromise,
-	AlcIntent_Lock,
-	AlcIntent_TryLock,
-	AlcIntent_Unlock,
-} AlcIntent;
-
-constexpr auto Alc_ResolveNone = u8_max;
-
-typedef u8 AlcFlag; enum {
-	FLAG_DEF(AlcFlag_Zero),
-	FLAG_DEF(AlcFlag_Locked),
-	FLAG_DEF(AlcFlag_NoWait)
-};
-
-typedef struct {
-	usize size;
-	ConstPtr hint;
-	ualign align;
-	AlcIntent intent;
-	AlcRelative relative;
-	AlcRange range;
-	AlcFlag flags;
-	u8 offers_size;
-} AlcReq;
+*/
 
 typedef u32 AlcAttr; enum {
-	FLAG_DEF(AlcAttr_IntentNew),
-	FLAG_DEF(AlcAttr_IntentResize),
-	FLAG_DEF(AlcAttr_IntentDelete),
-	FLAG_DEF(AlcAttr_IntentQuery),
-	FLAG_DEF(AlcAttr_IntentResizeQuery),
-	FLAG_DEF(AlcAttr_IntentPromise),
-	FLAG_DEF(AlcAttr_IntentResizePromise),
-	FLAG_DEF(AlcAttr_IntentLock),
-	FLAG_DEF(AlcAttr_IntentTryLock),
-	FLAG_DEF(AlcAttr_IntentUnlock),
-	FLAG_DEF(AlcAttr_FeatureZero),
-	FLAG_DEF(AlcAttr_FeatureRelativeLocal),
-	FLAG_DEF(AlcAttr_FeatureRelativeS16),
-	FLAG_DEF(AlcAttr_FeatureRelativeU16),
-	FLAG_DEF(AlcAttr_FeatureRelativeS32),
-	FLAG_DEF(AlcAttr_FeatureRelativeU32),
-	FLAG_DEF(AlcAttr_ThreadSafe)
+	FLAGS_DEF(AlcAttr,
+		IntentNew,
+		IntentResize,
+		IntentDelete,
+		IntentLock,
+		IntentUnlock,
+		FeatureZero,
+		Concurrent
+	),
+	AlcAttr_width
 };
+
+static_assert(AlcAttr_width <= 32);

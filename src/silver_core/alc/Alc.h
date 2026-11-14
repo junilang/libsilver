@@ -1,7 +1,7 @@
 #include "AlcRes.h"
 #include "AlcReq.h"
 
-typedef AlcPtr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
+typedef AlcPtr (*IAlc)(Ptr this, AlcReq req, Ptr aux, Ptr mem);
 
 #ifndef Alc_PTRTAG
 	#define Alc_PTRTAG PTRTAG
@@ -9,9 +9,11 @@ typedef AlcPtr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 
 
 #if Alc_PTRTAG
-	typedef union {
-		Ptr value;
-		usize raw_value;
+	typedef struct {
+		union {
+			Ptr value;
+			usize raw_value;
+		};
 	} Alc;
 
 	enum {
@@ -23,7 +25,7 @@ typedef AlcPtr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 	};
 
 	#ifndef IAlc_SLOTS
-		#define IAlc_SLOTS 16
+		#define IAlc_SLOTS 8
 	#endif
 
 	constexpr auto IAlc_slots = IAlc_SLOTS;
@@ -69,49 +71,22 @@ typedef AlcPtr (*IAlc)(Ptr this, AlcReq *req, Ptr arg, Ptr mem);
 #endif
 
 [[nodiscard, gnu::malloc]]
-AlcPtr Alc_invoke(Alc this, AlcReq *req, Ptr arg, Ptr mem) {
-	return Alc_iface(this)(Alc_this(this), req, arg, mem);
+AlcPtr Alc_invoke(Alc this, AlcReq req, Ptr aux, Ptr mem) {
+	return Alc_iface(this)(Alc_this(this), req, aux, mem);
 }
 
 AlcAttr Alc_attr(Alc this) {
-	// do not check for errors, all allocator implementations
-	// 	must be able to report their attributes
-	return (AlcAttr)(usize)Alc_invoke(this, &(AlcReq) {
-		.intent = AlcIntent_Attr
-	}, nullptr, nullptr);
+	auto const ptr = Alc_invoke(this, FIELD(AlcIntent, Attr), nullptr, nullptr);
+	#if Alc_SAFE
+		AlcPtr_ASSERT(ptr);
+	#endif
+	return (AlcAttr)(usize)ptr;
 }
 
 #ifndef Alc_DEFAULT_ALIGN
-	#define Alc_DEFAULT_ALIGN alignof(Ptr)
+	#define Alc_DEFAULT_ALIGN _Alignof(Ptr)
 #endif
 
 constexpr ualign Alc_default_align = Alc_DEFAULT_ALIGN;
-
-[[nodiscard, gnu::malloc]]
-AlcPtr Alc_new(Alc this, usize size) {
-	return Alc_invoke(this, &(AlcReq) {
-		.intent = AlcIntent_New,
-		.size = size,
-		.align = Alc_default_align
-	}, nullptr, nullptr);
-}
-
-[[nodiscard]]
-AlcRes Alc_delete(Alc this, Ptr mem) {
-	return AlcPtr_get(
-		Alc_invoke(this, &(AlcReq) {
-			.intent = AlcIntent_Delete,
-		}, nullptr, mem)
-	);
-}
-
-[[nodiscard, gnu::malloc]]
-AlcPtr Alc_resize(Alc this, Ptr mem, usize size) {
-	return Alc_invoke(this, &(AlcReq) {
-		.intent = AlcIntent_Resize,
-		.size = size,
-		.align = Alc_default_align,
-	}, nullptr, mem);
-}
 
 #include "Alc_meta.h"

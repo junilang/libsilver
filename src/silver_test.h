@@ -65,7 +65,7 @@
 			res = 1;
 		}
 
-		SinkRes_ASSERT(BufferedSink_flush(&bsink));
+		SinkRes_ASSERT(BufferedSink_flush_(&bsink, 0));
 		return res;
 	}
 

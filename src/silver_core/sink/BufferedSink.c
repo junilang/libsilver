@@ -4,6 +4,7 @@
 
 typedef struct {
 	Sink sink;
+	SinkReq req_overlay;
 	ubyte *buffer;
 	u32 size;
 	u32 capacity;
@@ -52,17 +53,17 @@ SinkRes BufferedSink_flush_(BufferedSink *this, SinkReq req) {
 	return SinkRes_Ok;
 }
 
-SinkRes BufferedSink_push(BufferedSink *this) {
-	return BufferedSink_push_(this, 0);
+SinkRes BufferedSink_lock_(BufferedSink *this, SinkReq req) {
+	return SinkRes_Ok;
 }
 
-SinkRes BufferedSink_flush(BufferedSink *this) {
-	return BufferedSink_flush_(this, 0);
+SinkRes BufferedSink_unlock_(BufferedSink *this, SinkReq req) {
+	return SinkRes_Ok;
 }
 
 SinkRes BufferedSink_invoke(BufferedSink *this, SinkReq req, Ptr aux, ConstPtr src) {
 	auto constexpr attr = FLAGS_CAST(SinkAttr,
-		IntentWrite, IntentFlush, IntentPush
+		IntentWrite, IntentFlush, IntentPush, Buffered, StatefulLock
 	);
 
 	SinkReq constexpr propagate_push =
@@ -84,8 +85,14 @@ SinkRes BufferedSink_invoke(BufferedSink *this, SinkReq req, Ptr aux, ConstPtr s
 		case SinkIntent_Flush:
 			return BufferedSink_flush_(this, req);
 
+		case SinkIntent_Lock:
+			return BufferedSink_lock_(this, req);
+
+		case SinkIntent_Unlock:
+			return BufferedSink_unlock_(this, req);
+
 		case SinkIntent_Attr:
-			*(SinkAttr*)aux = attr;
+			*(SinkAttr*)aux = Sink_attr(this->sink) | attr;
 			return SinkRes_Ok;
 
 		case SinkIntent_Write:

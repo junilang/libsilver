@@ -1,10 +1,10 @@
 typedef struct {
-	usize size; // max 4GB
+	usize size;
 	ubyte data[];
 } StaticAlc_Buffer;
 
 constexpr ualign StaticAlc_minalign = _Alignof(StaticAlc_Buffer);
-constexpr auto StaticAlc_Buffer_dataoffset = __builtin_offsetof(StaticAlc_Buffer, data);
+constexpr auto StaticAlc_dataoffset = __builtin_offsetof(StaticAlc_Buffer, data);
 
 typedef struct {
 	usize end;

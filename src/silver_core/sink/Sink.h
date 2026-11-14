@@ -21,6 +21,7 @@ typedef SinkRes (*ISink)(Ptr this, SinkReq req, Ptr aux, ConstPtr src);
 
 	enum {
 		ISink_VoidSink_ID,
+		ISink_OverlaySink_ID,
 		ISink_BufferSink_ID,
 		ISink_BufferedSink_ID,
 		ISink_AsyncSink_ID,
@@ -118,6 +119,27 @@ SinkRes Sink_flush(Sink this) {
 SinkRes Sink_push(Sink this) {
 	return Sink_invoke(this,
 		FIELD(SinkIntent, Push)
+	, nullptr, nullptr);
+}
+
+[[nodiscard]]
+SinkRes Sink_lock(Sink this) {
+	return Sink_invoke(this,
+		FIELD(SinkIntent, Lock)
+	, nullptr, nullptr);
+}
+
+[[nodiscard]]
+SinkRes Sink_trylock(Sink this) {
+	return Sink_invoke(this,
+		FIELD(SinkIntent, Lock) | FLAG(SinkFlag_NoWait)
+	, nullptr, nullptr);
+}
+
+[[nodiscard]]
+SinkRes Sink_unlock(Sink this) {
+	return Sink_invoke(this,
+		FIELD(SinkIntent, Unlock)
 	, nullptr, nullptr);
 }
 
