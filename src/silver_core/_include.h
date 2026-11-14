@@ -38,6 +38,6 @@
 	#include "print.h"
 
 	#include "alc/Alc.h"
-	#include "alc/StaticAlc.c"
+	#include "alc/BumpAlc.c"
 
 #endif

@@ -100,25 +100,28 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 	if (!(cond)) PANIC_PRINT_(__VA_ARGS__); \
 } while (0)
 
+#define PANIC_MSG_HEADER(msg) __func__, SOURCE_IDENTIFIER " " msg
+#define PANIC_PRINT_HEADER(msg) __func__, " " SOURCE_IDENTIFIER " " msg
+
 #define PANIC_MSG(...) PANIC_MSG_( \
-	__func__, SOURCE_IDENTIFIER " PANIC" __VA_OPT__(":", __VA_ARGS__) \
+	PANIC_MSG_HEADER("PANIC" __VA_OPT__(":")) __VA_OPT__(,__VA_ARGS__) \
 )
 
 #define PANIC_PRINT(...) PANIC_PRINT_( \
-	__func__, " " SOURCE_IDENTIFIER " PANIC" __VA_OPT__(": ", __VA_ARGS__) \
-) \
+	PANIC_PRINT_HEADER("PANIC" __VA_OPT__(":")) __VA_OPT__(,__VA_ARGS__) \
+)
 
 #define ASSERT_MSG(cond, ...) ASSERT_MSG_( \
-	cond, __func__, SOURCE_IDENTIFIER " ASSERT(" #cond ")" __VA_OPT__(":", __VA_ARGS__) \
+	cond, PANIC_MSG_HEADER("ASSERT(" #cond ")" __VA_OPT__(":")) __VA_OPT__(,__VA_ARGS__) \
 )
 
 #define ASSERT_PRINT(cond, ...) ASSERT_PRINT_( \
-	cond, __func__, " " SOURCE_IDENTIFIER " ASSERT(" #cond ")" __VA_OPT__(": ", __VA_ARGS__) \
+	cond, PANIC_PRINT_HEADER("ASSERT(" #cond ")" __VA_OPT__(":")) __VA_OPT__(,__VA_ARGS__) \
 )
 
 #define UNREACHABLE_GUARD(guard) do { \
 	if (guard) {  \
-		PANIC_MSG_(__func__, SOURCE_IDENTIFIER " UNREACHABLE"); \
+		PANIC_MSG_(PANIC_MSG_HEADER("UNREACHABLE")); \
 	} else { __builtin_unreachable(); } \
 } while (0)
 
@@ -172,7 +175,7 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 	}
 
 #define ASSERT_RES(R, res) \
-	R##_assert_(res, __func__, SOURCE_IDENTIFIER " " #R "_ASSERT(" #res "):")
+	R##_assert_(res, PANIC_MSG_HEADER(#R "_ASSERT(" #res "):"))
 
 #define PANIC PANIC_MSG
 #define ASSERT ASSERT_MSG

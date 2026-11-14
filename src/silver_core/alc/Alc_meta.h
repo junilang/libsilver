@@ -1,6 +1,6 @@
 #define IAlc_GENERATE_INTERFACE(N, E) \
-	extern AlcPtr IAlc_##N(Ptr this, AlcReq *req, Ptr arg, Ptr mem) { \
-		return N##_invoke((E)(usize)this, req, arg, mem); \
+	extern AlcPtr IAlc_##N(Ptr this, AlcReq req, Ptr aux, Ptr mem) { \
+		return N##_invoke((E)(usize)this, req, aux, mem); \
 	}
 
 #if Alc_PTRTAG

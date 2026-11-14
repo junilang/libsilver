@@ -1,6 +1,7 @@
 #define WEAVER_USE_PTHREAD true
 
 #include "silver_core.h"
+#include "silver_fs.h"
 #include "silver_os.h"
 
 #if BUILD_TESTING

@@ -66,7 +66,7 @@
 	},
 
 	"profile_asm": {
-		"out_binary": "juni.s",
+		"out_binary": "silver.s",
 		"flags": [ "-masm=intel", "-fverbose-asm", "-S" ],
 		"macros": {
 			"BUILD_ASM": "true"

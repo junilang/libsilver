@@ -14,43 +14,33 @@ typedef struct {
 	SinkRes (*fn)(PRINT_State *state, usize data);
 } PRINT_Cmd;
 
-SinkRes PRINT_cmd_setspec(PRINT_State *state, usize data) {
-	state->spec = (FmtSpec)data;
-	state->info &= FLAG_CLEAR(PRINT_PersistSpec);
+typedef struct {
+	FmtSpec spec;
+} PRINT_Spec;
+
+typedef struct {
+	FmtSpec spec;
+} PRINT_PersistSpec;
+
+PRINT_Spec PRINT_spec(FmtSpec spec) {
+	return (PRINT_Spec) { .spec = spec };
 }
 
-SinkRes PRINT_cmd_persistspec(PRINT_State *state, usize data) {
-	state->spec = (FmtSpec)data;
-	state->info |= FLAG_DEF(PRINT_PersistSpec);
+PRINT_PersistSpec PRINT_persistspec(FmtSpec spec) {
+	return (PRINT_PersistSpec) { .spec = spec };
 }
 
-PRINT_Cmd PRINT_spec(FmtSpec spec) {
-	return (PRINT_Cmd) {
-		.data = (usize)spec,
-		.fn = &PRINT_cmd_setspec
-	};
-}
-
-PRINT_Cmd PRINT_persistspec(FmtSpec spec) {
-	return (PRINT_Cmd) {
-		.data = (usize)spec,
-		.fn = &PRINT_cmd_persistspec
-	};
-}
-
-PRINT_Cmd const PRINT_clearspec = {
-	.data = 0,
-	.fn = &PRINT_cmd_setspec
-};
+PRINT_Spec constexpr PRINT_clearspec = { .spec = FmtSpec_null };
 
 SinkRes PRINT_ITEM_PRINT_Cmd(PRINT_State *state, PRINT_Cmd val) {
 	return val.fn(state, val.data);
 }
 
 #define PRINT_LOCALS_SHORTHAND \
+	[[maybe_unused]] auto const S = PRINT_spec; \
 	[[maybe_unused]] auto const SPEC = PRINT_spec; \
-	[[maybe_unused]] auto const CLEAR = PRINT_clearspec; \
 	[[maybe_unused]] auto const PERSIST = PRINT_persistspec;
+	[[maybe_unused]] auto const CLEAR = PRINT_clearspec; \
 
 #ifndef PRINT_LOCALS
 	#define PRINT_LOCALS PRINT_LOCALS_SHORTHAND
@@ -60,13 +50,13 @@ SinkRes PRINT_ITEM_PRINT_Cmd(PRINT_State *state, PRINT_Cmd val) {
 	PRINT_LOCALS \
 	__VA_OPT__(PRINT_0(__VA_ARGS__))
 
-#define PRINT_BUF_INTERNAL(buf_size, sink, ...) \
+#define PRINT_BUF_INTERNAL(buf_size, sink_, ...) \
 	usize constexpr PRINT_buf_size__ = (buf_size); \
-	Sink const PRINT_parent_sink__ = (sink); \
+	Sink const PRINT_parent_sink__ = (sink_); \
 	ubyte PRINT_buf__[PRINT_buf_size__]; \
 	BufferedSink PRINT_buf_sink__; \
 	BufferedSink_init(&PRINT_buf_sink__, PRINT_parent_sink__, PRINT_buf__, PRINT_buf_size__); \
-	Sink const PRINT_sink__ = BufferedSink_asSink(&PRINT_buf_sink__); \
+	PRINT_state__.sink = BufferedSink_asSink(&PRINT_buf_sink__); \
 	PRINT_INTERNAL(__VA_ARGS__) \
 	PRINT_res__ = BufferedSink_push_(&PRINT_buf_sink__, 0); \
 
@@ -74,20 +64,21 @@ SinkRes PRINT_ITEM_PRINT_Cmd(PRINT_State *state, PRINT_Cmd val) {
 	#define PRINT_BUFSIZE 64
 #endif
 
-#define PRINT_RAW(sink, ...) ({ \
+#define PRINT_RAW(sink_, ...) ({ \
 	__label__ PRINT_early_exit__; \
 	PRINT_State PRINT_state__ = {}; \
+	PRINT_state__.sink = (sink_); \
 	SinkRes PRINT_res__ = SinkRes_Ok; \
-	Sink const PRINT_sink__ = (sink); \
 	PRINT_INTERNAL(__VA_ARGS__) \
 	PRINT_early_exit__:; \
 	PRINT_res__; \
 })
 
-#define PRINT_BUF_(buf_size, sink, ...) ({ \
+#define PRINT_BUF_(buf_size, sink_, ...) ({ \
 	__label__ PRINT_early_exit__; \
+	PRINT_State PRINT_state__ = {}; \
 	SinkRes PRINT_res__ = SinkRes_Ok; \
-	PRINT_BUF_INTERNAL(buf_size, sink, __VA_ARGS__) \
+	PRINT_BUF_INTERNAL(buf_size, sink_, __VA_ARGS__) \
 	PRINT_early_exit__:; \
 	PRINT_res__; \
 })
@@ -100,13 +91,25 @@ SinkRes PRINT_ITEM_PRINT_Cmd(PRINT_State *state, PRINT_Cmd val) {
 
 #define PRINTR PRINT_RAW
 #define PRINTA(sink, ...) \
-	SinkRes_assert_(PRINT(sink, __VA_ARGS__), __func__, SOURCE_IDENTIFIER " PRINT failed:")
+	SinkRes_assert_(PRINT(sink, __VA_ARGS__), PANIC_MSG_HEADER("PRINT failed:"))
 
 FmtSpec PRINT_consumespec(PRINT_State *state) {
 	FmtSpec res = state->spec;
 	if (!(state->info & FLAG(PRINT_PersistSpec)))
 		state->spec = FmtSpec_null;
 	return res;
+}
+
+SinkRes PRINT_ITEM_PRINT_Spec(PRINT_State *state, PRINT_Spec val) {
+	state->spec = val.spec;
+	state->info &= FLAG_CLEAR(PRINT_PersistSpec);
+	return SinkRes_Ok;
+}
+
+SinkRes PRINT_ITEM_PRINT_PersistSpec(PRINT_State *state, PRINT_PersistSpec val) {
+	state->spec = val.spec;
+	state->info |= FLAG(PRINT_PersistSpec);
+	return SinkRes_Ok;
 }
 
 SinkRes PRINT_ITEM_ullong(PRINT_State *state, ullong val) {
@@ -160,6 +163,8 @@ SinkRes PRINT_ITEM_String(PRINT_State *state, String val) {
 #define PRINT_ITEM(V) \
 	PRINT_res__ = _Generic((V), \
 		PRINT_Cmd : PRINT_ITEM_PRINT_Cmd, \
+		PRINT_Spec : PRINT_ITEM_PRINT_Spec, \
+		PRINT_PersistSpec : PRINT_ITEM_PRINT_PersistSpec, \
 		char * : PRINT_ITEM_Str, \
 		const char * : PRINT_ITEM_Str, \
 		String : PRINT_ITEM_String, \
@@ -176,7 +181,7 @@ SinkRes PRINT_ITEM_String(PRINT_State *state, String val) {
 		ulong : PRINT_ITEM_ullong, \
 		ullong : PRINT_ITEM_ullong, \
 		default: PRINT_ITEM_ConstPtr \
-	)(PRINT_state__, (V)); \
+	)(&PRINT_state__, (V)); \
 	if (PRINT_res__) goto PRINT_early_exit__; \
 
 #define PRINT_0(V, ...) PRINT_ITEM((V))__VA_OPT__(PRINT_1(__VA_ARGS__))

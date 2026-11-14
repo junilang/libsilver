@@ -4,15 +4,15 @@ typedef struct {
 	usize capacity;
 } Vec;
 
-constexpr usize Vec_base_capacity = sizeof(Ptr) * 4;
-constexpr ualign Vec_default_align = Alc_default_align;
+constexpr ualign Vec_defaultalign = _Alignof(Ptr);
+constexpr usize Vec_basecapacity = sizeof(Ptr) * 4;
 
 #ifndef Vec_SAFE
 	#define Vec_SAFE LIBSILVER_SAFE
 #endif
 
-static usize Vec_ZZcapacityscale(usize capacity) {
-	return capacity / 2;
+static usize Vec_capacityscale_(usize capacity) {
+	return capacity + capacity / 2;
 }
 
 void Vec_zero(Vec *this) {
@@ -78,12 +78,17 @@ AlcRes Vec_reserve_aligned(Vec *this, Alc alc, usize size, ualign alc_align) {
 		#endif
 	};
 
+	AlcReq req =
+		AlcReq_size(new_size) |
+		AlcReq_align()
+	;
+
 	if (this->data)
 		req.intent = AlcIntent_Resize;
 	else
 		req.intent = AlcIntent_New;
 
-	data = Alc_invoke(alc, &req, nullptr, data);
+	data = Alc_invoke(alc, req, nullptr, data);
 	auto res = AlcPtr_get(data);
 	if (res) return res;
 

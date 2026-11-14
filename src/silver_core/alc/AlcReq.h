@@ -14,7 +14,7 @@ ENUM_GENERATE(AlcIntent, u8,
 )
 
 auto constexpr AlcIntent_width = ENUM_WIDTH(AlcIntent);
-auto constexpr AlcAlignBits_width = ENUM_VALUE_WIDTH(15);
+auto constexpr AlcAlignBits_width = ENUM_VALUE_WIDTH(ualign_width - 1);
 
 typedef u64 AlcReq; enum {
 	FIELD_DEF(AlcSize, AlcSize_width),
@@ -29,48 +29,51 @@ typedef u64 AlcReq; enum {
 static_assert(AlcReq_width <= 64);
 
 usize constexpr AlcSize_max = FIELD_MAX(AlcSize);
+usize constexpr Alc_maxalign = 1ull << FIELD_MAX(AlcAlignBits);
 
-/*
-typedef struct {
-	usize size;
-	ConstPtr hint;
-	ualign align;
-	AlcIntent intent;
-	AlcRelative relative;
-	AlcRange range;
-	AlcFlag flags;
-	u8 offers_size;
-} AlcReq;
+AlcReq AlcReq_align(ualign align) {
+	#if Alc_SAFE
+		// ensure alignment is power of 2
+		ASSERT(
+			(align & (align - 1)) == 0
+		, "alignment is not power of 2");
+		ASSERT(align <= Alc_maxalign);
+	#endif
 
-typedef enum : u8 {
-	AlcRelative_None,
-	AlcRelative_Local,
-	AlcRelative_S16,
-	AlcRelative_U16,
-	AlcRelative_S32,
-	AlcRelative_U32,
-} AlcRelative;
+	return FIELD_SET(AlcAlignBits, __builtin_ctzg(align));
+}
 
-typedef enum : u8 {
-	AlcRange_Least,
-	AlcRange_Exact,
-	AlcRange_Range,
-	AlcRange_Loose,
-} AlcRange;
+ualign AlcReq_getalign(AlcReq req) {
+	return (ualign)(1ull << FIELD_GET(AlcAlignBits, req));
+}
 
-*/
+#define AlcReq_ALIGN(T) AlcReq_align(_Alignof(T))
 
-typedef u32 AlcAttr; enum {
-	FLAGS_DEF(AlcAttr,
-		IntentNew,
-		IntentResize,
-		IntentDelete,
-		IntentLock,
-		IntentUnlock,
-		FeatureZero,
-		Concurrent
-	),
-	AlcAttr_width
-};
+AlcReq AlcReq_size(usize size) {
+	#if Alc_SAFE
+		ASSERT(size <= AlcSize_max);
+	#endif
 
-static_assert(AlcAttr_width <= 32);
+	return FIELD_SET(AlcSize, size);
+}
+
+AlcReq constexpr AlcReq_delete = FIELD(AlcIntent, Delete);
+AlcReq constexpr AlcReq_zero = FLAG(AlcFlag_Zero);
+
+AlcReq AlcReq_new(usize size, ualign align, bool zero) {
+	return
+		FIELD(AlcIntent, New) |
+		AlcReq_size(size) |
+		AlcReq_align(align) |
+		(zero ? 0 : AlcReq_zero)
+	;
+}
+
+AlcReq AlcReq_resize(usize size, ualign align, bool zero) {
+	return
+		FIELD(AlcIntent, Resize) |
+		AlcReq_size(size) |
+		AlcReq_align(align) |
+		(zero ? 0 : AlcReq_zero)
+	;
+}

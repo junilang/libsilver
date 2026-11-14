@@ -38,24 +38,13 @@
 
 	typedef void (*SilverTestSuite)(SilverTestState *state);
 
-	#ifndef LIBSILVER_TEST_STREAM
-		#define LIBSILVER_TEST_STREAM Stdout
-	#endif
-
 	int SilverTest_entry(int argc, Str *argv, SilverTestSuite suite) {
 		int res = 0;
-
-		const Sink psink = LIBSILVER_TEST_STREAM;
-
-		ubyte buf[1024];
-		BufferedSink bsink;
-		BufferedSink_init(&bsink, psink, buf, _Countof(buf));
-
 
 		SilverTestState state = {
 			.total = 0,
 			.failed = 0,
-			.log = BufferedSink_asSink(&bsink)
+			.log = Stdout
 		};
 
 		suite(&state);
@@ -65,7 +54,7 @@
 			res = 1;
 		}
 
-		SinkRes_ASSERT(BufferedSink_flush_(&bsink, 0));
+		SinkRes_ASSERT(Sink_flush(state.log));
 		return res;
 	}
 

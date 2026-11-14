@@ -21,7 +21,7 @@ typedef SinkRes (*ISink)(Ptr this, SinkReq req, Ptr aux, ConstPtr src);
 
 	enum {
 		ISink_VoidSink_ID,
-		ISink_OverlaySink_ID,
+		ISink_LockSink_ID,
 		ISink_BufferSink_ID,
 		ISink_BufferedSink_ID,
 		ISink_AsyncSink_ID,

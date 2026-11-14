@@ -1,5 +1,5 @@
 #if __has_builtin(__builtin_ia32_crc32di)
-#define LIBSILVER_HAS_CRC32 true
+	#define LIBSILVER_HAS_CRC32 true
 	constexpr u32 crc32_base = 0x12345678ull;
 
 	u32 u8_crc32(u32 base, u8 value) {

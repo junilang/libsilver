@@ -1,12 +1,16 @@
-#include "AlcRes.h"
-#include "AlcReq.h"
-
-typedef AlcPtr (*IAlc)(Ptr this, AlcReq req, Ptr aux, Ptr mem);
-
 #ifndef Alc_PTRTAG
 	#define Alc_PTRTAG PTRTAG
 #endif
 
+#ifndef Alc_SAFE
+	#define Alc_SAFE LIBSILVER_SAFE
+#endif
+
+#include "AlcReq.h"
+#include "AlcRes.h"
+#include "AlcAttr.h"
+
+typedef AlcPtr (*IAlc)(Ptr this, AlcReq req, Ptr aux, Ptr mem);
 
 #if Alc_PTRTAG
 	typedef struct {
@@ -17,9 +21,9 @@ typedef AlcPtr (*IAlc)(Ptr this, AlcReq req, Ptr aux, Ptr mem);
 	} Alc;
 
 	enum {
-		IAlc_StaticAlc_ID,
+		IAlc_VoidAlc_ID,
+		IAlc_BumpAlc_ID,
 		IAlc_AsyncAlc_ID,
-		IAlc_ArenaAlc_ID,
 		IAlc_OsAlc_ID,
 		IAlc_reserved
 	};
@@ -70,23 +74,24 @@ typedef AlcPtr (*IAlc)(Ptr this, AlcReq req, Ptr aux, Ptr mem);
 
 #endif
 
-[[nodiscard, gnu::malloc]]
+[[nodiscard]]
 AlcPtr Alc_invoke(Alc this, AlcReq req, Ptr aux, Ptr mem) {
 	return Alc_iface(this)(Alc_this(this), req, aux, mem);
 }
 
 AlcAttr Alc_attr(Alc this) {
-	auto const ptr = Alc_invoke(this, FIELD(AlcIntent, Attr), nullptr, nullptr);
+	AlcAttr result;
+	[[maybe_unused]] auto const ptr =
+		Alc_invoke(this, FIELD(AlcIntent, Attr), &result, nullptr)
+	;
 	#if Alc_SAFE
 		AlcPtr_ASSERT(ptr);
 	#endif
-	return (AlcAttr)(usize)ptr;
+	return result;
 }
 
-#ifndef Alc_DEFAULT_ALIGN
-	#define Alc_DEFAULT_ALIGN _Alignof(Ptr)
-#endif
-
-constexpr ualign Alc_default_align = Alc_DEFAULT_ALIGN;
+AlcRes Alc_delete(Alc this, Ptr mem) {
+	return AlcPtr_get(Alc_invoke(this, AlcReq_delete, nullptr, mem));
+}
 
 #include "Alc_meta.h"
