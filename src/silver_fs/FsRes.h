@@ -11,5 +11,6 @@ ENUM_GENERATE(FsRes, u8,
 )
 
 PANIC_RES_GENERATE(FsRes, FsRes_str)
+ASSERT_RES_GENERATE(FsRes)
 
 #define FsRes_ASSERT(result) ASSERT_RES(FsRes, result)

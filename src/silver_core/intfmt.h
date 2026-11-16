@@ -1,4 +1,4 @@
-enum {
+typedef u32 IntFmtSpec; enum {
 	FIELD_DEF(IntFmt_Base, 2),
 	FIELD_DEF(IntFmt_Delimiter, 2),
 	FIELD_DEF(IntFmt_Digits, 8),
@@ -12,7 +12,7 @@ enum {
 	IntFmtSpec_width
 };
 
-typedef u32 IntFmtSpec;
+static_assert(IntFmtSpec_width <= 32);
 
 enum {
 	IntFmt_Delimiter_Space,
@@ -28,32 +28,19 @@ enum {
 	IntFmt_Base_Oct
 };
 
-#define XS \
-	X(Ok) \
-	X(ErrInvalidSpec) \
-	X(ErrOverflow) \
-	X(ErrUnknown)
-
-	enum {
-		#define X(N) IntFmtRes_##N,
-			XS
-		#undef X
-	};
-
-	const String IntFmtRes_repr[] = {
-		#define X(N) [IntFmtRes_##N] = String_INIT(#N),
-			XS
-		#undef X
-	};
-
-#undef XS
+ENUM_GENERATE(IntFmtRes, int,
+	Ok,
+	ErrInvalidSpec,
+	ErrOverflow,
+	ErrUnknown
+)
 
 usize IntFmtRes_put(int r, ubyte *buf, usize buf_size) {
 	if (r > 0) r = IntFmtRes_Ok;
 	else r = -r;
 	if (r > IntFmtRes_ErrUnknown) r = IntFmtRes_ErrUnknown;
 
-	String s = IntFmtRes_repr[r];
+	String s = IntFmtRes_str[r];
 	if (s.size > buf_size) s.size = buf_size;
 	memcpy(buf, s.data, s.size);
 	return s.size;

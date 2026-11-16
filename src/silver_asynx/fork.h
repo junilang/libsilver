@@ -8,6 +8,7 @@ ENUM_GENERATE(AsynxForkRes, u8,
 )
 
 PANIC_RES_GENERATE(AsynxForkRes, AsynxForkRes_str)
+ASSERT_RES_GENERATE(AsynxForkRes)
 
 #define AsynxForkRes_ASSERT(res) ASSERT_RES(AsynxForkRes, res)
 

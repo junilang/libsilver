@@ -3,7 +3,7 @@ typedef struct {
 	_Atomic u32_lf lock;
 } AsyncAlc;
 
-AlcRes AsyncAlc_lock(AsyncAlc *this, AlcReq req) {
+AlcRes AsyncAlc_lock_(AsyncAlc *this, AlcReq req) {
 	if (req & FLAG(AlcFlag_NoWait)) {
 		if (atom_exchg(&this->lock, 1, atom_sync) == 0)
 			return AlcRes_Ok;
@@ -23,12 +23,14 @@ AlcRes AsyncAlc_lock(AsyncAlc *this, AlcReq req) {
 	goto retry;
 }
 
-AlcRes AsyncAlc_unlock(AsyncAlc *this, AlcReq req) {
+AlcRes AsyncAlc_unlock_(AsyncAlc *this, AlcReq req) {
 	if (!(req & FLAG(AlcFlag_Locked)))
 		return AlcRes_ErrInvalidReq;
 
-	atom_set(&this->lock, 0, atom_rel);
-	return AlcRes_Ok;
+	if (atom_exchg(&this->lock, 0, atom_sync) == 0)
+		return AlcRes_NotLocked;
+	else
+		return AlcRes_Ok;
 }
 
 AlcPtr AsyncAlc_invoke(AsyncAlc *this, AlcReq req, Ptr aux, Ptr mem) {
@@ -38,9 +40,9 @@ AlcPtr AsyncAlc_invoke(AsyncAlc *this, AlcReq req, Ptr aux, Ptr mem) {
 
 	switch (FIELD_GET_CAST(AlcIntent, req)) {
 		case AlcIntent_Lock:
-			return AlcPtr_set(AsyncAlc_lock(this, req));
+			return AlcPtr_set(AsyncAlc_lock_(this, req));
 		case AlcIntent_Unlock:
-			return AlcPtr_set(AsyncAlc_unlock(this, req));
+			return AlcPtr_set(AsyncAlc_unlock_(this, req));
 
 		case AlcIntent_Attr:
 			if (!aux) return AlcPtr_set(AlcRes_ErrInvalidAux);
@@ -54,14 +56,14 @@ AlcPtr AsyncAlc_invoke(AsyncAlc *this, AlcReq req, Ptr aux, Ptr mem) {
 	auto const mod_req = req & FLAG_CLEAR(AlcFlag_Locked);
 
 	if (!locked) {
-		auto const res = AsyncAlc_lock(this, req);
+		auto const res = AsyncAlc_lock_(this, req);
 		if (res) return AlcPtr_set(res);
 	}
 
 	auto const res = Alc_invoke(this->provider, mod_req, aux, mem);
 
 	if (!locked) {
-		auto const res = AsyncAlc_unlock(this, FLAG(AlcFlag_Locked));
+		auto const res = AsyncAlc_unlock_(this, FLAG(AlcFlag_Locked));
 		if (res) return AlcPtr_set(res);
 	}
 

@@ -1,6 +1,7 @@
 ENUM_GENERATE(AlcRes, u16,
 	Ok,
 	Locked,
+	NotLocked,
 	ErrInvalidSize,
 	ErrInvalidAlign,
 	ErrInvalidReq,
@@ -46,6 +47,7 @@ AlcRes AlcPtr_get(AlcPtr result) {
 }
 
 PANIC_RES_GENERATE(AlcRes, AlcRes_str)
+ASSERT_RES_GENERATE(AlcRes)
 
 #define AlcRes_ASSERT(res) ASSERT_RES(AlcRes, res)
 
@@ -60,6 +62,6 @@ void AlcPtr_assert_(AlcPtr ptr, ConstPtr func_name, ConstPtr header) {
 }
 
 #define AlcPtr_UNWRAP(res) \
-	AlcPtr_unwrap_(res, PANIC_MSG_HEADER("AlcPtr_UNWRAP(" #res "):"))
+	AlcPtr_unwrap_(res, PANIC_HEADER("AlcPtr_UNWRAP(" #res "):"))
 
 #define AlcPtr_ASSERT(res) \

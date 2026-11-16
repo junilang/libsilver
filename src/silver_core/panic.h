@@ -88,7 +88,7 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 	BufferSink_init(&PANIC_PRINT_buf_sink__, PANIC_PRINT_buf__, PANIC_PRINT_buf_size__); \
 	Sink const PANIC_PRINT_sink__ = BufferSink_asSink(&PANIC_PRINT_buf_sink__); \
 	SinkRes const PANIC_PRINT_res__ = PRINT_RAW(PANIC_PRINT_sink__, __VA_ARGS__); \
-	SinkRes_assert_(PANIC_PRINT_res__, PANIC_MSG_HEADER("PANIC_PRINT failed:")); \
+	SinkRes_assert_(PANIC_PRINT_res__, PANIC_HEADER("PANIC_PRINT failed:")); \
 	os_panic_write(PANIC_PRINT_buf__, PANIC_PRINT_buf_sink__.size); \
 	os_panic(); \
 } while (0)
@@ -101,11 +101,11 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 	if (!(cond)) PANIC_PRINT_(__VA_ARGS__); \
 } while (0)
 
-#define PANIC_MSG_HEADER(msg) __func__, SOURCE_IDENTIFIER " " msg
+#define PANIC_HEADER(msg) __func__, SOURCE_IDENTIFIER " " msg
 #define PANIC_PRINT_HEADER(msg) __func__, " " SOURCE_IDENTIFIER " " msg
 
 #define PANIC_MSG(...) PANIC_MSG_( \
-	PANIC_MSG_HEADER("PANIC" __VA_OPT__(":")) __VA_OPT__(,__VA_ARGS__) \
+	PANIC_HEADER("PANIC" __VA_OPT__(":")) __VA_OPT__(,__VA_ARGS__) \
 )
 
 #define PANIC_PRINT(...) PANIC_PRINT_( \
@@ -113,7 +113,7 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 )
 
 #define ASSERT_MSG(cond, ...) ASSERT_MSG_( \
-	cond, PANIC_MSG_HEADER("ASSERT(" #cond ")" __VA_OPT__(":")) __VA_OPT__(,__VA_ARGS__) \
+	cond, PANIC_HEADER("ASSERT(" #cond ")" __VA_OPT__(":")) __VA_OPT__(,__VA_ARGS__) \
 )
 
 #define ASSERT_PRINT(cond, ...) ASSERT_PRINT_( \
@@ -122,7 +122,7 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 
 #define UNREACHABLE_GUARD(guard) do { \
 	if (guard) {  \
-		PANIC_MSG_(PANIC_MSG_HEADER("UNREACHABLE")); \
+		PANIC_MSG_(PANIC_HEADER("UNREACHABLE")); \
 	} else { __builtin_unreachable(); } \
 } while (0)
 
@@ -134,10 +134,13 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 
 #define UNREACHABLE(...) UNREACHABLE_##__VA_OPT__(GUARD(__VA_ARGS__))
 
+#define PANIC_ARGS ConstPtr const func_name, ConstPtr const header
+#define PANIC_ARGS_FWD func_name, header
+
 #define PANIC_RES_GENERATE(R, S) \
 	[[noreturn, gnu::noinline]] \
 	void R##_panic_( \
-		R const res, ConstPtr const func_name, ConstPtr const header \
+		R const res, PANIC_ARGS \
 	) { \
 		constexpr auto plen = __builtin_strlen(#R "_"); \
 		constexpr auto bsize = 32; \
@@ -171,12 +174,14 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 		}; \
 		panic_msg_(msg, _Countof(msg)); \
 	} \
-	void R##_assert_(R res, ConstPtr func_name, ConstPtr header) { \
-		if (res) R##_panic_(res, func_name, header); \
+
+#define ASSERT_RES_GENERATE(R) \
+	void R##_assert_(R res, PANIC_ARGS) { \
+		if (res) R##_panic_(res, PANIC_ARGS_FWD); \
 	}
 
 #define ASSERT_RES(R, res) \
-	R##_assert_(res, PANIC_MSG_HEADER(#R "_ASSERT(" #res "):"))
+	R##_assert_(res, PANIC_HEADER(#R "_ASSERT(" #res "):"))
 
 #define PANIC PANIC_MSG
 #define ASSERT ASSERT_MSG

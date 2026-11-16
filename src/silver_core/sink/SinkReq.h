@@ -35,9 +35,7 @@ typedef u32 SinkAttr; enum {
 		IntentPush,
 		IntentLock,
 		IntentUnlock,
-		Concurrent,
-		Buffered,
-		StatefulLock
+		Concurrent
 	),
 	SinkAttr_width
 };

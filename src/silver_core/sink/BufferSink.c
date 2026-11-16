@@ -4,11 +4,11 @@
 
 typedef struct {
 	ubyte *buffer;
-	u32 size;
-	u32 capacity;
+	usize size;
+	usize capacity;
 } BufferSink;
 
-void BufferSink_init(BufferSink *this, ubyte *buffer, u32 capacity) {
+void BufferSink_init(BufferSink *this, ubyte *buffer, usize capacity) {
 	this->buffer = buffer;
 	this->size = 0;
 	this->capacity = capacity;
@@ -19,9 +19,12 @@ String BufferSink_asString(BufferSink *this) {
 }
 
 SinkRes BufferSink_invoke(BufferSink *this, SinkReq req, Ptr aux, ConstPtr src) {
-	constexpr SinkAttr attr = FLAGS(SinkAttr,
-		IntentWrite, IntentFlush, Buffered
+	auto constexpr attr = FLAGS_CAST(SinkAttr,
+		IntentWrite, IntentPush, IntentFlush
 	);
+
+	if (req & FLAGS(SinkFlag, Locked))
+		return SinkRes_ErrUnsupported;
 
 	switch (FIELD_GET_CAST(SinkIntent, req)) {
 		default:
@@ -31,6 +34,7 @@ SinkRes BufferSink_invoke(BufferSink *this, SinkReq req, Ptr aux, ConstPtr src) 
 			*(SinkAttr*)aux = attr;
 			return SinkRes_Ok;
 
+		case SinkIntent_Push:
 		case SinkIntent_Flush:
 			return SinkRes_Ok;
 
@@ -67,8 +71,7 @@ SinkRes BufferSink_invoke(BufferSink *this, SinkReq req, Ptr aux, ConstPtr src) 
 
 	memcpy(this->buffer + size, src, write_size);
 
-	// we can safely cast to u32 because write size is <= remain
-	this->size = size + (u32)write_size;
+	this->size = size + write_size;
 	if (aux) *(usize*)aux = write_size;
 
 	return res;

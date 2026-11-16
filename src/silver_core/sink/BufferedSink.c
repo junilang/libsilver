@@ -4,31 +4,74 @@
 
 typedef struct {
 	Sink sink;
-	SinkReq req_overlay;
 	ubyte *buffer;
-	u32 size;
-	u32 capacity;
+	usize size;
+	usize capacity;
+	bool locked;
 } BufferedSink;
 
-void BufferedSink_init(BufferedSink *this, Sink sink, ubyte *buffer, u32 capacity) {
+void BufferedSink_init(BufferedSink *this, Sink sink, ubyte *buffer, usize capacity) {
 	this->sink = sink;
 	this->buffer = buffer;
 	this->size = 0;
 	this->capacity = capacity;
+	this->locked = false;
+}
+
+SinkRes BufferedSink_lock(BufferedSink *this) {
+	if (this->locked)
+		return SinkRes_Locked;
+
+	auto const res = Sink_invoke(this->sink,
+		FIELD(SinkIntent, Lock)
+	, nullptr, nullptr);
+	if (res) return res;
+
+	this->locked = true;
+	return SinkRes_Ok;
+}
+
+SinkRes BufferedSink_unlock(BufferedSink *this) {
+	if (!this->locked)
+		return SinkRes_NotLocked;
+
+	auto const res = Sink_invoke(this->sink,
+		FIELD(SinkIntent, Unlock) | FLAG(SinkFlag_Locked)
+	, nullptr, nullptr);
+	if (res) return res;
+
+	this->locked = false;
+	return SinkRes_Ok;
+}
+
+SinkRes BufferedSink_lock_(BufferedSink *this, SinkReq req) {
+	if (this->locked) return SinkRes_Ok;
+
+	auto constexpr propagate = FLAGS(SinkFlag, Locked, NoWait);
+	return Sink_invoke(this->sink,
+		FIELD(SinkIntent, Lock) | (req & propagate)
+	, nullptr, nullptr);
+}
+
+SinkRes BufferedSink_unlock_(BufferedSink *this, SinkReq req) {
+	if (this->locked) return SinkRes_Ok;
+
+	auto constexpr propagate = FLAGS(SinkFlag, Locked, NoWait);
+	return Sink_invoke(this->sink,
+		FIELD(SinkIntent, Unlock) | (req & propagate)
+	, nullptr, nullptr);
 }
 
 SinkRes BufferedSink_push_(BufferedSink *this, SinkReq req) {
-	auto const sink = this->sink;
-	auto const buffer = this->buffer;
 	auto const size = this->size;
 
 	if (!size) return SinkRes_Ok;
 
-
-	SinkReq const propagate = req & FLAGS(SinkFlag, NoWait);
-	auto const res = Sink_invoke(sink,
-		FIELD(SinkIntent, Write) | FIELD_SET(SinkSize, size) | propagate
-	, nullptr, buffer);
+	auto constexpr propagate = FLAGS(SinkFlag, Locked, NoWait);
+	auto const res = Sink_invoke(this->sink,
+		FIELD(SinkIntent, Write) | FIELD_SET(SinkSize, size) |
+		(req & propagate) | (this->locked ? FLAG(SinkFlag_Locked) : 0)
+	, nullptr, this->buffer);
 	if (res) return res;
 
 	this->size = 0;
@@ -36,43 +79,41 @@ SinkRes BufferedSink_push_(BufferedSink *this, SinkReq req) {
 }
 
 SinkRes BufferedSink_flush_(BufferedSink *this, SinkReq req) {
-	auto const sink = this->sink;
-	auto const buffer = this->buffer;
 	auto const size = this->size;
+	auto constexpr propagate = FLAGS(SinkFlag, Locked, NoWait);
 
 	if (!size) {
-		//return Sink_invoke()
+		auto const res = Sink_invoke(this->sink,
+			FIELD(SinkIntent, Flush) | (req & propagate) |
+			(this->locked ? FLAG(SinkFlag_Locked) : 0)
+		, nullptr, nullptr);
+		if (res) return res;
+		return SinkRes_Ok;
 	}
 
-	auto const res = Sink_invoke(sink,
-		FIELD(SinkIntent, Write) | FIELD_SET(SinkSize, size) | req
-	, nullptr, buffer);
+	auto const res = Sink_invoke(this->sink,
+		FIELD(SinkIntent, Write) | FIELD_SET(SinkSize, size) |
+		FLAG(SinkFlag_Flush) | (req & propagate) |
+		(this->locked ? FLAG(SinkFlag_Locked) : 0)
+	, nullptr, this->buffer);
 	if (res) return res;
 
 	this->size = 0;
 	return SinkRes_Ok;
 }
 
-SinkRes BufferedSink_lock_(BufferedSink *this, SinkReq req) {
-	return SinkRes_Ok;
-}
-
-SinkRes BufferedSink_unlock_(BufferedSink *this, SinkReq req) {
-	return SinkRes_Ok;
-}
-
 SinkRes BufferedSink_invoke(BufferedSink *this, SinkReq req, Ptr aux, ConstPtr src) {
 	auto constexpr attr = FLAGS_CAST(SinkAttr,
-		IntentWrite, IntentFlush, IntentPush, Buffered, StatefulLock
+		IntentWrite, IntentFlush, IntentPush
 	);
 
 	SinkReq constexpr propagate_push =
-		FLAGS(SinkFlag, NoWait)
+		FLAGS(SinkFlag, Locked, NoWait)
 	;
 
 	SinkReq constexpr propagate_handoff =
 		FIELD_MASK(SinkSize) | FIELD_MASK(SinkIntent) |
-		FLAGS(SinkFlag, Flush, NoWait, Partial)
+		FLAGS(SinkFlag, Flush, Locked, NoWait, Partial)
 	;
 
 	switch (FIELD_GET_CAST(SinkIntent, req)) {
@@ -99,6 +140,8 @@ SinkRes BufferedSink_invoke(BufferedSink *this, SinkReq req, Ptr aux, ConstPtr s
 	}
 
 	usize const req_size = FIELD_GET(SinkSize, req);
+	SinkReq const global_lock = this->locked ? FLAG(SinkFlag_Locked) : 0;
+
 
 	auto const sink = this->sink;
 	auto const buffer = this->buffer;
@@ -122,7 +165,8 @@ SinkRes BufferedSink_invoke(BufferedSink *this, SinkReq req, Ptr aux, ConstPtr s
 		if (push) {
 			push_and_fwd:;
 			auto const res = Sink_invoke(sink,
-				FIELD(SinkIntent, Write) | FIELD_SET(SinkSize, size) | (req & propagate_push)
+				FIELD(SinkIntent, Write) | FIELD_SET(SinkSize, size) |
+				(req & propagate_push) | global_lock
 			, nullptr, buffer);
 
 			if (res) {
@@ -133,12 +177,13 @@ SinkRes BufferedSink_invoke(BufferedSink *this, SinkReq req, Ptr aux, ConstPtr s
 			this->size = 0;
 
 			fwd:;
-			return Sink_invoke(sink, req & propagate_handoff, aux, src);
+			return Sink_invoke(sink, (req & propagate_handoff) | global_lock, aux, src);
 
 		} else {
 			memcpy(buffer + size, src, remain);
 			auto const res = Sink_invoke(sink,
-				FIELD(SinkIntent, Write) | FIELD_SET(SinkSize, capacity) | (req & propagate_push)
+				FIELD(SinkIntent, Write) | FIELD_SET(SinkSize, capacity) |
+				(req & propagate_push) | global_lock
 			, nullptr, buffer);
 			if (res) {
 				if (aux) *(usize*)aux = 0;
@@ -157,7 +202,7 @@ SinkRes BufferedSink_invoke(BufferedSink *this, SinkReq req, Ptr aux, ConstPtr s
 	memcpy(this->buffer + size, src, req_size);
 	if (aux) *(usize*)aux = req_size;
 
-	auto const new_size = size + (u32)req_size;
+	auto const new_size = size + req_size;
 
 	if (push) {
 		auto const res = Sink_invoke(this->sink,
@@ -170,7 +215,7 @@ SinkRes BufferedSink_invoke(BufferedSink *this, SinkReq req, Ptr aux, ConstPtr s
 		return SinkRes_Ok;
 	}
 
-	this->size = size + (u32)req_size;
+	this->size = size + req_size;
 	return SinkRes_Ok;
 }
 

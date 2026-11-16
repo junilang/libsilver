@@ -91,7 +91,7 @@ SinkRes PRINT_ITEM_PRINT_Cmd(PRINT_State *state, PRINT_Cmd val) {
 
 #define PRINTR PRINT_RAW
 #define PRINTA(sink, ...) \
-	SinkRes_assert_(PRINT(sink, __VA_ARGS__), PANIC_MSG_HEADER("PRINT failed:"))
+	SinkRes_assert_(PRINT(sink, __VA_ARGS__), PANIC_HEADER("PRINT failed:"))
 
 FmtSpec PRINT_consumespec(PRINT_State *state) {
 	FmtSpec res = state->spec;

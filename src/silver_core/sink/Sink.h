@@ -20,8 +20,6 @@ typedef SinkRes (*ISink)(Ptr this, SinkReq req, Ptr aux, ConstPtr src);
 	} Sink;
 
 	enum {
-		ISink_VoidSink_ID,
-		ISink_LockSink_ID,
 		ISink_BufferSink_ID,
 		ISink_BufferedSink_ID,
 		ISink_AsyncSink_ID,
@@ -139,7 +137,7 @@ SinkRes Sink_trylock(Sink this) {
 [[nodiscard]]
 SinkRes Sink_unlock(Sink this) {
 	return Sink_invoke(this,
-		FIELD(SinkIntent, Unlock)
+		FIELD(SinkIntent, Unlock) | FLAG(SinkFlag_Locked)
 	, nullptr, nullptr);
 }
 

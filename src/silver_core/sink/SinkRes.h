@@ -2,6 +2,7 @@ ENUM_GENERATE(SinkRes, u8,
 	Ok,
 	Partial,
 	Locked,
+	NotLocked,
 	ErrInvalidReq,
 	ErrInvalidAux,
 	ErrInvalidSpec,
@@ -14,5 +15,6 @@ ENUM_GENERATE(SinkRes, u8,
 )
 
 PANIC_RES_GENERATE(SinkRes, SinkRes_str)
+ASSERT_RES_GENERATE(SinkRes)
 
 #define SinkRes_ASSERT(res) ASSERT_RES(SinkRes, res)
