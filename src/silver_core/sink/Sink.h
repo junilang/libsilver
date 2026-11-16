@@ -68,9 +68,9 @@ SinkRes Sink_invoke(Sink this, SinkReq req, Ptr aux, ConstPtr src) {
 
 SinkAttr Sink_attr(Sink this) {
 	SinkAttr result;
-
-	[[maybe_unused]]
-	auto const res = Sink_invoke(this, FIELD(SinkIntent, Attr), &result, nullptr);
+	[[maybe_unused]] auto const res =
+		Sink_invoke(this, FIELD(SinkIntent, Attr), &result, nullptr)
+	;
 	#if Sink_SAFE
 		SinkRes_ASSERT(res);
 	#endif

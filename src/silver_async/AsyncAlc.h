@@ -25,7 +25,7 @@ AlcRes AsyncAlc_lock(AsyncAlc *this, AlcReq req) {
 
 AlcRes AsyncAlc_unlock(AsyncAlc *this, AlcReq req) {
 	if (!(req & FLAG(AlcFlag_Locked)))
-		return AlcRes_ErrInvalidFlags;
+		return AlcRes_ErrInvalidReq;
 
 	atom_set(&this->lock, 0, atom_rel);
 	return AlcRes_Ok;
@@ -47,7 +47,7 @@ AlcPtr AsyncAlc_invoke(AsyncAlc *this, AlcReq req, Ptr aux, Ptr mem) {
 			*(AlcAttr*)aux = Alc_attr(this->provider) | attr;
 			return AlcPtr_Ok;
 
-		default:;
+		default:
 	}
 
 	bool const locked = req & FLAG(AlcFlag_Locked);

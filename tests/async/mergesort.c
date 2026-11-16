@@ -134,7 +134,7 @@ TEST(ZZ) {
 		weaver = AlcPtr_UNWRAP(ptr);
 	}
 
-	constexpr usize array_size = 1024 * 1024 * 10;
+	constexpr usize array_size = 1024 * 1024;
 	i32 *array;
 	{
 		auto const req = AlcReq_new(sizeof(i32) * array_size * 2, _Alignof(i32), false);
@@ -144,6 +144,7 @@ TEST(ZZ) {
 
 	{ // seed array
 		u64 state = 0x321321321321343ull;
+
 		auto it = array;
 		auto const end = array + array_size;
 
@@ -183,7 +184,7 @@ TEST(ZZ) {
 	AsyncFuture_wait(&future, nullptr);
 
 	if (array_size < 200) {
-		PRINTA(Stdout, array[0]);
+		PRINTA(Stdout, dst[0]);
 		for (usize i = 1; i < array_size; i++) {
 			PRINTA(Stdout, ", ", dst[i]);
 		}

@@ -193,15 +193,27 @@ AsyncRes Weaver_join(Weaver *this) {
 	// !!!!
 
 	// check if all threads are already idle
-	auto it = this->threads;
-	auto const end = it + threads_size;
-	for (; it < end; it++) {
-		if (
-			atom_get(&it->state, atom_acq) !=
-				WeaverThreadState_Idle
-		)
-			goto wait;
+	{
+		auto const wake_sync = atom_get(&this->wake_sync, atom_acq);
+		auto const idle_sync = atom_get(&this->wake_sync, atom_acq);
+		XDEBUG("wake_sync=", wake_sync, " idle_sync=",idle_sync);
+
+		if (wake_sync != 0 || idle_sync != 0) goto wait;
 	}
+
+	#if 0
+	{
+		auto it = this->threads;
+		auto const end = it + threads_size;
+		for (; it < end; it++) {
+			if (
+				atom_get(&it->state, atom_acq) !=
+					WeaverThreadState_Idle
+			)
+				goto wait;
+		}
+	}
+	#endif
 
 	XDEBUG("all threads idle");
 
@@ -266,7 +278,8 @@ AsyncRes Weaver_join(Weaver *this) {
 		atom_set(&this->down_sync, threads_size, atom_sync);
 	#endif
 
-	it = this->threads;
+	auto it = this->threads;
+	auto const end = it + threads_size;
 	for (; it < end; it++) {
 		#if Weaver_SAFE
 		{
@@ -599,7 +612,7 @@ AsyncRes Weaver_submit(Ptr vthis, usize context, const AsyncTask *tasks, usize t
 	// except the one we hold
 	while (rinfo & WeaverQueue_Rc_gtone) {
 		CPU_YIELD;
-		winfo = atom_get(&this->read.info, atom_acq);
+		rinfo = atom_get(&this->read.info, atom_acq);
 	}
 
 	// perform swap

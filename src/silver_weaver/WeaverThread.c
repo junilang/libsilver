@@ -207,7 +207,7 @@
 		do {
 			auto const res = Async_wait32(&this->state, WeaverThreadState_Idle, 0);
 			switch (res) {
-				default: PANIC("unhandle wait error");
+				default: PANIC("unhandled wait error");
 				case AsyncWaitRes_Mismatch:
 				case AsyncWaitRes_Ok:
 			};
