@@ -2,50 +2,51 @@
 	#define HashMap_SAFE LIBSILVER_SAFE
 #endif
 
-enum {
+#ifndef HashMap_DEBUG
+	#define HashMap_DEBUG false
+#endif
+
+typedef u64 HashMapInfo; enum {
 	FIELD_DEF(HashMap_Power, 6),
-	FIELD_DEF(HashMap_Empty, 58)
+	FIELD_DEF_UNTIL(HashMap_Empty, 64),
+	HashMapInfo_width
 };
 
-constexpr usize HashMap_empty_one = FIELD_SET(HashMap_Empty, 1);
+static_assert(HashMapInfo_width <= 64);
 
-constexpr u8 HashMap_sentinel_vacated = 0b1111'1111;
-constexpr u8 HashMap_sentinel_empty = 0b1000'0000;
-constexpr u8 HashMap_hash_mask = 0b0111'1111;
+usize constexpr HashMap_Empty_one = FIELD_SET(HashMap_Empty, 1);
 
 #ifndef HashMap_ALIGN
-	#define HashMap_ALIGN alignof(usize)
+	#define HashMap_ALIGN _Alignof(usize)
 #endif
 
-constexpr ualign HashMap_align = HashMap_ALIGN;
+ualign constexpr HashMap_align = HashMap_ALIGN;
 
-#ifndef HashMap_SIZE_BASE
-	#define HashMap_SIZE_BASE sizeof(usize)
+ubyte constexpr HashMap_svacated = 0b1111'1111;
+ubyte constexpr HashMap_sempty = 0b1000'0000;
+ubyte constexpr HashMap_shashmask = 0b0111'1111;
+
+auto constexpr HashMap_searchsize = sizeof(usize);
+usize constexpr HashMap_stencil = 0x0101010101010101ull;
+usize constexpr HashMap_stencil_empty = HashMap_stencil * HashMap_sempty;
+
+static_assert(usize_width == 64);
+static_assert(ubyte_width == 8);
+
+#ifndef HashMap_BASESIZE
+	#define HashMap_BASESIZE HashMap_searchsize
 #endif
 
-constexpr usize HashMap_size_base = HashMap_SIZE_BASE;
+usize constexpr HashMap_basesize = HashMap_BASESIZE;
 
-constexpr usize HashMap_search_size = sizeof(usize);
-constexpr usize HashMap_stencil_base = 0x0101010101010101ull;
-constexpr usize HashMap_empty_stencil = HashMap_stencil_base * HashMap_sentinel_empty;
-
-// ensure hashmap size is multiple of two
+static_assert(HashMap_basesize >= HashMap_searchsize);
 static_assert(
-	(HashMap_size_base >= HashMap_search_size) &&
-	(
-		HashMap_size_base == 2 ||
-		HashMap_size_base == 4 ||
-		HashMap_size_base == 8 ||
-		HashMap_size_base == 16 ||
-		HashMap_size_base == 32 ||
-		HashMap_size_base == 64 ||
-		HashMap_size_base == 128 ||
-		HashMap_size_base == 256
-	)
+	(HashMap_basesize & (HashMap_basesize - 1)) == 0
+	, "basesize is not power of 2"
 );
 
 typedef struct {
-	usize info;
+	HashMapInfo info;
 	Ptr data;
 } HashMap;
 
@@ -60,25 +61,23 @@ typedef bool (*HashMap_MatchFn)(Ptr cond, Ptr value);
 typedef Ptr (*HashMap_IterFn)(Ptr payload, usize hash, Ptr value);
 
 // determines the load factor, currently set to 50%
-usize HashMap_ZZslots(usize size) {
+usize HashMap_slots_(usize size) {
 	return size / 2;
 }
 
-void HashMap_ZZupgrade(Ptr src_data, usize src_size, Ptr dst_data, usize dst_size) {
-	auto src_table = (usize*)src_data;
-	auto const src_table_end = (usize*)((ubyte*)src_data + src_size);
+auto constexpr HashMap_maxslots = usize_max;
 
-	usize *const table_end = (usize*)((ubyte*)dst_data + dst_size);
+void HashMap_upgrade_(Ptr src_data, usize src_size, Ptr dst_data, usize dst_size) {
+	auto src_table = (usize*)src_data;
+	auto const src_table_end = (usize*)((usize)src_data + src_size);
+
+	auto const table_end = (usize*)((usize*)dst_data + dst_size);
 
 	usize src_offset = 0;
 	// loop over items in hashmap and add them to the new data buffer
 	for (; src_table < src_table_end; src_table++) {
 		// leaves top bits of non empty slots
-		usize src_lookup = (~(*src_table)) & HashMap_empty_stencil;
-
-		#if 0 && LIBSILVER_DEBUG
-			PRINTBP(512, Stderr, u64_bitsfmt, *src_table, "\n", u64_bitsfmt, src_lookup, "\n");
-		#endif
+		usize src_lookup = (~(*src_table)) & HashMap_stencil_empty;
 
 		while (src_lookup) {
 			auto const i = src_offset + (
@@ -87,8 +86,8 @@ void HashMap_ZZupgrade(Ptr src_data, usize src_size, Ptr dst_data, usize dst_siz
 
 			src_lookup &= (src_lookup - 1);
 
-			#if 0 && LIBSILVER_DEBUG
-				PRINTBP(128, Stderr, "i=", i, "\n");
+			#if HashMap_DEBUG
+				PRINTA(Stderr, "i=", i, "\n");
 			#endif
 
 			auto const src_item = ((HashMapItem*)src_table_end)[i];
@@ -101,13 +100,13 @@ void HashMap_ZZupgrade(Ptr src_data, usize src_size, Ptr dst_data, usize dst_siz
 
 			usize result;
 			for (; table < table_end; table++) {
-				result = (*table) & HashMap_empty_stencil;
+				result = (*table) & HashMap_stencil_empty;
 				if (result) goto found;
 			}
 
 			table = (usize*)dst_data;
 			for (; table < table_begin; table++) {
-				result = (*table) & HashMap_empty_stencil;
+				result = (*table) & HashMap_stencil_empty;
 				if (result) goto found;
 			}
 
@@ -119,9 +118,9 @@ void HashMap_ZZupgrade(Ptr src_data, usize src_size, Ptr dst_data, usize dst_siz
 			;
 
 			auto const table_entry = (ubyte*)table + entry_offset;
-			*table_entry = src_item.hash & HashMap_hash_mask;
+			*table_entry = src_item.hash & HashMap_shashmask;
 
-			auto item = (HashMapItem*)table_end + (table_entry - (ubyte*)dst_data);
+			auto item = (HashMapItem*)table_end + ((usize)table_entry - (usize)dst_data);
 			*item = src_item;
 		}
 
@@ -130,74 +129,59 @@ void HashMap_ZZupgrade(Ptr src_data, usize src_size, Ptr dst_data, usize dst_siz
 }
 
 [[nodiscard]]
-AlcRes HashMap_ZZinit(HashMap *this, Alc alc, u8 power) {
-	auto const size = HashMap_size_base << power;
+AlcRes HashMap_init_(HashMap *this, Alc alc, u8 power) {
+	auto const size = HashMap_basesize << power;
 
-	AlcReq req = {
-		.intent = AlcIntent_New,
-		.align = HashMap_align,
-		.size = size * (1 + sizeof(HashMapItem)),
-		#if LIBSILVER_DEBUG
-			.flags = FLAG(AlcFlag_Zero),
-		#endif
-	};
-
-	Ptr new_data = Alc_invoke(alc, &req, nullptr, nullptr);
-	auto res = AlcPtr_get(new_data);
+	auto const ptr = Alc_invoke(alc,
+		AlcReq_new(size * (1 + sizeof(HashMapItem)), HashMap_align, HashMap_DEBUG)
+	, nullptr, nullptr);
+	auto const res = AlcPtr_get(ptr);
 	if (res) return res;
 
-	memset(new_data, HashMap_sentinel_empty, size);
+	auto const new_data = (Ptr)ptr;
+	memset(new_data, HashMap_sempty, size);
 
 	this->data = new_data;
 	this->info =
 		FIELD_SET(HashMap_Power, power) |
-		FIELD_SET(HashMap_Empty, HashMap_ZZslots(size))
+		FIELD_SET(HashMap_Empty, HashMap_slots_(size))
 	;
 
 	return AlcRes_Ok;
 }
 
 [[nodiscard]]
-AlcRes HashMap_ZZexpand(HashMap *this, Alc alc, u8 new_power) {
+AlcRes HashMap_expand_(HashMap *this, Alc alc, u8 new_power) {
 	auto const info = this->info;
 
 	u8 const power = FIELD_GET(HashMap_Power, info);
 	#if HashMap_SAFE
-		if (new_power < power) // allows for defragmenting
-			PANIC("new_power lower than old");
-		if (new_power > FIELD_MAX(HashMap_Power))
-			PANIC("new_power too high");
+		ASSERT(new_power >= power);
+		ASSERT(new_power <= FIELD_MAX(HashMap_Power));
 	#endif
 
-	auto const size = HashMap_size_base << power;
-	auto const used = HashMap_ZZslots(size) - FIELD_GET(HashMap_Empty, info);
+	auto const size = HashMap_basesize << power;
+	auto const used = HashMap_slots_(size) - FIELD_GET(HashMap_Empty, info);
 
 	auto const data = this->data;
 
-	auto const new_size = HashMap_size_base << new_power;
-	auto const new_empty = HashMap_ZZslots(new_size) - used;
+	auto const new_size = HashMap_basesize << new_power;
+	auto const new_empty = HashMap_slots_(new_size) - used;
 
-	usize const new_info =
+	HashMapInfo const new_info =
 		FIELD_SET(HashMap_Power, new_power) |
 		FIELD_SET(HashMap_Empty, new_empty)
 	;
 
-	AlcReq req = {
-		.intent = AlcIntent_New,
-		.align = HashMap_align,
-		.size = new_size * (1 + sizeof(HashMapItem)),
-		#if LIBSILVER_DEBUG
-			.flags = FLAG(AlcFlag_Zero)
-		#endif
-	};
+	auto const ptr = Alc_invoke(alc,
+		AlcReq_new(new_size * (1 + sizeof(HashMapItem)), HashMap_align, HashMap_DEBUG)
+	, nullptr, nullptr);
+	auto const res = AlcPtr_get(ptr);
+	if (res) return res;
 
-	Ptr new_data = Alc_invoke(alc, &req, nullptr, nullptr);
-	auto const alc_res = AlcPtr_get(new_data);
-	if (alc_res) return alc_res;
-
-	memset(new_data, HashMap_sentinel_empty, new_size);
-
-	HashMap_ZZupgrade(data, size, new_data, new_size);
+	auto const new_data = (Ptr)ptr;
+	memset(new_data, HashMap_sempty, new_size);
+	HashMap_upgrade_(data, size, new_data, new_size);
 
 	this->data = new_data;
 	this->info = new_info;
@@ -207,81 +191,94 @@ AlcRes HashMap_ZZexpand(HashMap *this, Alc alc, u8 new_power) {
 
 [[nodiscard]]
 AlcRes HashMap_init(HashMap *this, Alc alc, usize slots) {
-	u8 power = 0;
-	usize size = HashMap_size_base;
-	while (HashMap_ZZslots(size) < slots) {
-		power++;
-		#if HashMap_SAFE
-			if (power > FIELD_MAX(HashMap_Power))
-				PANIC("power overflow");
-		#endif
+	#if HashMap_SAFE
+		ASSERT(slots <= HashMap_maxslots);
+	#endif
 
+	u8 power = 0;
+	usize size = HashMap_basesize;
+	while (HashMap_slots_(size) < slots) {
+		power++;
 		size <<= 1;
 	}
 
-	return HashMap_ZZinit(this, alc, power);
+	return HashMap_init_(this, alc, power);
+}
+
+[[nodiscard]]
+AlcRes HashMap_destroy(HashMap *this, Alc alc) {
+	auto const data = this->data;
+	AlcRes res;
+	if (data)
+		res = Alc_delete(alc, data);
+	else {
+		res = AlcRes_Ok;
+	}
+
+	#if HashMap_SAFE
+		this->data = nullptr;
+		this->info = 0;
+	#endif
+
+	return res;
 }
 
 [[nodiscard]]
 AlcRes HashMap_defragment(HashMap *this, Alc alc) {
 	// allocates a new buffer and runs the reinsertion algorithm
-	return HashMap_ZZexpand(this, alc, FIELD_GET(HashMap_Power, this->info));
+	return HashMap_expand_(this, alc, FIELD_GET(HashMap_Power, this->info));
 }
 
 [[nodiscard]]
 AlcRes HashMap_reserve(HashMap *this, Alc alc, usize slots) {
+	if (!this->data)
+		return HashMap_init(this, alc, slots);
+
 	auto const info = this->info;
-
 	u8 power = FIELD_GET(HashMap_Power, info);
-
-	auto size = HashMap_size_base << power;
 	auto empty = FIELD_GET(HashMap_Empty, info);
-	if (slots <= empty) {
-		if (!this->data)
-			return HashMap_ZZinit(this, alc, power);
-		else
-			return AlcRes_Ok;
-	}
+	auto size = HashMap_basesize << power;
 
-	auto const used = HashMap_ZZslots(size) - empty;
+	// there are already enough empty slots
+	if (slots <= empty)
+		return AlcRes_Ok;
+
+	auto const used = HashMap_slots_(size) - empty;
 
 	do {
 		power++;
 		#if HashMap_SAFE
-			if (power > FIELD_MAX(HashMap_Power))
-				PANIC("power overflow");
+			ASSERT(power <= FIELD_MAX(HashMap_Power));
 		#endif
 
-		size <<= 1;
-		empty = HashMap_ZZslots(size) - used;
+		size = HashMap_basesize << power;
+		empty = HashMap_slots_(size) - used;
 	} while (slots > empty);
 
-	if (!this->data)
-		return HashMap_ZZinit(this, alc, power);
-	else
-		return HashMap_ZZexpand(this, alc, power);
+	return HashMap_expand_(this, alc, power);
 }
 
 Ptr HashMap_add_unsafe(HashMap *this, usize hash) {
 	auto const data = this->data;
-	auto const size = HashMap_size_base << FIELD_GET(HashMap_Power, this->info);
+	auto const info = this->info;
+	auto const size = HashMap_basesize << FIELD_GET(HashMap_Power, info);
 
 	usize const search_index = (hash & (size - 1)) / sizeof(usize);
 
 	auto const table_begin = (usize*)data + search_index;
-	auto const table_end = (usize*)((ubyte*)data + size);
+	auto const table_end = (usize*)((usize)data + size);
 
 	usize result;
 
 	auto table = table_begin;
 	for (; table < table_end; table++) {
-		result = (*table) & HashMap_empty_stencil;
+		result = (*table) & HashMap_stencil_empty;
 		if (result) goto found;
 	}
 
 	table = (usize*)data;
 	for (; table < table_begin; table++) {
-		result = (*table) & HashMap_empty_stencil;
+		result = (*table) & HashMap_stencil_empty;
 		if (result) goto found;
 	}
 
@@ -292,20 +289,20 @@ Ptr HashMap_add_unsafe(HashMap *this, usize hash) {
 	auto const entry_offset = ((usize)__builtin_ctzg(result) - (ubyte_width - 1)) / ubyte_width;
 	auto const table_entry = (ubyte*)table + entry_offset;
 
-	*table_entry = hash & HashMap_hash_mask;
+	*table_entry = hash & HashMap_shashmask;
 
-	auto item = (HashMapItem*)table_end + (table_entry - (ubyte*)data);
+	auto const item = (HashMapItem*)table_end + (table_entry - (ubyte*)data);
 	item->hash = hash;
-	this->info -= FIELD_SET(HashMap_Empty, 1);
+	this->info -= HashMap_Empty_one;
 
 	return &item->value;
 }
 
 void HashMap_bulkadd_unsafe(HashMap *this, const HashMapItem *items, usize items_size) {
 	auto const data = this->data;
-	auto const size = HashMap_size_base << FIELD_GET(HashMap_Power, this->info);
+	auto const size = HashMap_basesize << FIELD_GET(HashMap_Power, this->info);
 
-	auto const table_end = (usize*)((ubyte*)data + size);
+	auto const table_end = (usize*)((usize)data + size);
 	auto const items_end = items + items_size;
 
 	for (; items < items_end; items++) {
@@ -318,13 +315,13 @@ void HashMap_bulkadd_unsafe(HashMap *this, const HashMapItem *items, usize items
 
 		auto table = table_begin;
 		for (; table < table_begin; table++) {
-			result = (*table) & HashMap_empty_stencil;
+			result = (*table) & HashMap_stencil_empty;
 			if (result) goto found;
 		}
 
 		table = (usize*)data;
 		for (; table < table_begin; table++) {
-			result = (*table) & HashMap_empty_stencil;
+			result = (*table) & HashMap_stencil_empty;
 			if (result) goto found;
 		}
 
@@ -334,7 +331,7 @@ void HashMap_bulkadd_unsafe(HashMap *this, const HashMapItem *items, usize items
 		auto const entry_offset = ((usize)__builtin_ctzg(result) - (ubyte_width - 1)) / ubyte_width;
 		auto const table_entry = (ubyte*)table + entry_offset;
 
-		*table_entry = item.hash & HashMap_hash_mask;
+		*table_entry = item.hash & HashMap_shashmask;
 
 		auto const itemp = (HashMapItem*)table_end + (table_entry - (ubyte*)data);
 		*itemp = item;
@@ -345,7 +342,7 @@ void HashMap_bulkadd_unsafe(HashMap *this, const HashMapItem *items, usize items
 
 [[nodiscard]]
 AlcRes HashMap_bulkadd(HashMap *this, Alc alc, const HashMapItem *items, usize items_size) {
-	auto res = HashMap_reserve(this, alc, items_size);
+	auto const res = HashMap_reserve(this, alc, items_size);
 	if (res) return res;
 
 	HashMap_bulkadd_unsafe(this, items, items_size);
@@ -353,16 +350,18 @@ AlcRes HashMap_bulkadd(HashMap *this, Alc alc, const HashMapItem *items, usize i
 }
 
 [[nodiscard]]
-AlcPtr HashMap_add(HashMap *this, usize hash, Alc alc) {
-	// expand hashmap if no empty slots remain
-	if (this->info < FIELD_SET(HashMap_Empty, 1)) {
-		u8 power = FIELD_GET(HashMap_Power, this->info);
-		AlcRes res;
-		if (!this->data)
-			res = HashMap_ZZinit(this, alc, power);
-		else
-			res = HashMap_ZZexpand(this, alc, power + 1);
+AlcPtr HashMap_add(HashMap *this, Alc alc, usize hash) {
+	auto const data = this->data;
+	if (!data) {
+		auto const res = HashMap_init_(this, alc, 0);
+		if (res) return AlcPtr_set(res);
+	}
 
+	auto const info = this->info;
+	// expand hashmap if no empty slots remain
+	if (info < HashMap_Empty_one) {
+		u8 const power = FIELD_GET(HashMap_Power, info);
+		auto const res = HashMap_expand_(this, alc, power + 1);
 		if (res) return AlcPtr_set(res);
 	}
 
@@ -373,21 +372,23 @@ Ptr HashMap_get(HashMap *this, usize hash, HashMap_MatchFn fn, Ptr cond) {
 	auto const data = this->data;
 	if (!data) return nullptr;
 
-	auto const size = HashMap_size_base << FIELD_GET(HashMap_Power, this->info);
-	auto const table_end = (usize*)((ubyte*)data + size);
+	auto const info = this->info;
 
-	usize const search_index = (hash & (size - 1)) & (sizeof(usize) - 1);
-	auto const table_begin = (usize*)((ubyte*)data + search_index);
+	auto const size = HashMap_basesize << FIELD_GET(HashMap_Power, info);
+	auto const table_end = (usize*)((usize)data + size);
 
-	auto const stencil = HashMap_stencil_base * (hash & HashMap_hash_mask);
+	usize const search_index = (hash & (size - 1)) / sizeof(usize);
+	auto const table_begin = (usize*)((usize)data + search_index);
+
+	auto const stencil = HashMap_stencil * (hash & HashMap_shashmask);
 
 	#define ZZTEST { \
 		auto const entry = *table; \
 		usize result = entry ^ stencil; \
-		result = (result - HashMap_stencil_base) & (~result) & HashMap_empty_stencil; \
+		result = (result - HashMap_stencil) & (~result) & HashMap_stencil_empty; \
 		\
 		if (!result) continue; \
-		usize base_index = (usize)((ubyte*)table - (ubyte*)data); \
+		auto const base_index = (usize)table - (usize)data; \
 		while (result) { \
 			usize const i = base_index + ( \
 				((usize)__builtin_ctzg(result) - (ubyte_width - 1)) / ubyte_width \
@@ -400,8 +401,8 @@ Ptr HashMap_get(HashMap *this, usize hash, HashMap_MatchFn fn, Ptr cond) {
 			result &= (result - 1); \
 		} \
 		\
-		result = entry ^ HashMap_empty_stencil; \
-		result = (result - HashMap_stencil_base) & (~result) & HashMap_empty_stencil; \
+		result = entry ^ HashMap_stencil_empty; \
+		result = (result - HashMap_stencil) & (~result) & HashMap_stencil_empty; \
 		if (result) return nullptr; \
 	}
 
@@ -420,21 +421,23 @@ Ptr HashMap_iter(HashMap *this, HashMap_IterFn fn, Ptr payload) {
 	auto const data = this->data;
 	if (!data) return nullptr;
 
-	auto const size = HashMap_size_base << FIELD_GET(HashMap_Power, this->info);
+	auto const info = this->info;
 
-	auto const table_end = (usize*)((ubyte*)data + size);
+	auto const size = HashMap_basesize << FIELD_GET(HashMap_Power, info);
+
+	auto const table_end = (usize*)((usize)data + size);
 	auto table = (usize*)data;
 
 	usize base_index = 0;
 	for (; table < table_end; table++) {
-		usize result = (~(*table)) & HashMap_empty_stencil;
+		usize result = (~(*table)) & HashMap_stencil_empty;
 		while (result) {
 			usize const i = base_index + (
 				((usize)__builtin_ctzg(result) - (ubyte_width - 1)) / ubyte_width
 			);
 
-			auto item = (const HashMapItem*)table_end + i;
-			Ptr res = fn(payload, item->hash, item->value);
+			auto const item = (const HashMapItem*)table_end + i;
+			Ptr const res = fn(payload, item->hash, item->value);
 			if (res) return res;
 
 			result &= (result - 1);
@@ -447,26 +450,29 @@ Ptr HashMap_iter(HashMap *this, HashMap_IterFn fn, Ptr payload) {
 }
 
 void HashMap_delete(HashMap *this, Ptr value_ptr) {
+	#if HashMap_SAFE
+		ASSERT(this->data, "HashMap not initialized");
+	#endif
+
 	auto const item = (HashMapItem*)(
 		(ubyte*)value_ptr - __builtin_offsetof(HashMapItem, value)
 	);
 
-	ubyte *const data = this->data;
+	auto const data = (ubyte*)this->data;
+	auto const info = this->info;
 
-	auto const size = HashMap_size_base << FIELD_GET(HashMap_Power, this->info);
-	auto const items = (HashMapItem*)(data + size);
+	auto const size = HashMap_basesize << FIELD_GET(HashMap_Power, info);
+	auto const items = (HashMapItem*)((usize)data + size);
 
 	#if HashMap_SAFE
 		auto const items_end = items + size;
-		if (item < items || item >= items_end)
-			PANIC("item out of bounds");
-
+		ASSERT(item >= items && item < items_end, "item out of bounds");
 		item->hash = 0;
 		item->value = nullptr;
 	#endif
 
 	auto const i = (usize)(item - items);
-	data[i] = HashMap_sentinel_vacated;
+	data[i] = HashMap_svacated;
 
 	this->info += FIELD_SET(HashMap_Empty, 1);
 }

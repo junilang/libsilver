@@ -92,7 +92,7 @@ FsRes FsFile_map(FsFile this, FsMappingMode mode, FsMapping *out_mapping) {
 }
 
 FsRes FsMapping_unmap(FsMapping *this) {
-	auto res = linux_munmap(this->data, this->size);
+	auto res = linux_munmap((Ptr)this->data, this->size);
 	if (res < 0) switch (res) {
 		default:
 			return FsRes_ErrUnknown;

@@ -2,7 +2,7 @@
 #define Asynx_TOK_(pfx, tok) Asynx_TOK__(pfx, tok)
 #define Asynx_TOK(tok) Asynx_TOK_(Asynx_PFX, tok)
 
-#define Asynx_LABELS_(pfx, ...) ENUM(pfx, AsynxLabel, 1, __VA_ARGS__)
+#define Asynx_LABELS_(pfx, ...) ENUM_(pfx, AsynxLabel, 1, __VA_ARGS__)
 #define Asynx_LABELS(...) Asynx_LABELS_(Asynx_TOK(_label_), __VA_ARGS__);
 
 typedef struct Asynx_TASKBODY(1) AsynxGenericTask;

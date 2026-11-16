@@ -82,13 +82,14 @@ void panic_msg_(const String *const msg, usize const msg_size) {
 } while (0)
 
 #define PANIC_PRINT_(...) do { \
-	usize constexpr PANIC_PRINT_buf_size__ = (PANIC_PRINT_BUFSIZE); \
+	usize constexpr PANIC_PRINT_buf_size__ = (PANIC_BUFSIZE); \
 	ubyte PANIC_PRINT_buf__[PANIC_PRINT_buf_size__]; \
 	BufferSink PANIC_PRINT_buf_sink__; \
 	BufferSink_init(&PANIC_PRINT_buf_sink__, PANIC_PRINT_buf__, PANIC_PRINT_buf_size__); \
 	Sink const PANIC_PRINT_sink__ = BufferSink_asSink(&PANIC_PRINT_buf_sink__); \
 	SinkRes const PANIC_PRINT_res__ = PRINT_RAW(PANIC_PRINT_sink__, __VA_ARGS__); \
-	SinkRes_assert_(PANIC_PRINT_res__, __func__, SOURCE_IDENTIFIER " PANIC_PRINT failed:"); \
+	SinkRes_assert_(PANIC_PRINT_res__, PANIC_MSG_HEADER("PANIC_PRINT failed:")); \
+	os_panic_write(PANIC_PRINT_buf__, PANIC_PRINT_buf_sink__.size); \
 	os_panic(); \
 } while (0)
 

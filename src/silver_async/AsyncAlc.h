@@ -1,13 +1,19 @@
 typedef struct {
-	_Atomic u32_lf lock;
 	Alc provider;
+	_Atomic u32_lf lock;
 } AsyncAlc;
 
-AlcRes AsyncAlc_lock(AsyncAlc *this) {
+AlcRes AsyncAlc_lock(AsyncAlc *this, AlcReq req) {
+	if (req & FLAG(AlcFlag_NoWait)) {
+		if (atom_exchg(&this->lock, 1, atom_sync) == 0)
+			return AlcRes_Ok;
+		else
+			return AlcRes_Locked;
+	}
+
 	retry:;
 	auto lock = atom_exchg(&this->lock, 1, atom_sync);
-
-	if (!lock) return AlcRes_Ok;
+	if (lock == 0) return AlcRes_Ok;
 
 	do {
 		CPU_YIELD;
@@ -17,49 +23,46 @@ AlcRes AsyncAlc_lock(AsyncAlc *this) {
 	goto retry;
 }
 
-AlcRes AsyncAlc_trylock(AsyncAlc *this) {
-	auto const lock = atom_exchg(&this->lock, 1, atom_sync);
-	if (!lock) return AlcRes_Ok;
-	return AlcRes_Locked;
-}
+AlcRes AsyncAlc_unlock(AsyncAlc *this, AlcReq req) {
+	if (!(req & FLAG(AlcFlag_Locked)))
+		return AlcRes_ErrInvalidFlags;
 
-AlcRes AsyncAlc_unlock(AsyncAlc *this) {
 	atom_set(&this->lock, 0, atom_rel);
 	return AlcRes_Ok;
 }
 
-AlcPtr AsyncAlc_invoke(AsyncAlc *this, AlcReq *req, Ptr arg, Ptr mem) {
-	constexpr AlcAttr attr =
-		FLAGS(AlcAttr, ThreadSafe, IntentLock, IntentTryLock, IntentUnlock)
-	;
+AlcPtr AsyncAlc_invoke(AsyncAlc *this, AlcReq req, Ptr aux, Ptr mem) {
+	AlcAttr constexpr attr = FLAGS(AlcAttr,
+		IntentLock, IntentUnlock, Concurrent
+	);
 
-	auto const intent = req->intent;
-	switch (intent) {
-		case AlcIntent_Lock: return AlcPtr_set(AsyncAlc_lock(this));
-		case AlcIntent_TryLock: return AlcPtr_set(AsyncAlc_trylock(this));
-		case AlcIntent_Unlock: return AlcPtr_set(AsyncAlc_unlock(this));
-		case AlcIntent_Attr: return (AlcPtr)(usize)(Alc_attr(this->provider) | attr);
+	switch (FIELD_GET_CAST(AlcIntent, req)) {
+		case AlcIntent_Lock:
+			return AlcPtr_set(AsyncAlc_lock(this, req));
+		case AlcIntent_Unlock:
+			return AlcPtr_set(AsyncAlc_unlock(this, req));
+
+		case AlcIntent_Attr:
+			if (!aux) return AlcPtr_set(AlcRes_ErrInvalidAux);
+			*(AlcAttr*)aux = Alc_attr(this->provider) | attr;
+			return AlcPtr_Ok;
+
 		default:;
 	}
 
-	bool const locked = req->flags & FLAG(AlcFlag_Locked);
-	if (locked) {
-		req->flags &= (AlcFlag)FLAG_CLEAR(AlcFlag_Locked);
-	} else {
-		if (req->flags & FLAG(AlcFlag_NoWait)) {
-			auto const res = AsyncAlc_trylock(this);
-			if (res) return AlcPtr_set(res);
-		} else {
-			AsyncAlc_lock(this);
-		}
+	bool const locked = req & FLAG(AlcFlag_Locked);
+	auto const mod_req = req & FLAG_CLEAR(AlcFlag_Locked);
+
+	if (!locked) {
+		auto const res = AsyncAlc_lock(this, req);
+		if (res) return AlcPtr_set(res);
 	}
 
-	auto const res = Alc_invoke(this->provider, req, arg, mem);
+	auto const res = Alc_invoke(this->provider, mod_req, aux, mem);
 
-	if (locked) {
-		req->flags |= FLAG(AlcFlag_Locked);
-	} else {
-		AsyncAlc_unlock(this);
+	if (!locked) {
+		auto const res = AsyncAlc_unlock(this, FLAG(AlcFlag_Locked));
+		if (res) return AlcPtr_set(res);
 	}
 
 	return res;

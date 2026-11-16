@@ -1,25 +1,13 @@
-#define XS \
-	X(Ok) \
-	X(ErrRecursive) \
-	X(ErrOverflow) \
-	X(ErrZero) \
-	X(ErrOne) \
-	X(Aux)
+ENUM_GENERATE(AsynxForkRes, u8,
+	Ok,
+	ErrRecursive,
+	ErrOverflow,
+	ErrZero,
+	ErrOne,
+	Aux
+)
 
-	typedef enum : u8 {
-		#define X(N) AsynxForkRes_##N,
-			XS
-		#undef X
-	} AsynxForkRes;
-
-	const String AsynxForkRes_repr[] = {
-		#define X(N) [AsynxForkRes_##N] = String_INIT(#N),
-			XS
-		#undef X
-	};
-#undef XS
-
-PANIC_RES_GENERATE(AsynxForkRes)
+PANIC_RES_GENERATE(AsynxForkRes, AsynxForkRes_str)
 
 #define AsynxForkRes_ASSERT(res) ASSERT_RES(AsynxForkRes, res)
 

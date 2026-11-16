@@ -19,41 +19,30 @@
 	#define AsyncFuture_WAIT8 (!AsyncFuture_SAFE)
 #endif
 
-#define XS \
-	X(Ok) \
-	X(Timeout) \
-	X(IsSet) \
-	X(IsResolved) \
-	X(IsError) \
-	X(IsInvalid) \
-	X(ErrUnderflow) \
-	X(ErrUnknown)
-
-	typedef enum : u8 {
-		#define X(N) AsyncFutureRes_##N,
-			XS
-		#undef X
-	} AsyncFutureRes;
-
-	const String AsyncFutureRes_repr[] = {
-		#define X(N) [AsyncFutureRes_##N] = String_INIT("AsyncFutureRes_"#N),
-			XS
-		#undef X
-	};
-
-#undef XS
+ENUM_GENERATE(AsyncFutureRes, u8,
+	Ok,
+	Timeout,
+	IsSet,
+	IsResolved,
+	IsError,
+	IsInvalid,
+	ErrUnderflow,
+	ErrUnknown
+)
 
 typedef u32 AsyncFutureInfo; enum {
-	// future is resolved
-	FLAG_DEF(AsyncFuture_Resolved),
-	// future is resolved with error
-	FLAG_DEF(AsyncFuture_Error),
-	// an error occured during interaction with future (error is not set)
-	FLAG_DEF(AsyncFuture_Invalid),
-	// lock set when thread is writing an error
-	FLAG_DEF(AsyncFuture_ErrorLock),
-	// lock set when thread is setting the task
-	FLAG_DEF(AsyncFuture_TaskLock),
+	FLAGS_DEF(AsyncFuture,
+		// future is resolved
+		Resolved,
+		// future is resolved with error
+		Error,
+		// an error occured during interaction with future (error is not set)
+		Invalid,
+		// lock set when thread is writing an error
+		ErrorLock,
+		// lock set when thread is setting the task
+		TaskLock
+	),
 
 	// task intent, 2 bits is enough for
 	// 00=no task (Yield), 01=Resume, 10=Suspend, 11=Call
@@ -64,37 +53,40 @@ typedef u32 AsyncFutureInfo; enum {
 
 	// number of resolve calls needed to complete the future
 	FIELD_DEF_UNTIL(AsyncFuture_Triggers, 32),
+	AsyncFutureInfo_width
 };
-
-static_assert(AsyncFuture_Intent_FIELD_END < AsyncFuture_Triggers_FIELD);
 
 #if AsyncFuture_WAIT8
 	// ensure that the state header fits into a single byte
 	static_assert(AsyncFuture_Intent_FIELD_END < 8);
 #endif
 
+static_assert(AsyncFuture_Intent_FIELD_END < AsyncFuture_Waiting_FIELD);
+static_assert(AsyncFutureInfo_width <= 32);
 
-constexpr AsyncFutureInfo AsyncFuture_ErrorLock = FLAG(AsyncFuture_ErrorLock);
-constexpr AsyncFutureInfo AsyncFuture_TaskLock = FLAG(AsyncFuture_TaskLock);
 
-constexpr AsyncFutureInfo AsyncFuture_Waiting_one = FIELD_SET(AsyncFuture_Waiting, 1);
 
-constexpr AsyncFutureInfo AsyncFuture_Triggers_one = FIELD_SET(AsyncFuture_Triggers, 1);
+AsyncFutureInfo constexpr AsyncFuture_ErrorLock = FLAG(AsyncFuture_ErrorLock);
+AsyncFutureInfo constexpr AsyncFuture_TaskLock = FLAG(AsyncFuture_TaskLock);
+
+AsyncFutureInfo constexpr AsyncFuture_Waiting_one = FIELD_SET(AsyncFuture_Waiting, 1);
+
+AsyncFutureInfo constexpr AsyncFuture_Triggers_one = FIELD_SET(AsyncFuture_Triggers, 1);
 
 // number of top bits in triggers field used for underflow detection
-constexpr u8 AsyncFuture_Triggers_underflowbits = 2;
+auto constexpr AsyncFuture_Triggers_underflowbits = 2;
 
 // the "zero" value has the top underflow bits set to ones
-constexpr AsyncFutureInfo AsyncFuture_Triggers_zero =
+AsyncFutureInfo constexpr AsyncFuture_Triggers_zero =
 	FIELD_MASK_UPPER(AsyncFuture_Triggers, AsyncFuture_Triggers_underflowbits)
 ;
 
 // the treshold for detecting succesfull resolves and underflows
-constexpr AsyncFutureInfo AsyncFuture_Triggers_single =
+AsyncFutureInfo constexpr AsyncFuture_Triggers_single =
 	AsyncFuture_Triggers_zero | AsyncFuture_Triggers_one
 ;
 
-constexpr u32 AsyncFuture_maxtriggers =
+u32 constexpr AsyncFuture_maxtriggers =
 	FIELD_MAX(AsyncFuture_Triggers) >> AsyncFuture_Triggers_underflowbits
 ;
 

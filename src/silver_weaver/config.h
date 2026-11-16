@@ -6,8 +6,8 @@
 	#define Weaver_DEBUG LIBSILVER_DEBUG
 #endif
 
-#ifndef Weaver_DEBUG_STREAM
-	#define Weaver_DEBUG_STREAM Stdout
+#ifndef Weaver_DEBUG_SINK
+	#define Weaver_DEBUG_SINK Stdout
 #endif
 
 #ifndef Weaver_USE_PTHREAD

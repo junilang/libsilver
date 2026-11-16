@@ -2,28 +2,39 @@
 	#define Rc_SAFE LIBSILVER_SAFE
 #endif
 
-constexpr usize Rc_tagmask = 0b11ull;
-constexpr usize Rc_ptrmask = ~Rc_tagmask;
+ENUM_GENERATE(RcClass, u8,
+	Owner, Weak, Const
+)
 
-typedef enum : u8 {
-	RcClass_Owner,
-	RcClass_Weak,
-	RcClass_Const
-} RcClass;
+auto constexpr RcClass_width = ENUM_WIDTH(RcClass);
+usize constexpr Rc_classmask = FIELD_MASK_LOWER(usize, RcClass_width);
+constexpr usize Rc_ptrmask = ~Rc_classmask;
 
-typedef union {
-	_Alignas(Rc_tagmask + 1) char align__;
-	u32 count;
+typedef struct {
+	union {
+		_Alignas(1ull << RcClass_width) char align__;
+		u32 count;
+	};
 } RcState;
 
-typedef union {
-	Ptr value;
-	usize raw_value;
+typedef struct {
+	union {
+		Ptr value;
+		usize raw_value;
+	};
 } Rc;
 
 constexpr Rc ConstRc = { .raw_value = RcClass_Const };
 
-Rc Rc_upcast(RcState *state, RcClass class) {
+Rc Rc_from(RcState *state, RcClass class) {
+	#if Rc_SAFE
+		ASSERT(
+			!((usize)state & Rc_classmask)
+			, "state not aligned"
+		);
+		ASSERT(class <= ENUM_MAX(RcClass));
+	#endif
+
 	return (Rc) {
 		.raw_value = ((usize)state & Rc_ptrmask) | (usize)class
 	};
@@ -34,16 +45,17 @@ RcState *Rc_state(Rc this) {
 }
 
 RcClass Rc_class(Rc this) {
-	return (RcClass)(this.raw_value & Rc_tagmask);
-}
+	auto const class = (RcClass)(this.raw_value & Rc_classmask);
+	#if Rc_SAFE
+		ASSERT(class <= ENUM_MAX(RcClass));
+	#endif
 
-bool Rc_valid(Rc this) {
-	return Rc_state(this)->count != 0;
+	return class;
 }
 
 Rc Rc_init(RcState *state) {
 	state->count = 1;
-	return Rc_upcast(state, RcClass_Owner);
+	return Rc_from(state, RcClass_Owner);
 }
 
 bool Rc_release(Rc this) {
@@ -53,10 +65,11 @@ bool Rc_release(Rc this) {
 			return false;
 
 		case RcClass_Owner:
-			RcState *state = Rc_state(this);
+			auto const state = Rc_state(this);
 			return (state->count--) == 1;
 
-		default: UNREACHABLE(Rc_SAFE);
+		default:
+			UNREACHABLE(false);
 	}
 }
 
@@ -65,24 +78,15 @@ Rc Rc_copy(Rc this) {
 		case RcClass_Const:
 			return this;
 
-		#if Rc_SAFE
-			case RcClass_Weak: {
-				RcState *state = Rc_state(this);
-				if (state->count++ == 0)
-					PANIC("attempt to copy invalid weak reference");
-				return Rc_upcast(state, RcClass_Owner);
-			}
-		#else
-			case RcClass_Weak:
-		#endif
-
+		case RcClass_Weak:
 		case RcClass_Owner: {
-			RcState *state = Rc_state(this);
+			auto const state = Rc_state(this);
 			state->count++;
-			return Rc_upcast(state, RcClass_Owner);
+			return Rc_from(state, RcClass_Owner);
 		}
 
-		default: UNREACHABLE(Rc_SAFE);
+		default:
+			UNREACHABLE(false);
 	}
 }
 
@@ -93,11 +97,10 @@ Rc Rc_weak(Rc this) {
 			return this;
 
 		case RcClass_Owner:
-			RcState *state = Rc_state(this);
-			state->count++;
-			return Rc_upcast(state, RcClass_Owner);
+			return Rc_from(Rc_state(this), RcClass_Weak);
 
-		default: UNREACHABLE(Rc_SAFE);
+		default:
+			UNREACHABLE(false);
 	}
 }
 
@@ -105,10 +108,12 @@ Rc Rc_const(Rc this) {
 	switch (Rc_class(this)) {
 		case RcClass_Const:
 			return this;
+
 		case RcClass_Weak:
 		case RcClass_Owner:
-			return Rc_upcast(Rc_state(this), RcClass_Const);
+			return Rc_from(Rc_state(this), RcClass_Const);
 
-		default: UNREACHABLE(Rc_SAFE);
+		default:
+			UNREACHABLE(false);
 	}
 }

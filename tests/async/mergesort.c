@@ -11,13 +11,16 @@
 	async_begin {
 		//PRINTBA(128, Stdout, this->src, " ", this->size, "\n");
 		if (this->size > 4) {
-			auto const alc = AsyncRT_alc(asynx_rt__, asynx_context__);
-			AlcReq req = {
-				.intent = AlcIntent_New,
-				.size = sizeof(ZZmergesort_Task) * 2,
-				.align = _Alignof(ZZmergesort_Task)
-			};
-			auto const ptr = Alc_invoke(alc, &req, nullptr, nullptr);
+			Alc alc;
+			asynx_error__.any = AsyncRT_alc(asynx_rt__, asynx_context__, &alc);
+			if (asynx_error__.any) goto asynx_catch_any__;
+
+			auto const req = AlcReq_new(
+				sizeof(ZZmergesort_Task) * 2,
+				_Alignof(ZZmergesort_Task),
+				false
+			);
+			auto const ptr = Alc_invoke(alc, req, nullptr, nullptr);
 			asynx_error__.alc = AlcPtr_get(ptr);
 			if (asynx_error__.alc) goto asynx_catch_alc__;
 			this->children = (Ptr)ptr;
@@ -63,7 +66,9 @@
 
 	async_join(join) {
 		if (this->children) {
-			auto const alc = AsyncRT_alc(asynx_rt__, asynx_context__);
+			Alc alc;
+			asynx_error__.any = AsyncRT_alc(asynx_rt__, asynx_context__, &alc);
+			if (asynx_error__.any) goto asynx_catch_any__;
 			asynx_error__.alc = Alc_delete(alc, this->children);
 			if (asynx_error__.alc) goto asynx_catch_alc__;
 		}
@@ -111,47 +116,30 @@ TEST(ZZ) {
 	Ptr heap;
 	usize heap_size;
 	{
-		AlcReq req = {
-			.intent = AlcIntent_New,
-			.size = (1024 * 1024) * 1024,
-		};
-		AlcPtr ptr = Alc_invoke(OsAlc, &req, nullptr, nullptr);
-		AlcRes res = AlcPtr_get(ptr);
-		if (res) return 1;
-
-		heap = (Ptr)ptr;
-		heap_size = req.size;
+		auto const req = AlcReq_new(1024 * 1024 * 1024, 0, false);
+		AlcPtr ptr = Alc_invoke(OsAlc, req, &heap_size, nullptr);
+		heap = AlcPtr_UNWRAP(ptr);
 	}
 
-	auto const heap_alc_ = StaticAlc_init(heap, heap_size);
+	BumpAlc heap_alc_;
+	BumpAlc_init(&heap_alc_, heap, heap_size);
 
 	AsyncAlc async_alc_;
-	AsyncAlc_init(&async_alc_, StaticAlc_upcast(heap_alc_));
-	auto const alc = AsyncAlc_upcast(&async_alc_);
+	AsyncAlc_init(&async_alc_, BumpAlc_asAlc(&heap_alc_));
+	auto const alc = AsyncAlc_asAlc(&async_alc_);
 
 	Weaver *weaver;
 	{
-		AlcPtr ptr = Weaver_create(alc, alc, 4, 8);
-		auto const res = AlcPtr_get(ptr);
-		if (res) return 2;
-
-		weaver = (Ptr)ptr;
+		auto const ptr = Weaver_create(alc, alc, 4, 8);
+		weaver = AlcPtr_UNWRAP(ptr);
 	}
 
 	constexpr usize array_size = 1024 * 1024 * 10;
 	i32 *array;
 	{
-		AlcReq req = {
-			.intent = AlcIntent_New,
-			.align = _Alignof(i32),
-			.size = sizeof(i32) * array_size * 2
-		};
-
-		AlcPtr ptr = Alc_invoke(alc, &req, nullptr, nullptr);
-		auto const res = AlcPtr_get(ptr);
-		if (res) return 3;
-
-		array = (Ptr)ptr;
+		auto const req = AlcReq_new(sizeof(i32) * array_size * 2, _Alignof(i32), false);
+		auto const ptr = Alc_invoke(alc, req, nullptr, nullptr);
+		array = AlcPtr_UNWRAP(ptr);
 	}
 
 	{ // seed array
@@ -165,9 +153,9 @@ TEST(ZZ) {
 	}
 
 	if (array_size < 200) {
-		PRINTBA(32, Stdout, array[0]);
+		PRINTA(Stdout, array[0]);
 		for (usize i = 1; i < array_size; i++) {
-			PRINTBA(32, Stdout, ", ", array[i]);
+			PRINTA(Stdout, ", ", array[i]);
 		}
 		PRINTA(Stdout, "\n");
 	}
@@ -178,7 +166,7 @@ TEST(ZZ) {
 	AsyncRes ares;
 
 	ares = Weaver_boot(weaver);
-	if (ares) goto async_error;
+	AsyncRes_ASSERT(ares);
 
 	AsyncFuture future = {};
 	AsyncFuture_init(&future, 1);
@@ -195,9 +183,9 @@ TEST(ZZ) {
 	AsyncFuture_wait(&future, nullptr);
 
 	if (array_size < 200) {
-		PRINTBA(32, Stdout, array[0]);
+		PRINTA(Stdout, array[0]);
 		for (usize i = 1; i < array_size; i++) {
-			PRINTBA(32, Stdout, ", ", dst[i]);
+			PRINTA(Stdout, ", ", dst[i]);
 		}
 		PRINTA(Stdout, "\n");
 	}
@@ -210,18 +198,14 @@ TEST(ZZ) {
 		}
 	}
 
-	PRINTBA(32, Stdout, "SORTED YAYYYY :3 !!!!\n");
+	PRINTA(Stdout, "SORTED YAYYYY :3 !!!!\n");
 
 	ares = Weaver_join(weaver);
-	if (ares) goto async_error;
+	AsyncRes_ASSERT(ares);
 
 	{
 		auto const res = Alc_delete(OsAlc, heap);
-		if (res) return 99;
-	}
-
-	if (0) async_error: {
-		return 666;
+		AlcRes_ASSERT(res);
 	}
 
 	return 0;

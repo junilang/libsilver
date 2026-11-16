@@ -8,19 +8,20 @@ usize values_delete[] = {1,2,3,4};
 int ZZentry(SilverTestContext *ctx) {
 	alignas(Ptr) ubyte buffer[8192];
 
-	auto alc_ = StaticAlc_init(buffer, sizeof(buffer));
-	auto alc = StaticAlc_upcast(alc_);
+	BumpAlc bumpalc;
+	BumpAlc_init(&bumpalc, buffer, sizeof(buffer));
+	auto alc = BumpAlc_asAlc(&bumpalc);
 
 	HashMap map = {};
 
-	AlcRes_UNWRAP(HashMap_init(&map, alc, 66));
+	AlcRes_ASSERT(HashMap_init(&map, alc, 66));
 
-	PRINTBP(128, Stdout, "power = ",FIELD_GET(HashMap_Power, map.info),"\n");
+	PRINTA(Stdout, "power = ",FIELD_GET(HashMap_Power, map.info),"\n");
 
 	// add items
-	for (usize i = 0; i < COUNTOF(values); i++) {
+	for (usize i = 0; i < _Countof(values); i++) {
 		usize *vp = AlcPtr_UNWRAP(
-			HashMap_add(&map, u64_hash(hash_base, values[i]), alc)
+			HashMap_add(&map, alc, u64_crc64(crc64_base, values[i]))
 		);
 
 		*vp = values[i];
@@ -29,20 +30,20 @@ int ZZentry(SilverTestContext *ctx) {
 	}
 
 	// delete some
-	for (usize i = 0; i < COUNTOF(values_delete); i++) {
+	for (usize i = 0; i < _Countof(values_delete); i++) {
 		usize *vp = HashMap_get(
-			&map, u64_hash(hash_base, values_delete[i]), &ZZmatch, (Ptr)values_delete[i]
+			&map, u64_crc64(crc64_base, values_delete[i]), &ZZmatch, (Ptr)values_delete[i]
 		);
 
-		if (!vp) PANIC("missing item");
+		ASSERT(vp, "missing item");
 
 		//PRINTBP(128, Stdout, "deleting ", vp, " = ", *vp, "\n");
 
 		HashMap_delete(&map, vp);
 	}
 
-	usize map_size = HashMap_size_base << FIELD_GET(HashMap_Power, map.info);
-	PRINTBP(128, Stdout, "map_size = ", map_size, "\n");
+	usize map_size = HashMap_basesize << FIELD_GET(HashMap_Power, map.info);
+	PRINTA(Stdout, "map_size = ", map_size, "\n");
 
 	// print out hashmap data
 	ubyte *table = map.data;
@@ -62,10 +63,10 @@ int ZZentry(SilverTestContext *ctx) {
 		#endif
 	}
 
-	for (usize i = 0; i < COUNTOF(values); i++) {
-		usize *vp = HashMap_get(&map, u64_hash(hash_base, values[i]), &ZZmatch, (Ptr)values[i]);
+	for (usize i = 0; i < _Countof(values); i++) {
+		usize *vp = HashMap_get(&map, u64_crc64(crc64_base, values[i]), &ZZmatch, (Ptr)values[i]);
 		if (vp) {
-			PRINTBP(128, Stdout, vp, " = ", *vp, "\n");
+			PRINTA(Stdout, vp, " = ", *vp, "\n");
 		}
 	}
 

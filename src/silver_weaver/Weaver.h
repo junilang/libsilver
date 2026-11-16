@@ -64,7 +64,7 @@ AsyncRT *Weaver_upcast(Weaver *this) {
 #endif
 
 #if Weaver_DEBUG
-	#define XDEBUG(...) PRINTBA(128, Weaver_DEBUG_STREAM, "[",XTID,"] ", __func__, ": " __VA_OPT__(,) __VA_ARGS__, "\n")
+	#define XDEBUG(...) PRINTA(Weaver_DEBUG_SINK, "[",XTID,"] ", __func__, ": " __VA_OPT__(,) __VA_ARGS__, "\n")
 #else
 	#define XDEBUG(...)
 #endif
@@ -490,15 +490,11 @@ AsyncRes Weaver_submit(Ptr vthis, usize context, const AsyncTask *tasks, usize t
 			#endif
 		} while (target_pos > new_capacity);
 
-		auto const alloc_size = usize_align(new_capacity * sizeof(AsyncTask), WeaverQueue_align);
+		usize alloc_size = usize_align(new_capacity * sizeof(AsyncTask), WeaverQueue_align);
 
-		AlcReq req = {
-			.intent = AlcIntent_Resize,
-			.size = alloc_size,
-			.align = WeaverQueue_align
-		};
-
-		AlcPtr ptr = Alc_invoke(this->queue_alc, &req, nullptr, wqueue);
+		auto const ptr = Alc_invoke(this->queue_alc,
+			AlcReq_resize(alloc_size, WeaverQueue_align, false)
+		, &alloc_size, wqueue);
 		auto const res = AlcPtr_get(ptr);
 		if (res) return (
 			res_origin |
@@ -506,7 +502,7 @@ AsyncRes Weaver_submit(Ptr vthis, usize context, const AsyncTask *tasks, usize t
 			FIELD_SET(AsyncRes_Code, res)
 		);
 
-		new_capacity = req.size / sizeof(AsyncTask);
+		new_capacity = alloc_size / sizeof(AsyncTask);
 		#if Weaver_SAFE
 			if (new_capacity > WeaverQueueSize_max)
 				new_capacity = WeaverQueueSize_max;
@@ -626,17 +622,11 @@ AsyncRes Weaver_submit(Ptr vthis, usize context, const AsyncTask *tasks, usize t
 	return Weaver_wake(this, (WeaverThreadId)context, wsize);
 }
 
-#if Alc_PTRTAG
-	Alc Weaver_alc(Ptr vthis, usize context) {
-		auto const this = (Weaver*)vthis;
-		return this->provider_alc;
-	}
-#else
-	void Weaver_alc(Ptr vthis, usize context, Alc *out_alc) {
-		auto const this = (Weaver*)vthis;
-		*out_alc = this->provider_alc;
-	}
-#endif
+AsyncRes Weaver_alc(Ptr vthis, usize context, Alc *out_alc) {
+	auto const this = (Weaver*)vthis;
+	*out_alc = this->provider_alc;
+	return AsyncRes_Ok;
+}
 
 [[nodiscard]]
 AlcRes Weaver_init(
@@ -659,20 +649,17 @@ AlcRes Weaver_init(
 	this->wake_sync = 0;
 
 
-	usize queue_allocsize = usize_align(queue_capacity * sizeof(AsyncTask), WeaverQueue_align);
-
-	AlcReq req = {
-		.intent = AlcIntent_New,
-		.size = queue_allocsize,
-		.align = WeaverQueue_align
-	};
+	auto const queue_allocsize = usize_align(queue_capacity * sizeof(AsyncTask), WeaverQueue_align);
 
 	{ // read queue
-		AlcPtr ptr = Alc_invoke(queue_alc, &req, nullptr, nullptr);
+		usize alloc_size;
+		AlcPtr ptr = Alc_invoke(queue_alc,
+			AlcReq_new(queue_allocsize, WeaverQueue_align, false)
+		, &alloc_size, nullptr);
 		auto const res = AlcPtr_get(ptr);
 		if (res) return res;
 
-		usize capacity = req.size / sizeof(AsyncTask);
+		usize capacity = alloc_size / sizeof(AsyncTask);
 		if (capacity > WeaverQueueSize_max)
 			capacity = WeaverQueueSize_max;
 
@@ -683,12 +670,14 @@ AlcRes Weaver_init(
 	}
 
 	{ // write queue
-		req.size = queue_allocsize;
-		AlcPtr ptr = Alc_invoke(queue_alc, &req, nullptr, nullptr);
+		usize alloc_size;
+		AlcPtr ptr = Alc_invoke(queue_alc,
+			AlcReq_new(queue_allocsize, WeaverQueue_align, false)
+		, &alloc_size, nullptr);
 		auto const res = AlcPtr_get(ptr);
 		if (res) return res;
 
-		usize capacity = req.size / sizeof(AsyncTask);
+		usize capacity = alloc_size / sizeof(AsyncTask);
 		if (capacity > WeaverQueueSize_max)
 			capacity = WeaverQueueSize_max;
 
@@ -725,13 +714,9 @@ AlcRes Weaver_deinit(Weaver *this) {
 
 [[nodiscard]]
 AlcPtr Weaver_create(Alc alc, Alc provider_alc, u32 threads_size, WeaverQueueSize queue_capacity) {
-	AlcReq req = {
-		.intent = AlcIntent_New,
-		.size = Weaver_allocsize(threads_size),
-		.align = _Alignof(Weaver)
-	};
-
-	auto ptr = Alc_invoke(alc, &req, nullptr, nullptr);
+	auto ptr = Alc_invoke(alc,
+		AlcReq_new(Weaver_allocsize(threads_size), _Alignof(Weaver), false)
+	, nullptr, nullptr);
 	if (AlcPtr_check(ptr)) return ptr;
 
 	auto this = (Weaver*)ptr;
