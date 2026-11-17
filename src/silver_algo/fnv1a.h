@@ -17,6 +17,11 @@ u64 u64_fnv1a(u64 base, u64 value) {
 	return (base ^ value) * fnv1a_prime;
 }
 
+u64 i8_fnv1a(u64 base, i8 value) { return u8_fnv1a(base, (u8)value); }
+u64 i16_fnv1a(u64 base, i16 value) { return u16_fnv1a(base, (u16)value); }
+u64 i32_fnv1a(u64 base, i32 value) { return u32_fnv1a(base, (u32)value); }
+u64 i64_fnv1a(u64 base, i64 value) { return u64_fnv1a(base, (u64)value); }
+
 u64 fnv1a(u64 base, ConstPtr data, usize size) {
 	const ubyte *bytes = data;
 	const ubyte *end = bytes + size;

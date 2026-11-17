@@ -24,3 +24,11 @@ IFmt Fmt_iface(Fmt this) {
 SinkRes Fmt_invoke(Fmt this, FmtSpec spec, Sink sink) {
 	return Fmt_iface(this)(Fmt_this(this), spec, IPASS(Sink, sink));
 }
+
+#define IFmt_GENERATE(N, E) \
+	SinkRes IFmt_##N(Ptr this, FmtSpec spec, IARG(Sink, sink)) { \
+		return N##_fmt((E)(usize)this, spec, IWRAP(Sink, sink)); \
+	} \
+	Fmt N##_asFmt(E this) { \
+		return (Fmt){.this=(Ptr)(usize)this,.iface=&IFmt_##N}; \
+	}

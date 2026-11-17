@@ -1,5 +1,7 @@
 #if __has_builtin(__builtin_ia32_crc32di)
 	#define LIBSILVER_HAS_CRC32 true
+	#define LIBSILVER_HAS_CRC64 true
+
 	constexpr u32 crc32_base = 0x12345678ull;
 
 	u32 u8_crc32(u32 base, u8 value) {
@@ -17,6 +19,11 @@
 	u32 u64_crc32(u32 base, u64 value) {
 		return (u32)__builtin_ia32_crc32di(base, value);
 	}
+
+	u32 i8_crc32(u32 base, i8 value) { return u8_crc32(base, (u8)value); }
+	u32 i16_crc32(u32 base, i16 value) { return u16_crc32(base, (u16)value); }
+	u32 i32_crc32(u32 base, i32 value) { return u32_crc32(base, (u32)value); }
+	u32 i64_crc32(u32 base, i64 value) { return u64_crc32(base, (u64)value); }
 
 	u32 crc32(u32 base, ConstPtr data, usize size) {
 		const ubyte *bytes = data;
@@ -77,6 +84,11 @@
 		;
 	}
 
+	u64 i8_crc64(u64 base, i8 value) { return u8_crc64(base, (u8)value); }
+	u64 i16_crc64(u64 base, i16 value) { return u16_crc64(base, (u16)value); }
+	u64 i32_crc64(u64 base, i32 value) { return u64_crc64(base, (u32)value); }
+	u64 i64_crc64(u64 base, i64 value) { return u64_crc64(base, (u64)value); }
+
 	u64 crc64(u64 base, ConstPtr data, usize size) {
 		const ubyte *bytes = data;
 		const ubyte *end = bytes + size;
@@ -104,7 +116,7 @@
 		}
 
 		return base;
-}
+	}
 
 #else
 	#define LIBSILVER_HAS_CRC32 false

@@ -8,4 +8,5 @@
 	#include "crc32.h"
 	#include "fnv1a.h"
 	#include "splitmix64.h"
+	#include "hash.h"
 #endif
